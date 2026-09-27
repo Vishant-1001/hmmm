@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from forecast_bust.config import ARTIFACT_DIR, INTERIM_DIR, data_config, model_config
+from forecast_bust.config import clean_json, ARTIFACT_DIR, INTERIM_DIR, data_config, model_config
 from forecast_bust.data.regions import Region, build_regions, region_members
 from forecast_bust.labels.signature import failure_signature
 from forecast_bust.verification.alignment import SEASON_CODES, season_of, split_of, valid_time
@@ -137,13 +137,13 @@ def build_cases(ds: xr.Dataset) -> pd.DataFrame:
                      + "_D" + df["lead_day"].astype(str).str.zfill(2))
 
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    (ARTIFACT_DIR / "preprocessing.json").write_text(json.dumps({
+    (ARTIFACT_DIR / "preprocessing.json").write_text(json.dumps(clean_json({
         "normalisation": "normalized_error = regional RMSE / scale(region, season); scale = std of ERA5 Z500 "
                          "anomaly (vs ERA5 1990-2017 climatology) over TRAIN valid times only",
         "fitted_on": "train", "split": data_config()["split"],
         "scales": sc.to_dict(orient="records"),
-    }, indent=1, default=str))
-    (ARTIFACT_DIR / "thresholds.json").write_text(json.dumps({
+    }), indent=1, default=str))
+    (ARTIFACT_DIR / "thresholds.json").write_text(json.dumps(clean_json({
         "definition": "bust = normalized_error > Q90 of TRAIN normalized_error within (region, lead_day, season). "
                       "The 90th-percentile threshold is a project-defined operational bust criterion.",
         "sensitivity": "Q95 of the same TRAIN distribution",
@@ -151,7 +151,7 @@ def build_cases(ds: xr.Dataset) -> pd.DataFrame:
                        "a documented project diagnostic",
         "fitted_on": "train", "conditioning": GROUP,
         "thresholds": th.to_dict(orient="records"),
-    }, indent=1, default=str))
+    }), indent=1, default=str))
     summary = df.groupby("split").agg(rows=("bust", "size"), bust_rate=("bust", "mean"),
                                       bust_q95_rate=("bust_q95", "mean"), hidden_rate=("hidden_bust", "mean"),
                                       inits=("init_time", "nunique"))

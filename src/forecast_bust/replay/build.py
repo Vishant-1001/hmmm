@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 
 from forecast_bust.analogues.memory import compute_memory_features
-from forecast_bust.config import ARTIFACT_DIR, MODEL_DIR, data_config, model_config
+from forecast_bust.config import clean_json, ARTIFACT_DIR, MODEL_DIR, data_config, model_config
 from forecast_bust.data.assemble import load_states
 from forecast_bust.data.regions import build_regions
 from forecast_bust.explainability.explain import explain_row
@@ -121,7 +121,7 @@ def build() -> None:
         "actual_test_signature_frequencies": fp["actual_signature"].value_counts(normalize=True).to_dict(),
         "note": "Reference = always predicting the most common TRAIN bust signature / TRAIN frequencies.",
     }
-    (ARTIFACT_DIR / "fingerprint_metrics.json").write_text(json.dumps(fpm, indent=1))
+    (ARTIFACT_DIR / "fingerprint_metrics.json").write_text(json.dumps(clean_json(fpm), indent=1))
 
     # ---- replay cases ----
     out_dir = ARTIFACT_DIR / "replay"
@@ -146,7 +146,7 @@ def build() -> None:
             nb = neigh.get(int(ix))
             analogues = []
             if nb:
-                for j, d in list(zip(*nb))[:8]:
+                for j, d in list(zip(*nb))[:5]:
                     a = table.iloc[j]
                     analogues.append({"case_id": a["case_id"], "init_time": str(a["init_time"]), "distance": _r(d, 3),
                                       "bust": int(a["bust"]), "normalized_error": _r(a["norm_error"], 3),
@@ -221,10 +221,10 @@ def build() -> None:
         }
         d = out_dir / cid
         d.mkdir()
-        (d / "forecast.json").write_text(json.dumps(forecast, default=str))
-        (d / "verification.json").write_text(json.dumps(verification, default=str))
+        (d / "forecast.json").write_text(json.dumps(clean_json(forecast), default=str))
+        (d / "verification.json").write_text(json.dumps(clean_json(verification), default=str))
         index.append({"case_id": cid, "init_time": str(t), "selection": c["selection"],
                       "selection_note": c["selection_note"], "n_alerts": int(a.sum())})
         log.info("replay case %s written", cid)
-    (out_dir / "index.json").write_text(json.dumps({"cases": index,
-                                                    "selection_rule": __doc__.split("Case selection")[1].strip()}, indent=1))
+    (out_dir / "index.json").write_text(json.dumps(clean_json({"cases": index,
+                                                    "selection_rule": __doc__.split("Case selection")[1].strip()}), indent=1))

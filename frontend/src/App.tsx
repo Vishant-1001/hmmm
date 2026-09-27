@@ -32,8 +32,9 @@ export default function App() {
         </nav>
       </header>
       <div className="banner" data-testid="mode-banner">
-        <strong>Historical research replay</strong> — precomputed real ECMWF IFS ENS forecasts (WeatherBench 2, 2022 test year).
-        Not a live feed; NCMRWF integration is architected but not claimed. {mode && <span className="muted">[{mode}]</span>}
+        <strong>Historical research replay</strong> — precomputed real ECMWF IFS ENS forecasts from the held-out test period
+        (WeatherBench 2). Not a live feed; NCMRWF integration is architected but not claimed.
+        {mode && <span className="muted" data-testid="api-mode"> Server: {mode}.</span>}
       </div>
       <main>
         {err && <div className="card err">{err}</div>}

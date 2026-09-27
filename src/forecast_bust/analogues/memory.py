@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
 
-from forecast_bust.config import ARTIFACT_DIR, model_config
+from forecast_bust.config import clean_json, ARTIFACT_DIR, model_config
 
 log = logging.getLogger(__name__)
 
@@ -125,6 +125,6 @@ def compute_memory_features(df: pd.DataFrame, mode: str | None = None, neighbour
             "scaler_fitted_on": "train", "radius_definition": "median TRAIN distance to k-th eligible analogue",
             "temporal_rule": "candidate.valid_time <= query.init_time, same region and lead day"}
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    (ARTIFACT_DIR / f"analogue_memory_{mode}.json").write_text(json.dumps(
-        {**meta, "scaler": scaler}, indent=1, default=float))
+    (ARTIFACT_DIR / f"analogue_memory_{mode}.json").write_text(json.dumps(clean_json(
+        {**meta, "scaler": scaler}), indent=1, default=float))
     return res, meta, neigh

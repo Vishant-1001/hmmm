@@ -5,7 +5,7 @@ Inputs are ONLY forecast quantities (ens_mean, ens_std, member statistics m_*) a
 fields era5_z500 / era5_rank are never read here; tests/test_leakage.py enforces this.
 
 Groups
-  SPREAD : B2 inputs            spread magnitude, spread percentile, lead, region, season
+  SPREAD : B2 inputs            spread magnitude, spread percentile, lead, region, season, init hour
   ATM    : atmospheric state    Z500/700/850 anomalies, 500-850 thickness anomaly, gradients, curvature
   ENS    : ensemble behaviour   IQR, P10-P90, skewness, anomaly-sign agreement, neighbourhood spread ...
   PAT    : large-scale pattern  frozen TRAIN-fitted PCA of context-domain Z500 anomaly
@@ -23,13 +23,13 @@ import pandas as pd
 import xarray as xr
 from sklearn.decomposition import PCA
 
-from forecast_bust.config import ARTIFACT_DIR, MODEL_DIR, data_config, model_config
+from forecast_bust.config import clean_json, ARTIFACT_DIR, MODEL_DIR, data_config, model_config
 from forecast_bust.data.regions import region_members
 from forecast_bust.labels.build import regions_for
 
 log = logging.getLogger(__name__)
 
-SPREAD = ["spread_m", "spread_pct", "lead_day", "region_code", "season_code"]
+SPREAD = ["spread_m", "spread_pct", "lead_day", "region_code", "season_code", "init_hour"]
 ATM = ["anom500", "abs_anom500", "anom700", "anom850", "thick_anom", "grad_x", "grad_y", "grad_mag",
        "lap500", "nbhd_anom500"]
 ENS = ["m_iqr", "m_p10p90", "m_skew", "m_sign_agree", "spread_nbhd", "spread_hetero", "spread700",
@@ -79,13 +79,13 @@ def fit_pca(ds: xr.Dataset, train_mask_init: np.ndarray, seed: int) -> PCA:
     pca = PCA(n_components=model_config()["pca"]["n_components"], random_state=seed).fit(X)
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(pca, MODEL_DIR / "pca.joblib")
-    (ARTIFACT_DIR / "pca.json").write_text(json.dumps({
+    (ARTIFACT_DIR / "pca.json").write_text(json.dumps(clean_json({
         "fitted_on": "train initialisations only, all Day 1-10 leads pooled",
         "field": "ensemble-mean Z500 anomaly vs ERA5 1990-2017 climatology, sqrt(cos lat) weighted, context domain",
         "n_components": int(pca.n_components_),
         "explained_variance_ratio": pca.explained_variance_ratio_.round(5).tolist(),
         "n_train_fields": int(X.shape[0]),
-    }, indent=1))
+    }), indent=1))
     return pca
 
 
@@ -189,4 +189,5 @@ def add_features(cases: pd.DataFrame, ds: xr.Dataset) -> pd.DataFrame:
     gf = grid_features(ds, pca)
     df = cases.merge(gf, on=["init_time", "lead_hours", "region_id"], how="left", validate="one_to_one")
     df["region_code"] = df["row"] * 100 + df["col"]
+    df["init_hour"] = pd.to_datetime(df["init_time"]).dt.hour.astype(np.int8)
     return df

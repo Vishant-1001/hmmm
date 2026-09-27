@@ -16,7 +16,7 @@ GROUP_NAMES = {"SPREAD": "Ensemble spread (baseline information)", "ATM": "Atmos
                "MEM": "Historical forecast-state memory"}
 FEATURE_LABELS = {
     "spread_m": "Z500 ensemble spread (m)", "spread_pct": "spread percentile vs training (same region/lead/season)",
-    "lead_day": "lead day", "region_code": "region", "season_code": "season",
+    "lead_day": "lead day", "init_hour": "initialisation hour (UTC)", "region_code": "region", "season_code": "season",
     "anom500": "ens-mean Z500 anomaly (m)", "abs_anom500": "|Z500 anomaly| (m)", "anom700": "Z700 anomaly (m)",
     "anom850": "Z850 anomaly (m)", "thick_anom": "500-850 hPa thickness anomaly (m)",
     "grad_x": "zonal Z500 gradient (m/100 km)", "grad_y": "meridional Z500 gradient (m/100 km)",

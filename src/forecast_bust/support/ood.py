@@ -14,7 +14,7 @@ import pandas as pd
 from sklearn.covariance import LedoitWolf
 
 from forecast_bust.analogues.memory import analogue_space
-from forecast_bust.config import ARTIFACT_DIR, model_config
+from forecast_bust.config import clean_json, ARTIFACT_DIR, model_config
 
 SUPPORT_LEVELS = ["NORMAL SUPPORT", "MODERATE SUPPORT", "WEAK SUPPORT", "INSUFFICIENT HISTORICAL SUPPORT"]
 EVIDENCE_LEVELS = ["STRONG EVIDENCE", "MODERATE EVIDENCE", "WEAK EVIDENCE", "INSUFFICIENT HISTORICAL SUPPORT"]
@@ -33,7 +33,7 @@ def fit_support(train: pd.DataFrame) -> dict:
                              "thresholds": np.quantile(d, qs).tolist()}
     obj = {"space": cols, "quantiles": qs, "fitted_on": "train", "per_lead": models,
            "categories": SUPPORT_LEVELS}
-    (ARTIFACT_DIR / "support_diagnostics.json").write_text(json.dumps(obj, indent=1))
+    (ARTIFACT_DIR / "support_diagnostics.json").write_text(json.dumps(clean_json(obj), indent=1))
     return obj
 
 

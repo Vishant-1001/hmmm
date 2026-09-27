@@ -40,3 +40,23 @@ def cache_dir() -> Path:
     p = REPO_ROOT / data_config()["cache_dir"]
     p.mkdir(parents=True, exist_ok=True)
     return p
+
+
+def clean_json(obj):
+    """Recursively replace NaN/inf with None so artifacts are strict JSON."""
+    import math
+
+    import numpy as np
+
+    if isinstance(obj, dict):
+        return {str(k): clean_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [clean_json(v) for v in obj]
+    if isinstance(obj, (np.floating, float)):
+        f = float(obj)
+        return f if math.isfinite(f) else None
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    return obj

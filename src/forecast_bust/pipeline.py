@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from forecast_bust.analogues.memory import compute_memory_features
-from forecast_bust.config import ARTIFACT_DIR, INTERIM_DIR, MODEL_DIR, REPO_ROOT, data_config, model_config
+from forecast_bust.config import clean_json, ARTIFACT_DIR, INTERIM_DIR, MODEL_DIR, REPO_ROOT, data_config, model_config
 from forecast_bust.data.assemble import assemble, load_states, states_path
 from forecast_bust.features.build import GROUPS, add_features
 from forecast_bust.labels.build import build_cases
@@ -78,7 +78,7 @@ def write_dataset_manifest(ds, cases: pd.DataFrame) -> None:
         "not_used": "No NCMRWF data is used; NCMRWF NEPS integration is architected (adapter interface) but not claimed.",
     }
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    (ARTIFACT_DIR / "dataset_manifest.json").write_text(json.dumps(manifest, indent=1, default=str))
+    (ARTIFACT_DIR / "dataset_manifest.json").write_text(json.dumps(clean_json(manifest), indent=1, default=str))
 
 
 def build_table(reassemble: bool = True) -> pd.DataFrame:
@@ -154,7 +154,7 @@ def train(reassemble: bool = True) -> None:
         "runtime_s": round(time.time() - t0, 1),
         "software": _versions(),
     }
-    (ARTIFACT_DIR / "experiment_manifest.json").write_text(json.dumps(manifest, indent=1, default=str))
+    (ARTIFACT_DIR / "experiment_manifest.json").write_text(json.dumps(clean_json(manifest), indent=1, default=str))
     log.info("training done in %.0fs", time.time() - t0)
 
 

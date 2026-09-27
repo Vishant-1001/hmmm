@@ -12,7 +12,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from forecast_bust.config import ARTIFACT_DIR, MODEL_DIR, data_config, model_config
+from forecast_bust.config import clean_json, ARTIFACT_DIR, MODEL_DIR, data_config, model_config
 from forecast_bust.data.assemble import load_states
 from forecast_bust.evaluation import metrics as M
 from forecast_bust.models.sentinel import DESCRIPTIONS, FEATURE_SETS
@@ -109,17 +109,17 @@ def evaluate() -> dict:
         "q95_sensitivity": q95, "frozen_memory_sensitivity": frozen, "by_evidence_level": by_evidence,
     }
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    (ARTIFACT_DIR / "metrics.json").write_text(json.dumps(out, indent=1, default=float))
-    (ARTIFACT_DIR / "ablation_results.json").write_text(json.dumps(ablation, indent=1, default=float))
+    (ARTIFACT_DIR / "metrics.json").write_text(json.dumps(clean_json(out), indent=1, default=float))
+    (ARTIFACT_DIR / "ablation_results.json").write_text(json.dumps(clean_json(ablation), indent=1, default=float))
     cal = {n: {"test": M.reliability_curve(y, te[f"p_{n}"].values),
                "validation": M.reliability_curve(va["bust"].values, va[f"p_{n}"].values)}
            for n in ("B0", "B2", "FULL")}
     cal["method"] = "isotonic regression fitted on validation predictions only, then frozen"
-    (ARTIFACT_DIR / "calibration.json").write_text(json.dumps(cal, indent=1))
-    (ARTIFACT_DIR / "spread_skill.json").write_text(json.dumps(spread_skill(te), indent=1))
+    (ARTIFACT_DIR / "calibration.json").write_text(json.dumps(clean_json(cal), indent=1))
+    (ARTIFACT_DIR / "spread_skill.json").write_text(json.dumps(clean_json(spread_skill(te)), indent=1))
     models = joblib.load(MODEL_DIR / "models.joblib")
-    (ARTIFACT_DIR / "feature_importance.json").write_text(json.dumps(
-        {n: models[n].importance() for n in FEATURE_SETS}, indent=1))
+    (ARTIFACT_DIR / "feature_importance.json").write_text(json.dumps(clean_json(
+        {n: models[n].importance() for n in FEATURE_SETS}), indent=1))
     keep = ["case_id", "init_time", "valid_time", "region_id", "lead_day", "season", "error_m", "norm_error",
             "bust", "hidden_bust", "spread_m", "p_B0", "p_B2", "p_FULL", "evidence_level", "support_level"]
     te[keep].to_parquet(ARTIFACT_DIR / "predictions_test.parquet", index=False)
@@ -140,7 +140,7 @@ def spread_skill(te: pd.DataFrame) -> dict:
                                                  / np.sqrt((g["error_m"] ** 2).mean())),
                      "corr_spread_error": float(np.corrcoef(g["spread_m"], g["error_m"])[0, 1])})
     test_inits = pd.to_datetime(te["init_time"].unique())
-    rk = ds["era5_rank"].sel(init=ds.init.isin(test_inits.values)).values
+    rk = ds["era5_rank"].sel(init=ds.init.isin(np.asarray(test_inits))).values
     hist = {}
     for j, h in enumerate(ds.lead.values):
         counts = np.bincount(rk[:, j].ravel().astype(int), minlength=n_mem + 1)
