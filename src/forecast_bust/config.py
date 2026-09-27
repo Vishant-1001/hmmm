@@ -9,9 +9,14 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = REPO_ROOT / "config"
-ARTIFACT_DIR = Path(os.environ.get("FBS_ARTIFACT_DIR", REPO_ROOT / "artifacts"))
+# FBS_SPLIT=dev runs the whole pipeline on a development split (train 2018-2019,
+# validation 2020, dev-test 2021) so that iteration never touches the 2022 test year.
+DEV = os.environ.get("FBS_SPLIT", "final") == "dev"
+_suffix = "dev" if DEV else ""
+ARTIFACT_DIR = Path(os.environ.get("FBS_ARTIFACT_DIR", REPO_ROOT / "artifacts")) / _suffix
 DATA_DIR = Path(os.environ.get("FBS_DATA_DIR", REPO_ROOT / "data"))
-MODEL_DIR = REPO_ROOT / "models"
+MODEL_DIR = REPO_ROOT / "models" / _suffix
+INTERIM_DIR = REPO_ROOT / "data" / "interim" / _suffix
 
 
 @lru_cache(maxsize=None)
@@ -21,7 +26,10 @@ def load_config(name: str) -> dict:
 
 
 def data_config() -> dict:
-    return load_config("data")
+    cfg = load_config("data")
+    if DEV:
+        cfg = {**cfg, "split": cfg["dev_split"]}
+    return cfg
 
 
 def model_config() -> dict:

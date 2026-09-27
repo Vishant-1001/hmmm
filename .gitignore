@@ -41,3 +41,4 @@ frontend/.vite/
 .vscode/
 *.swp
 logs/
+artifacts/dev/

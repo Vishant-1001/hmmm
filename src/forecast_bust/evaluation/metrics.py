@@ -1,0 +1,130 @@
+"""Evaluation metrics. Every function takes arrays of real predictions and labels."""
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score, roc_curve
+
+
+def auprc(y, p) -> float:
+    return float(average_precision_score(y, p)) if np.any(y) else float("nan")
+
+
+def roc_auc(y, p) -> float:
+    return float(roc_auc_score(y, p)) if 0 < np.mean(y) < 1 else float("nan")
+
+
+def brier(y, p) -> float:
+    return float(brier_score_loss(y, p))
+
+
+def reliability_curve(y, p, n_bins: int = 10) -> dict:
+    bins = np.linspace(0, 1, n_bins + 1)
+    idx = np.clip(np.digitize(p, bins) - 1, 0, n_bins - 1)
+    rows = []
+    for b in range(n_bins):
+        m = idx == b
+        if m.sum():
+            rows.append({"bin_lo": float(bins[b]), "bin_hi": float(bins[b + 1]), "n": int(m.sum()),
+                         "mean_pred": float(np.mean(p[m])), "obs_freq": float(np.mean(y[m]))})
+    return {"bins": rows}
+
+
+def ece(y, p, n_bins: int = 10) -> float:
+    rc = reliability_curve(y, p, n_bins)["bins"]
+    n = len(y)
+    return float(sum(r["n"] / n * abs(r["mean_pred"] - r["obs_freq"]) for r in rc))
+
+
+def threshold_at_far(y, p, far: float) -> float:
+    """Smallest threshold whose false-alarm rate (FP / negatives) is <= far."""
+    neg = np.sort(np.asarray(p)[np.asarray(y) == 0])[::-1]
+    k = int(np.floor(far * len(neg)))
+    if k >= len(neg):
+        return float(neg[-1])
+    return float(np.nextafter(neg[k], np.inf))
+
+
+def recall_at_far(y, p, far: float) -> float:
+    fpr, tpr, _ = roc_curve(y, p)
+    return float(np.max(tpr[fpr <= far])) if np.any(fpr <= far) else 0.0
+
+
+def confusion_at(y, p, thr: float) -> dict:
+    y = np.asarray(y).astype(bool)
+    a = np.asarray(p) >= thr
+    tp, fp = int((a & y).sum()), int((a & ~y).sum())
+    fn, tn = int((~a & y).sum()), int((~a & ~y).sum())
+    return {"threshold": float(thr), "tp": tp, "fp": fp, "fn": fn, "tn": tn,
+            "precision": tp / (tp + fp) if tp + fp else float("nan"),
+            "recall": tp / (tp + fn) if tp + fn else float("nan"),
+            "false_alarm_rate": fp / (fp + tn) if fp + tn else float("nan")}
+
+
+def hidden_bust_metrics(df: pd.DataFrame, p: np.ndarray, thr: float) -> dict:
+    """Recall on hidden busts (bust & low spread) and alert precision within low-spread cases."""
+    a = p >= thr
+    hb = df["hidden_bust"].to_numpy().astype(bool)
+    low = df["low_spread"].to_numpy().astype(bool)
+    bust = df["bust"].to_numpy().astype(bool)
+    return {
+        "n_hidden_busts": int(hb.sum()),
+        "hidden_bust_recall": float(a[hb].mean()) if hb.any() else float("nan"),
+        "low_spread_alert_precision": float(bust[low & a].mean()) if (low & a).any() else float("nan"),
+        "low_spread_auprc": auprc(bust[low], p[low]) if low.any() else float("nan"),
+    }
+
+
+def warning_lead(df: pd.DataFrame, p: np.ndarray, thr: float) -> dict:
+    a = p >= thr
+    b = df["bust"].to_numpy().astype(bool)
+    lead = df["lead_day"].to_numpy()
+    by_lead = {int(d): float(a[(lead == d) & b].mean()) for d in np.unique(lead) if ((lead == d) & b).any()}
+    return {"mean_lead_day_of_detected_busts": float(lead[a & b].mean()) if (a & b).any() else float("nan"),
+            "recall_by_lead_day": by_lead}
+
+
+def peak_day_error(df: pd.DataFrame, p: np.ndarray) -> dict:
+    """|argmax_day predicted risk - argmax_day (normalized error / Q90 threshold)| over
+    (init, region) trajectories containing at least one bust."""
+    d = df[["init_time", "region_id", "lead_day", "bust", "norm_error", "q_primary"]].copy()
+    d["p"] = p
+    d["exceed"] = d["norm_error"] / d["q_primary"]
+    errs = []
+    for _, g in d.groupby(["init_time", "region_id"]):
+        if g["bust"].any():
+            errs.append(abs(int(g.loc[g["p"].idxmax(), "lead_day"]) - int(g.loc[g["exceed"].idxmax(), "lead_day"])))
+    e = np.array(errs)
+    return {"n_trajectories": int(len(e)), "mean_abs_peak_day_error": float(e.mean()) if len(e) else float("nan"),
+            "within_1_day": float((e <= 1).mean()) if len(e) else float("nan")}
+
+
+def spatial_overlap(df: pd.DataFrame, p: np.ndarray, thr: float) -> dict:
+    """Mean Jaccard overlap between alerted and actual-bust regions per (init, lead) map."""
+    d = df[["init_time", "lead_day", "bust"]].copy()
+    d["a"] = p >= thr
+    d["b"] = d["bust"].astype(bool)
+    d["inter"] = d["a"] & d["b"]
+    d["union"] = d["a"] | d["b"]
+    g = d.groupby(["init_time", "lead_day"])[["inter", "union"]].sum()
+    g = g[g["union"] > 0]
+    j = g["inter"] / g["union"]
+    return {"n_maps": int(len(g)), "mean_jaccard": float(j.mean()) if len(j) else float("nan")}
+
+
+def block_bootstrap_diff(df: pd.DataFrame, p_a: np.ndarray, p_b: np.ndarray, n: int = 200,
+                         seed: int = 0) -> dict:
+    """Bootstrap over initialisation dates (blocks) of AUPRC(a) - AUPRC(b)."""
+    rng = np.random.default_rng(seed)
+    y = df["bust"].to_numpy()
+    days = pd.to_datetime(df["init_time"]).dt.floor("D").to_numpy()
+    uniq, inv = np.unique(days, return_inverse=True)
+    rows_by_day = [np.where(inv == i)[0] for i in range(len(uniq))]
+    diffs = []
+    for _ in range(n):
+        pick = rng.integers(0, len(uniq), len(uniq))
+        idx = np.concatenate([rows_by_day[i] for i in pick])
+        diffs.append(auprc(y[idx], p_a[idx]) - auprc(y[idx], p_b[idx]))
+    diffs = np.array(diffs)
+    return {"mean": float(diffs.mean()), "ci95": [float(np.quantile(diffs, 0.025)), float(np.quantile(diffs, 0.975))],
+            "p_le_0": float((diffs <= 0).mean()), "n_boot": n, "block": "initialisation day"}

@@ -29,3 +29,7 @@ seasons:  # India-relevant seasons
   MAM: [3, 4, 5]
   JJAS: [6, 7, 8, 9]
   OND: [10, 11, 12]
+dev_split:  # development only (FBS_SPLIT=dev); never includes 2022
+  train: ["2018-01-01", "2019-12-31T23:59"]
+  validation: ["2020-01-01", "2020-12-31T23:59"]
+  test: ["2021-01-01", "2021-12-31T23:59"]

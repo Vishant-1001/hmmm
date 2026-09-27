@@ -1,0 +1,31 @@
+"""Transparent forecaster review-priority score (product rule, not a scientific quantity).
+
+    score = p_bust * urgency(lead_day) * evidence_weight(evidence)
+            + disagreement_bonus * max(0, p_bust - p_spread_baseline)
+
+    urgency(d) = 0.5 ** ((d - 1) / urgency_halflife_days)
+
+Parameters live in config/model.yaml (priority section).
+"""
+from __future__ import annotations
+
+import numpy as np
+
+from forecast_bust.config import model_config
+
+EVIDENCE_NAMES = ["STRONG", "MODERATE", "WEAK", "INSUFFICIENT HISTORICAL SUPPORT"]
+
+
+def priority_score(p: np.ndarray, p_b2: np.ndarray, lead_day: np.ndarray, evidence_level: np.ndarray) -> np.ndarray:
+    cfg = model_config()["priority"]
+    urg = 0.5 ** ((np.asarray(lead_day) - 1) / cfg["urgency_halflife_days"])
+    w = np.array([cfg["evidence_weight"][n] for n in EVIDENCE_NAMES])[np.asarray(evidence_level, dtype=int)]
+    return np.asarray(p) * urg * w + cfg["disagreement_bonus"] * np.maximum(0, np.asarray(p) - np.asarray(p_b2))
+
+
+def formula() -> dict:
+    cfg = model_config()["priority"]
+    return {"formula": "score = p_bust * 0.5**((lead_day-1)/H) * evidence_weight + B * max(0, p_bust - p_B2)",
+            "H_days": cfg["urgency_halflife_days"], "B": cfg["disagreement_bonus"],
+            "evidence_weight": cfg["evidence_weight"],
+            "note": "Product triage rule; weights are design choices, not fitted or validated constants."}
