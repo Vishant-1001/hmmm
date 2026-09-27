@@ -157,6 +157,12 @@ def replay(case_id: str):
     return overview(case_id)
 
 
+@app.get("/api/replay/{case_id}/full")
+def replay_full(case_id: str):
+    """Complete blind case (all regions, trajectories, evidence). Contains no verification data."""
+    return {"mode": MODE, **_case(case_id)}
+
+
 @app.get("/api/replay/{case_id}/verification")
 def verification(case_id: str):
     _case(case_id)
