@@ -27,7 +27,7 @@
 
 * **Resolution.** Bandwidth (~1 MB/s) forced the WB2 64×32 (5.625°) member product. Each region
   is one grid box, so "regional RMSE" equals the absolute error of the box-mean Z500 and
-  position/phase signatures are resolved only at the 3×3-box (≈17°) scale. The prompt-level
+  failure signatures are computed over a 7×7-box (≈39°) window; a 3×3 window was tried on dev training data and put 93% of busts in one class (bias-dominated), so it was uninformative. The prompt-level
   5°×5° cell target is approximated by 5.625° boxes.
 * **Sampling.** Every second 4-initialisation chunk was downloaded (~50% of initialisations);
   forecast-evolution features exist only when the cycle 24 h earlier is in the sample (≈ half of

@@ -6,7 +6,7 @@ labels:
   hidden_bust_spread_quantile: 0.25  # documented diagnostic, not a universal constant
   conditioning: [region_id, lead_day, season]
 signature:
-  window: 1            # neighbourhood half-width in grid boxes (3x3 window)
+  window: 3            # half-width in grid boxes: 7x7 window (~39 deg, synoptic wavelength scale)
   dominance: 0.6       # share of MSE needed to call a phase or amplitude signature
 pca:
   n_components: 8

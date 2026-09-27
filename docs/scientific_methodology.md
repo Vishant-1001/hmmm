@@ -102,7 +102,7 @@ decision-support diagnostic, not a new scientific metric.
 
 ## 10. Failure signature (deterministic, project-defined)
 
-Over a 3×3-box window around the region, the exact MSE decomposition
+Over a 7×7-box window (≈39°, the synoptic wavelength scale) around the region, the exact MSE decomposition
 
     MSE = (F̄−Ā)² + (σF−σA)² + 2σFσA(1−r)
 
