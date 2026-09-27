@@ -115,7 +115,8 @@ export function BarRow({ label, value, max = 1, color = "var(--series-1)", fmt }
   );
 }
 
-export function ReliabilityDiagram({ curves }: { curves: { name: string; color: string; bins: { mean_pred: number; obs_freq: number; n: number }[] }[] }) {
+export function ReliabilityDiagram({ curves: raw, minN = 30 }: { curves: { name: string; color: string; bins: { mean_pred: number; obs_freq: number; n: number }[] }[]; minN?: number }) {
+  const curves = raw.map((c) => ({ ...c, bins: c.bins.filter((b) => b.n >= minN) }));
   const S = 260, m = 34;
   const sc = (v: number) => m + v * (S - m - 10);
   const sy = (v: number) => S - m - v * (S - m - 10);
@@ -144,7 +145,7 @@ export function ReliabilityDiagram({ curves }: { curves: { name: string; color: 
       </svg>
       <div className="legend">
         {curves.map((c) => <span key={c.name}><span className="swatch" style={{ background: c.color }} />{c.name}</span>)}
-        <span>dashed = perfect reliability</span>
+        <span>dashed = perfect reliability; bins with fewer than {minN} cases hidden</span>
       </div>
     </div>
   );
