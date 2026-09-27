@@ -15,6 +15,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -26,6 +27,7 @@ MODE = "Historical research replay - precomputed real ECMWF IFS ENS cases; not a
 app = FastAPI(title="Forecast Bust Sentinel API", version="0.1.0",
               description="Regional Day 1-10 forecast-bust probability over existing NWP (SIH26079 research prototype)")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 def _read(path: Path):
@@ -136,7 +138,8 @@ def evidence(case_id: str, region_id: str, lead_day: int | None = None):
     d = r["trajectory"][day - 1]
     return {"region_id": region_id, "lead_day": day, "p_bust": d["p_bust"], "p_spread_baseline": d["p_spread_baseline"],
             "disagreement_pp": d["disagreement_pp"], "evidence_strength": d["evidence"], "support": d["support"],
-            "support_distance": d["support_distance"], **d["explanation"]}
+            "support_distance": d["support_distance"], "attribution_note": _case(case_id).get("attribution_note"),
+            **d["explanation"]}
 
 
 @app.get("/api/forecast/{case_id}/regions/{region_id}/history")

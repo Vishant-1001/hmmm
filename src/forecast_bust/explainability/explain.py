@@ -12,7 +12,7 @@ import pandas as pd
 from forecast_bust.features.build import GROUPS
 
 GROUP_NAMES = {"SPREAD": "Ensemble spread (baseline information)", "ATM": "Atmospheric state",
-               "ENS": "Ensemble behaviour", "PAT": "Large-scale pattern", "EVO": "Forecast evolution",
+               "ENS": "Ensemble behaviour", "REC": "Recent verified error behaviour", "PAT": "Large-scale pattern", "EVO": "Forecast evolution",
                "MEM": "Historical forecast-state memory"}
 FEATURE_LABELS = {
     "spread_m": "Z500 ensemble spread (m)", "spread_pct": "spread percentile vs training (same region/lead/season)",
@@ -34,6 +34,9 @@ FEATURE_LABELS = {
     "an_dist_mean": "mean analogue distance", "an_bust_rate": "analogue bust rate",
     "an_err_med": "analogue median normalized error", "an_err_q90": "analogue 90th pct normalized error",
     "an_n_eligible": "verified historical cases available",
+    "rec_err": "recent verified normalized error, this region (5 d)", "rec_bias": "recent verified mean error, this region (m)",
+    "rec_bust_rate": "recent verified bust fraction, this region", "rec_n": "recent verified cases (5 d)",
+    "rec_err_nbhd": "recent verified normalized error, neighbours", "rec_err_domain": "recent verified normalized error, domain",
 }
 for i in range(1, 21):
     FEATURE_LABELS[f"pc{i}"] = f"pattern PC{i} coordinate"
@@ -113,6 +116,12 @@ def explain_row(row: pd.Series, contrib_row: np.ndarray, features: list[str], re
     else:
         ev.append({"kind": "D. Forecast-evolution evidence",
                    "text": "Previous-cycle forecast for the same valid time not available in the downloaded archive."})
+    if np.isfinite(row.get("rec_err", np.nan)):
+        ev.append({"kind": "C2. Recent verified error behaviour",
+                   "text": f"Over the 5 days before initialisation, verified Day 1-3 forecasts for this region had mean "
+                           f"normalized error {row['rec_err']:.2f} (mean error {row['rec_bias']:+.1f} m; "
+                           f"{100 * row['rec_bust_rate']:.0f}% busts, n = {int(row['rec_n'])}); neighbouring regions "
+                           f"{row['rec_err_nbhd']:.2f}, whole domain {row['rec_err_domain']:.2f}."})
     ev.append({"kind": "E. Baseline disagreement",
                "text": f"Sentinel {100 * p_full:.0f}% vs calibrated spread-only baseline {100 * p_b2:.0f}% "
                        f"({100 * (p_full - p_b2):+.0f} percentage points)."})

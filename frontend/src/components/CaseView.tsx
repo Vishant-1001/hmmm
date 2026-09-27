@@ -173,7 +173,7 @@ export function CaseView({ cases }: { cases: CaseIndexItem[] }) {
               </tbody>
             </table>
           </div>
-          <p className="muted">{d.explanation.attribution_note}</p>
+          <p className="muted">{data.attribution_note}</p>
           <h3>Historical failure signature among similar forecast states</h3>
           {sig.distribution ? (
             <>

@@ -154,3 +154,20 @@ def test_signature_decomposition_is_exact():
     s = failure_signature(f[None], a[None], lats)
     from forecast_bust.verification.metrics import weighted_rmse
     assert np.isclose(s["mse"][0], weighted_rmse(f, a, lats) ** 2)
+
+
+def test_recent_error_features_are_causal():
+    from forecast_bust.analogues.recent import recent_error_features
+    df = _cases()
+    df["bias_m"] = 1.0
+    df["row"], df["col"] = 0, 0
+    a = recent_error_features(df)
+    df2 = df.copy()
+    late = df2["valid_time"] > pd.Timestamp("2018-01-10")
+    df2.loc[late, "norm_error"] += 1000
+    df2.loc[late, "bust"] = 1 - df2.loc[late, "bust"]
+    b = recent_error_features(df2)
+    early = a["init_time"] <= pd.Timestamp("2018-01-10")
+    pd.testing.assert_series_equal(a.loc[early, "rec_err"], b.loc[early, "rec_err"])
+    # the first initialisation has no verified history
+    assert np.isnan(a.loc[a["init_time"] == a["init_time"].min(), "rec_err"]).all()

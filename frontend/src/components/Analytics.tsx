@@ -3,7 +3,7 @@ import { api } from "../api";
 import { BarRow, ReliabilityDiagram } from "./Charts";
 
 const f = (v: number | null | undefined, n = 3) => (v == null || Number.isNaN(v) ? "—" : v.toFixed(n));
-const ORDER = ["B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "FULL"];
+const ORDER = ["B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "M6", "ALL", "FULL"];
 
 export function Analytics() {
   const [m, setM] = useState<any>(null);

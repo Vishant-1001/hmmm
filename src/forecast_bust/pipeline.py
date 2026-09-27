@@ -21,11 +21,14 @@ import numpy as np
 import pandas as pd
 
 from forecast_bust.analogues.memory import compute_memory_features
+from forecast_bust.analogues.recent import recent_error_features
 from forecast_bust.config import clean_json, ARTIFACT_DIR, INTERIM_DIR, MODEL_DIR, REPO_ROOT, data_config, model_config
 from forecast_bust.data.assemble import assemble, load_states, states_path
 from forecast_bust.features.build import GROUPS, add_features
 from forecast_bust.labels.build import build_cases
-from forecast_bust.models.sentinel import DESCRIPTIONS, FEATURE_SETS, B0Climatology, CalibratedGBM
+from forecast_bust.evaluation.metrics import auprc
+from forecast_bust.models.sentinel import (CANDIDATE_GROUPS, DESCRIPTIONS, FEATURE_SETS, B0Climatology, CalibratedGBM,
+                                           full_feature_set)
 from forecast_bust.support.ood import EVIDENCE_LEVELS, SUPPORT_LEVELS, evidence_strength, fit_support, support_distance
 
 log = logging.getLogger(__name__)
@@ -89,6 +92,7 @@ def build_table(reassemble: bool = True) -> pd.DataFrame:
     write_dataset_manifest(ds, cases)
     df = add_features(cases, ds)
     df, meta, _ = compute_memory_features(df)
+    df = recent_error_features(df)
     sup = fit_support(df[df["split"] == "train"])
     dist, lvl = support_distance(df, sup)
     df["support_distance"] = dist
@@ -104,16 +108,29 @@ def train(reassemble: bool = True) -> None:
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     models = {"B0": B0Climatology().fit(tr)}
     fitted = {}
+    val_auprc = {}
     for name, feats in FEATURE_SETS.items():
         m = CalibratedGBM(feats, name).fit(tr, va)
         models[name] = m
-        fitted[name] = {"best_iteration": m.best_iteration, "n_features": len(feats)}
-        log.info("fitted %s (%d features, best_iter %d)", name, len(feats), m.best_iteration)
+        val_auprc[name] = auprc(va["bust"].values, m.predict_raw(va))
+        fitted[name] = {"best_iteration": m.best_iteration, "n_features": len(feats),
+                        "validation_auprc_raw": val_auprc[name]}
+        log.info("fitted %s (%d features, best_iter %d, val AUPRC %.4f)", name, len(feats), m.best_iteration,
+                 val_auprc[name])
+    # Group selection on VALIDATION only: keep a group iff B2+group beats B2 on validation AUPRC
+    selected = [g for m, g in CANDIDATE_GROUPS.items() if val_auprc[m] > val_auprc["B2"]]
+    FEATURE_SETS_RUN = dict(FEATURE_SETS)
+    FEATURE_SETS_RUN["FULL"] = full_feature_set(selected)
+    models["FULL"] = CalibratedGBM(FEATURE_SETS_RUN["FULL"], "FULL").fit(tr, va)
+    val_auprc["FULL"] = auprc(va["bust"].values, models["FULL"].predict_raw(va))
+    fitted["FULL"] = {"best_iteration": models["FULL"].best_iteration, "n_features": len(FEATURE_SETS_RUN["FULL"]),
+                      "validation_auprc_raw": val_auprc["FULL"], "selected_groups": selected}
+    log.info("FULL uses validated groups %s (val AUPRC %.4f)", selected, val_auprc["FULL"])
     # Q95 sensitivity (same protocol, different project-defined criterion)
     tr95, va95 = tr.assign(bust=tr["bust_q95"]), va.assign(bust=va["bust_q95"])
     models["B0_q95"] = B0Climatology().fit(tr95)
     models["B2_q95"] = CalibratedGBM(FEATURE_SETS["B2"], "B2_q95").fit(tr95, va95)
-    models["FULL_q95"] = CalibratedGBM(FEATURE_SETS["FULL"], "FULL_q95").fit(tr95, va95)
+    models["FULL_q95"] = CalibratedGBM(FEATURE_SETS_RUN["FULL"], "FULL_q95").fit(tr95, va95)
     # Frozen-memory sensitivity: memory restricted to train+validation cases
     dff, _, _ = compute_memory_features(df.drop(columns=GROUPS["MEM"]), mode="frozen")
     models["FULL_frozen_memory"] = models["FULL"]  # same model, different memory feature inputs at test time
@@ -125,7 +142,7 @@ def train(reassemble: bool = True) -> None:
     preds = pd.DataFrame({"case_id": rows["case_id"].values})
     preds["p_B0"] = models["B0"].predict(rows)
     preds["s_B1"] = rows["spread_pct"].values
-    for name in FEATURE_SETS:
+    for name in FEATURE_SETS_RUN:
         preds[f"p_{name}"] = models[name].predict(rows)
     preds["p_B0_q95"] = models["B0_q95"].predict(rows)
     preds["p_B2_q95"] = models["B2_q95"].predict(rows)
@@ -147,7 +164,7 @@ def train(reassemble: bool = True) -> None:
         "python": platform.python_version(), "seed": model_config()["seed"],
         "data_config": data_config(), "model_config": model_config(),
         "splits": json.loads(split_counts.to_json(orient="index", date_format="iso")),
-        "feature_groups": GROUPS, "feature_sets": FEATURE_SETS, "descriptions": DESCRIPTIONS,
+        "feature_groups": GROUPS, "feature_sets": FEATURE_SETS_RUN, "selected_groups": selected, "descriptions": DESCRIPTIONS,
         "fitted": fitted, "support_levels": SUPPORT_LEVELS, "evidence_levels": EVIDENCE_LEVELS,
         "protocol": "fit on train (early stopping on validation) -> isotonic calibration on validation -> "
                     "frozen -> single evaluation on test",

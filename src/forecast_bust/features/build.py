@@ -11,6 +11,7 @@ Groups
   PAT    : large-scale pattern  frozen TRAIN-fitted PCA of context-domain Z500 anomaly
   EVO    : forecast evolution   revision vs the cycle 24 h earlier for the same valid time
   MEM    : historical memory    analogue statistics (see forecast_bust.analogues.memory)
+  REC    : recent verified error behaviour of this NWP system (see forecast_bust.analogues.recent)
 """
 from __future__ import annotations
 
@@ -37,8 +38,9 @@ ENS = ["m_iqr", "m_p10p90", "m_skew", "m_sign_agree", "spread_nbhd", "spread_het
 PAT = [f"pc{i + 1}" for i in range(model_config()["pca"]["n_components"])] + ["pc_norm", "pc_resid"]
 EVO = ["rev_region", "rev_nbhd", "rev_pc", "rev_spread", "rev_available"]
 MEM = ["an_n_within", "an_dist1", "an_dist_mean", "an_bust_rate", "an_err_med", "an_err_q90", "an_n_eligible"]
-GROUPS = {"SPREAD": SPREAD, "ATM": ATM, "ENS": ENS, "PAT": PAT, "EVO": EVO, "MEM": MEM}
-FORBIDDEN_INPUTS = ("era5_z500", "era5_rank", "error_m", "norm_error", "bust", "sig_", "era5_anom_m")
+REC = ["rec_err", "rec_bias", "rec_bust_rate", "rec_n", "rec_err_nbhd", "rec_err_domain"]
+GROUPS = {"SPREAD": SPREAD, "ATM": ATM, "ENS": ENS, "PAT": PAT, "EVO": EVO, "MEM": MEM, "REC": REC}
+FORBIDDEN_INPUTS = ("era5_z500", "era5_rank", "error_m", "norm_error", "bust", "sig_", "era5_anom_m", "bias_m")
 
 
 def _grid_fields(ds: xr.Dataset):

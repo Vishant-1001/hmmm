@@ -10,9 +10,8 @@ export interface Driver {
 
 export interface Explanation {
   drivers: Driver[];
-  groups: Record<string, { name: string; contribution_logodds: number }>;
+  groups: Record<string, number>;
   evidence: { kind: string; text: string }[];
-  attribution_note: string;
 }
 
 export interface Analogue {
@@ -89,6 +88,7 @@ export interface ForecastCase {
   alert_threshold: { p_bust: number; definition: string };
   priority_formula: Record<string, unknown>;
   priority_queue: QueueItem[];
+  attribution_note: string;
   regions: Region[];
   fields: { lead_days: number[]; lats: number[]; lons: number[]; ens_mean_z500: number[][][]; ens_spread_z500: number[][][] };
 }

@@ -6,14 +6,14 @@ const day = (d: number, p: number) => ({
   p_climatology: 0.1, disagreement_pp: 100 * (p - 0.1), spread_m: 10, spread_pct: 0.3, alert: p > 0.3,
   support: "NORMAL SUPPORT", support_distance: 1, evidence: "MODERATE EVIDENCE", analogues_within_radius: 20,
   verified_cases_available: 100, analogue_bust_rate: 0.2, priority_score: p,
-  explanation: { drivers: [], groups: {}, evidence: [{ kind: "C. Historical evidence", text: "FIXTURE evidence" }], attribution_note: "fixture" },
+  explanation: { drivers: [], groups: {}, evidence: [{ kind: "C. Historical evidence", text: "FIXTURE evidence" }] },
   analogues: [], historical_failure_signature: { basis: "none", n: 0, distribution: null },
 });
 
 export const fixtureCase: ForecastCase = {
   case_id: "2022010100", init_time: "2022-01-01T00:00:00", mode: "TEST FIXTURE", data_source: "TEST FIXTURE",
   selection: "random", selection_note: "TEST FIXTURE", alert_threshold: { p_bust: 0.3, definition: "fixture" },
-  priority_formula: { formula: "fixture" },
+  priority_formula: { formula: "fixture" }, attribution_note: "fixture",
   priority_queue: [{ region_id: "R0000", lead_day: 3, score: 1, p_bust: 0.6, p_spread_baseline: 0.1, disagreement_pp: 50,
     evidence: "MODERATE EVIDENCE", analogues_within_radius: 20, support: "NORMAL SUPPORT" }],
   regions: [{ region_id: "R0000", name: "Fixture", lat: 0, lon: 62, lat_bounds: [-2.8, 2.8], lon_bounds: [59, 64.7],

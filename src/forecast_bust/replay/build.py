@@ -153,6 +153,12 @@ def build() -> None:
                                       "signature": a["sig_class"] if int(a["bust"]) else None})
             exp = expected_signature(nb[0] if nb else None, table)
             ex = explain_row(row, contrib[k], full.features, ref, float(row["p_FULL"]), float(row["p_B2"]), base_rate)
+            attribution_note = ex.pop("attribution_note")
+            for dr in ex["drivers"]:
+                dr["value"] = _r(dr["value"], 3)
+                dr["train_percentile"] = _r(dr["train_percentile"], 1)
+                dr["contribution_logodds"] = _r(dr["contribution_logodds"], 3)
+            ex["groups"] = {g: _r(v["contribution_logodds"], 3) for g, v in ex["groups"].items()}
             ev = EVIDENCE_NAMES[int(row["evidence_level"])]
             day = {
                 "lead_day": int(row["lead_day"]), "valid_time": str(row["valid_time"]),
@@ -193,7 +199,7 @@ def build() -> None:
             "split": "test", "selection": c["selection"], "selection_note": c["selection_note"],
             "alert_threshold": {"p_bust": thr, "definition": "FULL model probability giving 10% false-alarm rate "
                                                               "on VALIDATION (product threshold)"},
-            "priority_formula": formula(), "priority_queue": queue, "regions": reg_out, "fields": fields,
+            "priority_formula": formula(), "priority_queue": queue, "attribution_note": attribution_note, "regions": reg_out, "fields": fields,
             "blind": True,
         }
         verif_regions = []

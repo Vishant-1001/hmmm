@@ -18,12 +18,12 @@ support:
   quantiles: [0.90, 0.975, 0.995]   # training distances -> NORMAL / MODERATE / WEAK / INSUFFICIENT
 xgboost:
   n_estimators: 2000
-  learning_rate: 0.05
-  max_depth: 5
-  min_child_weight: 20
+  learning_rate: 0.03
+  max_depth: 3
+  min_child_weight: 200
   subsample: 0.8
-  colsample_bytree: 0.8
-  reg_lambda: 1.0
+  colsample_bytree: 0.5
+  reg_lambda: 10.0
   tree_method: hist
   early_stopping_rounds: 100
   eval_metric: aucpr

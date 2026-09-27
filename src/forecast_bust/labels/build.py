@@ -53,6 +53,7 @@ def base_table(ds: xr.Dataset) -> pd.DataFrame:
         li, oi = region_members(r, lat, lon)
         sl = (slice(None), slice(None), oi[:, None], li[None, :])
         err = weighted_rmse(fm[sl], ob[sl], lat[li], lat_spacing=dlat)
+        bias = (fm[sl] - ob[sl]).mean(axis=(-2, -1))
         spread = np.sqrt(np.mean(fs[sl] ** 2, axis=(-2, -1)))
         o_anom = (ob[sl] - cl[sl]).mean(axis=(-2, -1))
         # neighbourhood window for the failure signature (verification-time quantity)
@@ -64,7 +65,7 @@ def base_table(ds: xr.Dataset) -> pd.DataFrame:
             "lead_hours": np.tile(leads, n_i),
             "valid_time": vt.ravel(),
             "region_id": r.region_id, "row": r.row, "col": r.col, "lat": r.lat, "lon": r.lon,
-            "error_m": err.ravel(), "spread_m": spread.ravel(), "era5_anom_m": o_anom.ravel(),
+            "error_m": err.ravel(), "bias_m": bias.ravel(), "spread_m": spread.ravel(), "era5_anom_m": o_anom.ravel(),
             "sig_class": sig["cls"].ravel(), "sig_phase_share": sig["phase_share"].ravel(),
             "sig_amp_share": sig["amp_share"].ravel(), "sig_bias_m": sig["bias"].ravel(),
             "sig_corr": sig["corr"].ravel(),

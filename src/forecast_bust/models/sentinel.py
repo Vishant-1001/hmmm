@@ -18,22 +18,35 @@ from forecast_bust.features.build import GROUPS
 
 GROUP = ["region_id", "lead_day", "season"]
 
-FEATURE_SETS = {
-    "B2": GROUPS["SPREAD"],
-    "M1": GROUPS["SPREAD"] + GROUPS["ATM"],
-    "M2": GROUPS["SPREAD"] + GROUPS["ENS"],
-    "M3": GROUPS["SPREAD"] + GROUPS["PAT"],
-    "M4": GROUPS["SPREAD"] + GROUPS["EVO"],
-    "M5": GROUPS["SPREAD"] + GROUPS["MEM"],
-    "FULL": GROUPS["SPREAD"] + GROUPS["ATM"] + GROUPS["ENS"] + GROUPS["PAT"] + GROUPS["EVO"] + GROUPS["MEM"],
-}
+# Monotone-in-time counts (memory size) act as hidden timestamps; they are shown as evidence
+# but never used as model inputs (decided on the dev split, see docs/leakage_controls.md).
+NON_MODEL_FEATURES = {"an_n_eligible", "an_n_within", "rec_n"}
+
+
+def _g(name: str) -> list[str]:
+    return [f for f in GROUPS[name] if f not in NON_MODEL_FEATURES]
+
+
+CANDIDATE_GROUPS = {"M1": "ATM", "M2": "ENS", "M3": "PAT", "M4": "EVO", "M5": "MEM", "M6": "REC"}
+FEATURE_SETS = {"B2": _g("SPREAD")}
+FEATURE_SETS.update({m: _g("SPREAD") + _g(g) for m, g in CANDIDATE_GROUPS.items()})
+FEATURE_SETS["ALL"] = _g("SPREAD") + sum((_g(g) for g in CANDIDATE_GROUPS.values()), [])
+
+
+def full_feature_set(selected_groups: list[str]) -> list[str]:
+    """FULL = B2 inputs + feature groups validated on the VALIDATION split."""
+    return _g("SPREAD") + sum((_g(g) for g in selected_groups), [])
+
+
 DESCRIPTIONS = {
     "B0": "Climatological bust frequency (TRAIN, per region x lead x season)",
     "B1": "Raw ensemble-spread score (spread percentile; ranking score, not a probability)",
-    "B2": "Calibrated spread-only gradient-boosted model (spread, spread percentile, lead, region, season)",
+    "B2": "Calibrated spread-only gradient-boosted model (spread, spread percentile, lead, region, season, init hour)",
     "M1": "B2 + atmospheric state", "M2": "B2 + ensemble behaviour", "M3": "B2 + large-scale pattern (PCA)",
-    "M4": "B2 + forecast evolution", "M5": "B2 + historical forecast-state memory",
-    "FULL": "Sentinel: all feature groups",
+    "M4": "B2 + forecast evolution", "M5": "B2 + historical forecast-state memory (analogues)",
+    "M6": "B2 + recent verified forecast-error behaviour",
+    "ALL": "B2 + every feature group (no validation-based selection)",
+    "FULL": "Sentinel: B2 inputs + feature groups that improved VALIDATION AUPRC over B2",
 }
 
 

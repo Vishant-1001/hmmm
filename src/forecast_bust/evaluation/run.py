@@ -19,7 +19,7 @@ from forecast_bust.models.sentinel import DESCRIPTIONS, FEATURE_SETS
 from forecast_bust.pipeline import PRED, TABLE
 
 log = logging.getLogger(__name__)
-MODELS = ["B0", "B1"] + list(FEATURE_SETS)
+MODELS = ["B0", "B1"] + list(FEATURE_SETS) + ["FULL"]
 
 
 def _score_col(name: str) -> str:
@@ -91,9 +91,10 @@ def evaluate() -> dict:
         by_evidence.append({"evidence": ev_names[int(lv)], "n": int(len(g)), "bust_rate": float(g["bust"].mean()),
                             "mean_p_FULL": float(g["p_FULL"].mean()),
                             "auprc_FULL": M.auprc(g["bust"].values, g["p_FULL"].values)})
+    full = pd.read_parquet(TABLE, columns=["init_time", "split", "bust"])
     split_info = {s: {"inits": int(g["init_time"].nunique()), "rows": int(len(g)),
                       "first_init": str(g["init_time"].min()), "last_init": str(g["init_time"].max()),
-                      "bust_rate": float(g["bust"].mean())} for s, g in df.groupby("split")}
+                      "bust_rate": float(g["bust"].mean())} for s, g in full.groupby("split")}
     out = {
         "dataset": {"source": data_config()["source"]["name"], "forecast_store": data_config()["source"]["forecast_store"],
                     "reference": "ERA5 (WeatherBench 2) - verification reference analysis, not perfect truth",
@@ -106,6 +107,7 @@ def evaluate() -> dict:
                                        "excludes 0 AND relative gain >= 5% (rule fixed before test evaluation)",
                        "material_improvement": bool(material)},
         "by_lead_day": by_lead, "by_season": by_season,
+        "selected_groups": json.loads((ARTIFACT_DIR / "experiment_manifest.json").read_text())["selected_groups"],
         "q95_sensitivity": q95, "frozen_memory_sensitivity": frozen, "by_evidence_level": by_evidence,
     }
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
@@ -119,7 +121,7 @@ def evaluate() -> dict:
     (ARTIFACT_DIR / "spread_skill.json").write_text(json.dumps(clean_json(spread_skill(te)), indent=1))
     models = joblib.load(MODEL_DIR / "models.joblib")
     (ARTIFACT_DIR / "feature_importance.json").write_text(json.dumps(clean_json(
-        {n: models[n].importance() for n in FEATURE_SETS}), indent=1))
+        {n: models[n].importance() for n in list(FEATURE_SETS) + ["FULL"]}), indent=1))
     keep = ["case_id", "init_time", "valid_time", "region_id", "lead_day", "season", "error_m", "norm_error",
             "bust", "hidden_bust", "spread_m", "p_B0", "p_B2", "p_FULL", "evidence_level", "support_level"]
     te[keep].to_parquet(ARTIFACT_DIR / "predictions_test.parquet", index=False)
