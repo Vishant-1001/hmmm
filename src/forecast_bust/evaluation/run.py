@@ -122,6 +122,7 @@ def evaluate() -> dict:
     models = joblib.load(MODEL_DIR / "models.joblib")
     (ARTIFACT_DIR / "feature_importance.json").write_text(json.dumps(clean_json(
         {n: models[n].importance() for n in list(FEATURE_SETS) + ["FULL"]}), indent=1))
+    (ARTIFACT_DIR / "feature_diagnostics.json").write_text(json.dumps(clean_json(feature_diagnostics()), indent=1))
     keep = ["case_id", "init_time", "valid_time", "region_id", "lead_day", "season", "error_m", "norm_error",
             "bust", "hidden_bust", "spread_m", "p_B0", "p_B2", "p_FULL", "evidence_level", "support_level"]
     te[keep].to_parquet(ARTIFACT_DIR / "predictions_test.parquet", index=False)
@@ -149,3 +150,21 @@ def spread_skill(te: pd.DataFrame) -> dict:
         hist[int(h) // 24] = counts.tolist()
     return {"split": "test", "n_members": n_mem, "per_lead": rows, "rank_histogram_by_lead_day": hist,
             "note": "spread-skill ratio uses the (M+1)/M finite-ensemble correction; diagnostics only"}
+
+
+def feature_diagnostics() -> dict:
+    """Univariate ROC AUC of each model input vs the bust label on TRAIN and VALIDATION rows
+    (never test). Values < 0.5 mean higher values go with fewer busts. Used to diagnose
+    whether information beyond spread exists and whether relationships transfer across periods."""
+    from forecast_bust.models.sentinel import FEATURE_SETS as FS
+    feats = FS["ALL"]
+    df = pd.read_parquet(TABLE, columns=feats + ["split", "bust"])
+    out = {}
+    for f in feats:
+        r = {}
+        for s in ("train", "validation"):
+            g = df[(df["split"] == s) & df[f].notna()]
+            r[s] = M.roc_auc(g["bust"].values, g[f].values) if len(g) > 100 else None
+            r[f"n_{s}"] = int(len(g))
+        out[f] = r
+    return {"note": "univariate ROC AUC vs bust; train and validation only", "features": out}
