@@ -1,0 +1,31 @@
+# Data configuration. All sources verified against the public WeatherBench 2 bucket on 2026-09-28.
+source:
+  name: ECMWF IFS ENS (via WeatherBench 2)
+  forecast_store: gs://weatherbench2/datasets/ifs_ens/2018-2022-64x32_equiangular_conservative.zarr
+  reference_store: gs://weatherbench2/datasets/era5/1959-2023_01_10-6h-64x32_equiangular_conservative.zarr
+  climatology_store: gs://weatherbench2/datasets/era5-hourly-climatology/1990-2017_6h_64x32_equiangular_conservative.zarr
+  storage_options: {token: anon}
+  grid: 64x32 equiangular conservative (5.625 deg)
+variable: geopotential
+levels: [500, 700, 850]
+target_level: 500
+# Day 1..10 = +24h..+240h
+lead_hours: [24, 48, 72, 96, 120, 144, 168, 192, 216, 240]
+# Target domain (regions = native 5.625 deg grid boxes whose centres fall inside)
+target_domain: {lat_min: -5.0, lat_max: 40.0, lon_min: 60.0, lon_max: 105.0}
+# Wider atmospheric context cached for pattern features
+context_domain: {lat_min: -31.0, lat_max: 65.0, lon_min: 22.0, lon_max: 147.0}
+# The forecast store is chunked 4 initialisations per chunk (00/12 UTC on two days).
+# Every `block_stride`-th chunk is downloaded (bandwidth constraint, ~1 MB/s link).
+block_stride: 2
+init_chunk_size: 4
+cache_dir: data/cache
+split:
+  train: ["2018-01-01", "2020-12-31T23:59"]
+  validation: ["2021-01-01", "2021-12-31T23:59"]
+  test: ["2022-01-01", "2022-12-31T23:59"]
+seasons:  # India-relevant seasons
+  JF: [1, 2]
+  MAM: [3, 4, 5]
+  JJAS: [6, 7, 8, 9]
+  OND: [10, 11, 12]

@@ -1,0 +1,657 @@
+{
+  "gate": "GATE 1 real-data smoke test",
+  "passed": true,
+  "run_at": "2026-09-27T21:04:58.271581+00:00",
+  "forecast_store": "gs://weatherbench2/datasets/ifs_ens/2018-2022-64x32_equiangular_conservative.zarr",
+  "reference_store": "gs://weatherbench2/datasets/era5/1959-2023_01_10-6h-64x32_equiangular_conservative.zarr",
+  "init_time": "2018-01-01T00:00:00.000000000",
+  "lead_hours": 72,
+  "valid_time": "2018-01-04T00:00:00.000000000",
+  "variable": "Z500 (geopotential/9.80665, m)",
+  "n_members": 50,
+  "n_regions": 64,
+  "domain_rmse_m": 5.897178244745937,
+  "domain_mean_spread_m": 4.261486053466797,
+  "regions": [
+    {
+      "region_id": "R0000",
+      "name": "Equatorial Indian Ocean",
+      "lat": -2.8125,
+      "lon": 61.875,
+      "ens_mean_z500_m": 5847.21337890625,
+      "ens_spread_z500_m": 2.3747832775115967,
+      "era5_z500_m": 5848.72265625,
+      "rmse_m": 1.50927734375
+    },
+    {
+      "region_id": "R0001",
+      "name": "Equatorial Indian Ocean",
+      "lat": -2.8125,
+      "lon": 67.5,
+      "ens_mean_z500_m": 5845.1171875,
+      "ens_spread_z500_m": 2.971176862716675,
+      "era5_z500_m": 5848.27734375,
+      "rmse_m": 3.16015625
+    },
+    {
+      "region_id": "R0002",
+      "name": "Equatorial Indian Ocean",
+      "lat": -2.8125,
+      "lon": 73.125,
+      "ens_mean_z500_m": 5841.28173828125,
+      "ens_spread_z500_m": 3.250972270965576,
+      "era5_z500_m": 5842.69189453125,
+      "rmse_m": 1.41015625
+    },
+    {
+      "region_id": "R0003",
+      "name": "Equatorial Indian Ocean",
+      "lat": -2.8125,
+      "lon": 78.75,
+      "ens_mean_z500_m": 5840.927734375,
+      "ens_spread_z500_m": 2.752192497253418,
+      "era5_z500_m": 5838.01123046875,
+      "rmse_m": 2.91650390625
+    },
+    {
+      "region_id": "R0004",
+      "name": "Equatorial Indian Ocean",
+      "lat": -2.8125,
+      "lon": 84.375,
+      "ens_mean_z500_m": 5843.3154296875,
+      "ens_spread_z500_m": 2.771028518676758,
+      "era5_z500_m": 5834.12744140625,
+      "rmse_m": 9.18798828125
+    },
+    {
+      "region_id": "R0005",
+      "name": "Equatorial Indian Ocean",
+      "lat": -2.8125,
+      "lon": 90.0,
+      "ens_mean_z500_m": 5845.10791015625,
+      "ens_spread_z500_m": 2.1958765983581543,
+      "era5_z500_m": 5835.40234375,
+      "rmse_m": 9.70556640625
+    },
+    {
+      "region_id": "R0006",
+      "name": "Equatorial Indian Ocean",
+      "lat": -2.8125,
+      "lon": 95.625,
+      "ens_mean_z500_m": 5848.7841796875,
+      "ens_spread_z500_m": 2.440293788909912,
+      "era5_z500_m": 5842.3671875,
+      "rmse_m": 6.4169921875
+    },
+    {
+      "region_id": "R0007",
+      "name": "Surrounding region",
+      "lat": -2.8125,
+      "lon": 101.25,
+      "ens_mean_z500_m": 5855.65087890625,
+      "ens_spread_z500_m": 3.0734739303588867,
+      "era5_z500_m": 5852.62060546875,
+      "rmse_m": 3.0302734375
+    },
+    {
+      "region_id": "R0100",
+      "name": "Equatorial Indian Ocean",
+      "lat": 2.8125,
+      "lon": 61.875,
+      "ens_mean_z500_m": 5843.04931640625,
+      "ens_spread_z500_m": 3.1812188625335693,
+      "era5_z500_m": 5847.40576171875,
+      "rmse_m": 4.3564453125
+    },
+    {
+      "region_id": "R0101",
+      "name": "Equatorial Indian Ocean",
+      "lat": 2.8125,
+      "lon": 67.5,
+      "ens_mean_z500_m": 5842.18115234375,
+      "ens_spread_z500_m": 3.3352458477020264,
+      "era5_z500_m": 5847.2685546875,
+      "rmse_m": 5.08740234375
+    },
+    {
+      "region_id": "R0102",
+      "name": "Equatorial Indian Ocean",
+      "lat": 2.8125,
+      "lon": 73.125,
+      "ens_mean_z500_m": 5840.79638671875,
+      "ens_spread_z500_m": 3.0690677165985107,
+      "era5_z500_m": 5842.95263671875,
+      "rmse_m": 2.15625
+    },
+    {
+      "region_id": "R0103",
+      "name": "Equatorial Indian Ocean",
+      "lat": 2.8125,
+      "lon": 78.75,
+      "ens_mean_z500_m": 5839.7431640625,
+      "ens_spread_z500_m": 3.145115852355957,
+      "era5_z500_m": 5841.0712890625,
+      "rmse_m": 1.328125
+    },
+    {
+      "region_id": "R0104",
+      "name": "Equatorial Indian Ocean",
+      "lat": 2.8125,
+      "lon": 84.375,
+      "ens_mean_z500_m": 5840.97119140625,
+      "ens_spread_z500_m": 3.038118839263916,
+      "era5_z500_m": 5836.4404296875,
+      "rmse_m": 4.53076171875
+    },
+    {
+      "region_id": "R0105",
+      "name": "Equatorial Indian Ocean",
+      "lat": 2.8125,
+      "lon": 90.0,
+      "ens_mean_z500_m": 5843.29638671875,
+      "ens_spread_z500_m": 2.3334319591522217,
+      "era5_z500_m": 5836.5595703125,
+      "rmse_m": 6.73681640625
+    },
+    {
+      "region_id": "R0106",
+      "name": "Equatorial Indian Ocean",
+      "lat": 2.8125,
+      "lon": 95.625,
+      "ens_mean_z500_m": 5846.16845703125,
+      "ens_spread_z500_m": 2.5488669872283936,
+      "era5_z500_m": 5842.68017578125,
+      "rmse_m": 3.4882812499999996
+    },
+    {
+      "region_id": "R0107",
+      "name": "Surrounding region",
+      "lat": 2.8125,
+      "lon": 101.25,
+      "ens_mean_z500_m": 5850.978515625,
+      "ens_spread_z500_m": 2.5236904621124268,
+      "era5_z500_m": 5848.5625,
+      "rmse_m": 2.416015625
+    },
+    {
+      "region_id": "R0200",
+      "name": "Arabian Sea",
+      "lat": 8.4375,
+      "lon": 61.875,
+      "ens_mean_z500_m": 5844.708984375,
+      "ens_spread_z500_m": 3.1150388717651367,
+      "era5_z500_m": 5847.42578125,
+      "rmse_m": 2.716796875
+    },
+    {
+      "region_id": "R0201",
+      "name": "Arabian Sea",
+      "lat": 8.4375,
+      "lon": 67.5,
+      "ens_mean_z500_m": 5842.44873046875,
+      "ens_spread_z500_m": 3.114503860473633,
+      "era5_z500_m": 5846.1806640625,
+      "rmse_m": 3.73193359375
+    },
+    {
+      "region_id": "R0202",
+      "name": "South Indian Peninsula",
+      "lat": 8.4375,
+      "lon": 73.125,
+      "ens_mean_z500_m": 5839.822265625,
+      "ens_spread_z500_m": 3.2607946395874023,
+      "era5_z500_m": 5841.12841796875,
+      "rmse_m": 1.30615234375
+    },
+    {
+      "region_id": "R0203",
+      "name": "South Indian Peninsula",
+      "lat": 8.4375,
+      "lon": 78.75,
+      "ens_mean_z500_m": 5836.8876953125,
+      "ens_spread_z500_m": 3.5384573936462402,
+      "era5_z500_m": 5838.30078125,
+      "rmse_m": 1.4130859375
+    },
+    {
+      "region_id": "R0204",
+      "name": "Bay of Bengal",
+      "lat": 8.4375,
+      "lon": 84.375,
+      "ens_mean_z500_m": 5836.07275390625,
+      "ens_spread_z500_m": 2.8457579612731934,
+      "era5_z500_m": 5831.548828125,
+      "rmse_m": 4.52392578125
+    },
+    {
+      "region_id": "R0205",
+      "name": "Bay of Bengal",
+      "lat": 8.4375,
+      "lon": 90.0,
+      "ens_mean_z500_m": 5841.81689453125,
+      "ens_spread_z500_m": 2.3585317134857178,
+      "era5_z500_m": 5833.34228515625,
+      "rmse_m": 8.474609375
+    },
+    {
+      "region_id": "R0206",
+      "name": "Surrounding region",
+      "lat": 8.4375,
+      "lon": 95.625,
+      "ens_mean_z500_m": 5846.77880859375,
+      "ens_spread_z500_m": 2.547112226486206,
+      "era5_z500_m": 5842.84033203125,
+      "rmse_m": 3.9384765625
+    },
+    {
+      "region_id": "R0207",
+      "name": "Surrounding region",
+      "lat": 8.4375,
+      "lon": 101.25,
+      "ens_mean_z500_m": 5852.6337890625,
+      "ens_spread_z500_m": 2.339057207107544,
+      "era5_z500_m": 5850.8916015625,
+      "rmse_m": 1.7421875
+    },
+    {
+      "region_id": "R0300",
+      "name": "Arabian Sea",
+      "lat": 14.0625,
+      "lon": 61.875,
+      "ens_mean_z500_m": 5847.22021484375,
+      "ens_spread_z500_m": 3.1038482189178467,
+      "era5_z500_m": 5845.138671875,
+      "rmse_m": 2.08154296875
+    },
+    {
+      "region_id": "R0301",
+      "name": "Arabian Sea",
+      "lat": 14.0625,
+      "lon": 67.5,
+      "ens_mean_z500_m": 5844.5927734375,
+      "ens_spread_z500_m": 3.1340556144714355,
+      "era5_z500_m": 5841.65966796875,
+      "rmse_m": 2.93310546875
+    },
+    {
+      "region_id": "R0302",
+      "name": "South Indian Peninsula",
+      "lat": 14.0625,
+      "lon": 73.125,
+      "ens_mean_z500_m": 5840.59716796875,
+      "ens_spread_z500_m": 2.9375197887420654,
+      "era5_z500_m": 5836.46240234375,
+      "rmse_m": 4.134765625
+    },
+    {
+      "region_id": "R0303",
+      "name": "South Indian Peninsula",
+      "lat": 14.0625,
+      "lon": 78.75,
+      "ens_mean_z500_m": 5836.7255859375,
+      "ens_spread_z500_m": 2.8603477478027344,
+      "era5_z500_m": 5830.20361328125,
+      "rmse_m": 6.52197265625
+    },
+    {
+      "region_id": "R0304",
+      "name": "Bay of Bengal",
+      "lat": 14.0625,
+      "lon": 84.375,
+      "ens_mean_z500_m": 5833.75048828125,
+      "ens_spread_z500_m": 3.067471742630005,
+      "era5_z500_m": 5824.73681640625,
+      "rmse_m": 9.013671875
+    },
+    {
+      "region_id": "R0305",
+      "name": "Bay of Bengal",
+      "lat": 14.0625,
+      "lon": 90.0,
+      "ens_mean_z500_m": 5836.85791015625,
+      "ens_spread_z500_m": 2.80995774269104,
+      "era5_z500_m": 5828.791015625,
+      "rmse_m": 8.06689453125
+    },
+    {
+      "region_id": "R0306",
+      "name": "Myanmar / Indochina",
+      "lat": 14.0625,
+      "lon": 95.625,
+      "ens_mean_z500_m": 5844.12158203125,
+      "ens_spread_z500_m": 2.6282670497894287,
+      "era5_z500_m": 5840.56689453125,
+      "rmse_m": 3.5546875
+    },
+    {
+      "region_id": "R0307",
+      "name": "Myanmar / Indochina",
+      "lat": 14.0625,
+      "lon": 101.25,
+      "ens_mean_z500_m": 5855.681640625,
+      "ens_spread_z500_m": 2.7728700637817383,
+      "era5_z500_m": 5854.98486328125,
+      "rmse_m": 0.69677734375
+    },
+    {
+      "region_id": "R0400",
+      "name": "Arabian Sea",
+      "lat": 19.6875,
+      "lon": 61.875,
+      "ens_mean_z500_m": 5828.3486328125,
+      "ens_spread_z500_m": 3.911512851715088,
+      "era5_z500_m": 5823.64892578125,
+      "rmse_m": 4.69970703125
+    },
+    {
+      "region_id": "R0401",
+      "name": "Arabian Sea",
+      "lat": 19.6875,
+      "lon": 67.5,
+      "ens_mean_z500_m": 5824.912109375,
+      "ens_spread_z500_m": 3.9864001274108887,
+      "era5_z500_m": 5818.728515625,
+      "rmse_m": 6.18359375
+    },
+    {
+      "region_id": "R0402",
+      "name": "Central India",
+      "lat": 19.6875,
+      "lon": 73.125,
+      "ens_mean_z500_m": 5820.05517578125,
+      "ens_spread_z500_m": 3.4458937644958496,
+      "era5_z500_m": 5812.55859375,
+      "rmse_m": 7.496582031250001
+    },
+    {
+      "region_id": "R0403",
+      "name": "Central India",
+      "lat": 19.6875,
+      "lon": 78.75,
+      "ens_mean_z500_m": 5812.6767578125,
+      "ens_spread_z500_m": 3.1037650108337402,
+      "era5_z500_m": 5804.3876953125,
+      "rmse_m": 8.2890625
+    },
+    {
+      "region_id": "R0404",
+      "name": "Bay of Bengal",
+      "lat": 19.6875,
+      "lon": 84.375,
+      "ens_mean_z500_m": 5807.1142578125,
+      "ens_spread_z500_m": 3.2290751934051514,
+      "era5_z500_m": 5797.7607421875,
+      "rmse_m": 9.353515625
+    },
+    {
+      "region_id": "R0405",
+      "name": "Bay of Bengal",
+      "lat": 19.6875,
+      "lon": 90.0,
+      "ens_mean_z500_m": 5806.9287109375,
+      "ens_spread_z500_m": 3.1748571395874023,
+      "era5_z500_m": 5800.2138671875,
+      "rmse_m": 6.71484375
+    },
+    {
+      "region_id": "R0406",
+      "name": "Myanmar / Indochina",
+      "lat": 19.6875,
+      "lon": 95.625,
+      "ens_mean_z500_m": 5809.595703125,
+      "ens_spread_z500_m": 3.6285390853881836,
+      "era5_z500_m": 5808.490234375,
+      "rmse_m": 1.10546875
+    },
+    {
+      "region_id": "R0407",
+      "name": "Myanmar / Indochina",
+      "lat": 19.6875,
+      "lon": 101.25,
+      "ens_mean_z500_m": 5824.94287109375,
+      "ens_spread_z500_m": 3.488027811050415,
+      "era5_z500_m": 5826.19775390625,
+      "rmse_m": 1.2548828125
+    },
+    {
+      "region_id": "R0500",
+      "name": "Northwest India / Pakistan",
+      "lat": 25.3125,
+      "lon": 61.875,
+      "ens_mean_z500_m": 5760.6513671875,
+      "ens_spread_z500_m": 5.635010242462158,
+      "era5_z500_m": 5756.951171875,
+      "rmse_m": 3.7001953125
+    },
+    {
+      "region_id": "R0501",
+      "name": "Northwest India / Pakistan",
+      "lat": 25.3125,
+      "lon": 67.5,
+      "ens_mean_z500_m": 5757.00390625,
+      "ens_spread_z500_m": 5.504665851593018,
+      "era5_z500_m": 5746.8798828125,
+      "rmse_m": 10.1240234375
+    },
+    {
+      "region_id": "R0502",
+      "name": "Central India",
+      "lat": 25.3125,
+      "lon": 73.125,
+      "ens_mean_z500_m": 5761.9013671875,
+      "ens_spread_z500_m": 4.820589542388916,
+      "era5_z500_m": 5750.35693359375,
+      "rmse_m": 11.54443359375
+    },
+    {
+      "region_id": "R0503",
+      "name": "Central India",
+      "lat": 25.3125,
+      "lon": 78.75,
+      "ens_mean_z500_m": 5756.9990234375,
+      "ens_spread_z500_m": 4.506906986236572,
+      "era5_z500_m": 5747.30810546875,
+      "rmse_m": 9.69091796875
+    },
+    {
+      "region_id": "R0504",
+      "name": "Central India",
+      "lat": 25.3125,
+      "lon": 84.375,
+      "ens_mean_z500_m": 5744.427734375,
+      "ens_spread_z500_m": 5.186374187469482,
+      "era5_z500_m": 5735.26123046875,
+      "rmse_m": 9.16650390625
+    },
+    {
+      "region_id": "R0505",
+      "name": "Northeast India / Bangladesh",
+      "lat": 25.3125,
+      "lon": 90.0,
+      "ens_mean_z500_m": 5730.361328125,
+      "ens_spread_z500_m": 5.309657096862793,
+      "era5_z500_m": 5723.470703125,
+      "rmse_m": 6.890625000000001
+    },
+    {
+      "region_id": "R0506",
+      "name": "Northeast India / Bangladesh",
+      "lat": 25.3125,
+      "lon": 95.625,
+      "ens_mean_z500_m": 5723.0322265625,
+      "ens_spread_z500_m": 5.256331920623779,
+      "era5_z500_m": 5721.5107421875,
+      "rmse_m": 1.521484375
+    },
+    {
+      "region_id": "R0507",
+      "name": "Myanmar / Indochina",
+      "lat": 25.3125,
+      "lon": 101.25,
+      "ens_mean_z500_m": 5722.34326171875,
+      "ens_spread_z500_m": 6.681539535522461,
+      "era5_z500_m": 5722.58203125,
+      "rmse_m": 0.23876953125
+    },
+    {
+      "region_id": "R0600",
+      "name": "Northwest India / Pakistan",
+      "lat": 30.9375,
+      "lon": 61.875,
+      "ens_mean_z500_m": 5644.80419921875,
+      "ens_spread_z500_m": 10.810718536376953,
+      "era5_z500_m": 5637.79833984375,
+      "rmse_m": 7.005859375
+    },
+    {
+      "region_id": "R0601",
+      "name": "Northwest India / Pakistan",
+      "lat": 30.9375,
+      "lon": 67.5,
+      "ens_mean_z500_m": 5643.05029296875,
+      "ens_spread_z500_m": 8.148086547851562,
+      "era5_z500_m": 5632.2587890625,
+      "rmse_m": 10.79150390625
+    },
+    {
+      "region_id": "R0602",
+      "name": "Northwest India / Pakistan",
+      "lat": 30.9375,
+      "lon": 73.125,
+      "ens_mean_z500_m": 5670.42626953125,
+      "ens_spread_z500_m": 5.7320451736450195,
+      "era5_z500_m": 5660.00439453125,
+      "rmse_m": 10.421875
+    },
+    {
+      "region_id": "R0603",
+      "name": "Himalaya / Tibetan Plateau",
+      "lat": 30.9375,
+      "lon": 78.75,
+      "ens_mean_z500_m": 5678.06005859375,
+      "ens_spread_z500_m": 5.896039962768555,
+      "era5_z500_m": 5667.5927734375,
+      "rmse_m": 10.46728515625
+    },
+    {
+      "region_id": "R0604",
+      "name": "Himalaya / Tibetan Plateau",
+      "lat": 30.9375,
+      "lon": 84.375,
+      "ens_mean_z500_m": 5662.150390625,
+      "ens_spread_z500_m": 6.994622707366943,
+      "era5_z500_m": 5652.28173828125,
+      "rmse_m": 9.86865234375
+    },
+    {
+      "region_id": "R0605",
+      "name": "Himalaya / Tibetan Plateau",
+      "lat": 30.9375,
+      "lon": 90.0,
+      "ens_mean_z500_m": 5652.7216796875,
+      "ens_spread_z500_m": 7.239184379577637,
+      "era5_z500_m": 5647.36572265625,
+      "rmse_m": 5.35595703125
+    },
+    {
+      "region_id": "R0606",
+      "name": "Himalaya / Tibetan Plateau",
+      "lat": 30.9375,
+      "lon": 95.625,
+      "ens_mean_z500_m": 5648.81591796875,
+      "ens_spread_z500_m": 5.584956645965576,
+      "era5_z500_m": 5647.73193359375,
+      "rmse_m": 1.083984375
+    },
+    {
+      "region_id": "R0607",
+      "name": "Himalaya / Tibetan Plateau",
+      "lat": 30.9375,
+      "lon": 101.25,
+      "ens_mean_z500_m": 5629.24267578125,
+      "ens_spread_z500_m": 6.264976501464844,
+      "era5_z500_m": 5628.64208984375,
+      "rmse_m": 0.6005859375
+    },
+    {
+      "region_id": "R0700",
+      "name": "Afghanistan / Iran",
+      "lat": 36.5625,
+      "lon": 61.875,
+      "ens_mean_z500_m": 5534.4208984375,
+      "ens_spread_z500_m": 7.047178745269775,
+      "era5_z500_m": 5528.64404296875,
+      "rmse_m": 5.77685546875
+    },
+    {
+      "region_id": "R0701",
+      "name": "Afghanistan / Iran",
+      "lat": 36.5625,
+      "lon": 67.5,
+      "ens_mean_z500_m": 5558.96337890625,
+      "ens_spread_z500_m": 5.894410610198975,
+      "era5_z500_m": 5556.11669921875,
+      "rmse_m": 2.8466796875
+    },
+    {
+      "region_id": "R0702",
+      "name": "Afghanistan / Iran",
+      "lat": 36.5625,
+      "lon": 73.125,
+      "ens_mean_z500_m": 5598.04345703125,
+      "ens_spread_z500_m": 6.419661521911621,
+      "era5_z500_m": 5592.94482421875,
+      "rmse_m": 5.0986328125
+    },
+    {
+      "region_id": "R0703",
+      "name": "Himalaya / Tibetan Plateau",
+      "lat": 36.5625,
+      "lon": 78.75,
+      "ens_mean_z500_m": 5599.1044921875,
+      "ens_spread_z500_m": 6.543373107910156,
+      "era5_z500_m": 5591.19970703125,
+      "rmse_m": 7.90478515625
+    },
+    {
+      "region_id": "R0704",
+      "name": "Himalaya / Tibetan Plateau",
+      "lat": 36.5625,
+      "lon": 84.375,
+      "ens_mean_z500_m": 5575.10205078125,
+      "ens_spread_z500_m": 7.837214469909668,
+      "era5_z500_m": 5568.1640625,
+      "rmse_m": 6.93798828125
+    },
+    {
+      "region_id": "R0705",
+      "name": "Himalaya / Tibetan Plateau",
+      "lat": 36.5625,
+      "lon": 90.0,
+      "ens_mean_z500_m": 5550.97216796875,
+      "ens_spread_z500_m": 7.910992622375488,
+      "era5_z500_m": 5548.390625,
+      "rmse_m": 2.58154296875
+    },
+    {
+      "region_id": "R0706",
+      "name": "Himalaya / Tibetan Plateau",
+      "lat": 36.5625,
+      "lon": 95.625,
+      "ens_mean_z500_m": 5545.93994140625,
+      "ens_spread_z500_m": 6.426555633544922,
+      "era5_z500_m": 5543.4755859375,
+      "rmse_m": 2.46435546875
+    },
+    {
+      "region_id": "R0707",
+      "name": "Himalaya / Tibetan Plateau",
+      "lat": 36.5625,
+      "lon": 101.25,
+      "ens_mean_z500_m": 5543.19580078125,
+      "ens_spread_z500_m": 5.677802562713623,
+      "era5_z500_m": 5540.6181640625,
+      "rmse_m": 2.57763671875
+    }
+  ]
+}

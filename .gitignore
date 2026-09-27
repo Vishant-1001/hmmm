@@ -40,3 +40,4 @@ frontend/.vite/
 .idea/
 .vscode/
 *.swp
+logs/
