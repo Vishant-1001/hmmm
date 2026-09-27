@@ -13,6 +13,9 @@ that enforces it and the test that checks it.
 | Spread percentile / hidden-bust threshold | TRAIN ECDF / TRAIN P25 per group | `spread_percentile`, `fit_thresholds` | `test_spread_percentile_uses_train_reference` |
 | Self-analogue / future analogue | Candidate eligible iff `candidate.valid_time <= query.init_time` (so the candidate was initialised earlier *and* already verified) | `analogues/memory.py::eligible_mask` | `test_memory_temporal_cutoff_and_no_self`, `test_memory_features_do_not_use_future_labels` |
 | Test labels improving test prediction via memory | Default `causal_online` uses only labels already verified at issue time (the operational situation); `frozen` mode (train+validation memory only) reported as sensitivity | `memory.py`, `pipeline.py` | `test_memory_frozen_mode_excludes_test`, `metrics.json:frozen_memory_sensitivity` |
+| Recent-error features using unverified cases | REC uses only forecasts with valid_time ≤ init (same availability rule as memory) | `analogues/recent.py` | `test_recent_error_features_are_causal` |
+| Hidden timestamps | Memory-size counts excluded from model inputs | `models/sentinel.py::NON_MODEL_FEATURES` | code review |
+| Feature-group choice tuned on test | Groups selected on VALIDATION AUPRC only | `pipeline.py::train` | `experiment_manifest.json:selected_groups` |
 | Future forecast cycles | Evolution features use the cycle 24 h *earlier* only | `features/build.py::grid_features` | code review |
 | Calibration on test | Isotonic regression fitted on VALIDATION predictions, frozen | `models/sentinel.py::CalibratedGBM` | protocol in `experiment_manifest.json` |
 | Operating threshold on test | Alert threshold chosen on VALIDATION (10% FAR) | `evaluation/run.py` | `metrics.json:operating_point.chosen_on` |

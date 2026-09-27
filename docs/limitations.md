@@ -39,3 +39,8 @@
   bootstrap CIs account for sampling within the year only.
 * **Variables.** Only geopotential (500/700/850 hPa) was downloaded; winds, MSLP and humidity
   features are not used. "Wind" information enters only through Z500 gradients.
+* **Recent verified-error features assume timely verification.** They use ERA5 up to the
+  initialisation time; ERA5 is released with ~5-day latency, so operationally the NWP centre's own
+  analysis would have to stand in for the most recent days.
+* **In-sample quota effect.** Training labels are TRAIN quantiles, which slightly distorts label-rate
+  features inside the training period (see methodology). Validation-based group selection mitigates it.

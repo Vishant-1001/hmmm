@@ -57,6 +57,20 @@ B2 is deliberately strong: it learns region/lead/season-specific spread-skill re
 | PAT large-scale pattern | 8 PCs of the ensemble-mean Z500 anomaly over the context domain (20°E–146°E, 31°S–65°N), fitted on TRAIN only and frozen; PC-space norm; unexplained-variance fraction |
 | EVO forecast evolution | revision vs the cycle 24 h earlier for the same valid time (regional, neighbourhood RMS, PC-space), spread change; missing when that cycle is not in the downloaded sample (XGBoost handles NaN) |
 | MEM historical memory | see §7 |
+| REC recent verified error | mean normalized error, mean signed error and bust fraction of this region's Day 1–3 forecasts verified in the 5 days up to initialisation; neighbour and domain means (`analogues/recent.py`) |
+
+**Model inputs vs displayed evidence.** Counts that grow monotonically with the size of the memory
+(`an_n_eligible`, `an_n_within`, `rec_n`) act as hidden timestamps and are excluded from model inputs;
+they are shown to the forecaster as evidence only.
+
+**FULL model.** A feature group enters FULL only if "B2 + group" beats B2 on VALIDATION AUPRC (never
+on test). "ALL" (every group) is also reported so the effect of the selection is visible.
+
+**In-sample quota effect (found on the dev split).** Because bust labels are TRAIN quantiles within
+each (region, lead, season) group, a training case whose analogues were busts is slightly *less*
+likely to be a bust itself (the group's 10% quota is used up). Label-rate features therefore show a
+reversed relationship inside TRAIN (e.g. analogue bust rate AUC 0.45 in train vs 0.53 on validation
+in the dev split). Validation-based group selection guards against this leaking into FULL.
 
 ## 7. Historical forecast-state memory
 
