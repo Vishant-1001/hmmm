@@ -1,0 +1,123 @@
+[
+ {
+  "model": "B0",
+  "description": "Climatological bust frequency (TRAIN, per region x lead x season)",
+  "auprc": 0.0907542853665033,
+  "roc_auc": 0.5174832660171628,
+  "brier": 0.08038098993310326,
+  "ece": 0.013380333807041421,
+  "hidden_bust_recall": 0.07252660622782814,
+  "recall_at_far_10": 0.07452179823283814,
+  "mean_lead_day_of_detected_busts": 4.634095634095634
+ },
+ {
+  "model": "B1",
+  "description": "Raw ensemble-spread score (spread percentile; ranking score, not a probability)",
+  "auprc": 0.1313945126155664,
+  "roc_auc": 0.609381240615031,
+  "brier": null,
+  "ece": null,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.1949703854743179,
+  "mean_lead_day_of_detected_busts": 6.156558806432862
+ },
+ {
+  "model": "B2",
+  "description": "Calibrated spread-only gradient-boosted model (spread, spread percentile, lead, region, season, init hour)",
+  "auprc": 0.13598740493476308,
+  "roc_auc": 0.608682106302211,
+  "brier": 0.07914802432060242,
+  "ece": 0.0071977090408587826,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.19788328963977087,
+  "mean_lead_day_of_detected_busts": 6.319367588932806
+ },
+ {
+  "model": "M1",
+  "description": "B2 + atmospheric state",
+  "auprc": 0.13501646354564334,
+  "roc_auc": 0.6105974622744879,
+  "brier": 0.07924019545316696,
+  "ece": 0.009423735451597028,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.18822215749101853,
+  "mean_lead_day_of_detected_busts": 6.2369782046546
+ },
+ {
+  "model": "M2",
+  "description": "B2 + ensemble behaviour",
+  "auprc": 0.1364339712139166,
+  "roc_auc": 0.6073980819246474,
+  "brier": 0.07911750674247742,
+  "ece": 0.0078071705826502176,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.19623264394601417,
+  "mean_lead_day_of_detected_busts": 6.456637895602137
+ },
+ {
+  "model": "M3",
+  "description": "B2 + large-scale pattern (PCA)",
+  "auprc": 0.13582479990290305,
+  "roc_auc": 0.6152876368584819,
+  "brier": 0.07915667444467545,
+  "ece": 0.007982616180673629,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.1806000582580833,
+  "mean_lead_day_of_detected_busts": 6.523877843820455
+ },
+ {
+  "model": "M4",
+  "description": "B2 + forecast evolution",
+  "auprc": 0.13804535119801636,
+  "roc_auc": 0.6154899573196997,
+  "brier": 0.07901239395141602,
+  "ece": 0.006401623780533793,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.20618506651131177,
+  "mean_lead_day_of_detected_busts": 6.407780689377142
+ },
+ {
+  "model": "M5",
+  "description": "B2 + historical forecast-state memory (analogues)",
+  "auprc": 0.1369467150227766,
+  "roc_auc": 0.6121189981266173,
+  "brier": 0.07903768867254257,
+  "ece": 0.006679172575463603,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.1970579667928925,
+  "mean_lead_day_of_detected_busts": 6.58947787963332
+ },
+ {
+  "model": "M6",
+  "description": "B2 + recent verified forecast-error behaviour",
+  "auprc": 0.13849912209678872,
+  "roc_auc": 0.6184180065861759,
+  "brier": 0.07897744327783585,
+  "ece": 0.005872085389218042,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.19642683755704438,
+  "mean_lead_day_of_detected_busts": 6.457662554881873
+ },
+ {
+  "model": "ALL",
+  "description": "B2 + every feature group (no validation-based selection)",
+  "auprc": 0.13844986598495637,
+  "roc_auc": 0.614383778547424,
+  "brier": 0.07905665040016174,
+  "ece": 0.00884269151888798,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.17919215457811438,
+  "mean_lead_day_of_detected_busts": 6.234492399091385
+ },
+ {
+  "model": "FULL",
+  "description": "Sentinel: B2 inputs + feature groups that improved VALIDATION AUPRC over B2",
+  "auprc": 0.13598740493476308,
+  "roc_auc": 0.608682106302211,
+  "brier": 0.07914802432060242,
+  "ece": 0.0071977090408587826,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.19788328963977087,
+  "mean_lead_day_of_detected_busts": 6.319367588932806
+ }
+]

@@ -1,0 +1,792 @@
+{
+ "dataset": {
+  "source": "ECMWF IFS ENS (via WeatherBench 2)",
+  "forecast_store": "gs://weatherbench2/datasets/ifs_ens/2018-2022-64x32_equiangular_conservative.zarr",
+  "reference": "ERA5 (WeatherBench 2) - verification reference analysis, not perfect truth",
+  "target": "Z500 ensemble-mean regional error",
+  "splits": {
+   "embargo": {
+    "inits": 18,
+    "rows": 6400,
+    "first_init": "2020-12-24 00:00:00",
+    "last_init": "2021-12-31 12:00:00",
+    "bust_rate": 0.08609375
+   },
+   "test": {
+    "inits": 366,
+    "rows": 234240,
+    "first_init": "2022-01-01 00:00:00",
+    "last_init": "2022-12-31 12:00:00",
+    "bust_rate": 0.08793545081967213
+   },
+   "train": {
+    "inits": 1096,
+    "rows": 698624,
+    "first_init": "2018-01-01 00:00:00",
+    "last_init": "2020-12-29 12:00:00",
+    "bust_rate": 0.10131630175888603
+   },
+   "validation": {
+    "inits": 364,
+    "rows": 230656,
+    "first_init": "2021-01-01 00:00:00",
+    "last_init": "2021-12-28 12:00:00",
+    "bust_rate": 0.08664418007769145
+   }
+  }
+ },
+ "test_base_rate": 0.08793545081967213,
+ "n_test_rows": 234240,
+ "primary_metric": "AUPRC (bust = normalized error > TRAIN Q90 per region x lead x season)",
+ "models": {
+  "B0": {
+   "description": "Climatological bust frequency (TRAIN, per region x lead x season)",
+   "is_probability": true,
+   "auprc": 0.0907542853665033,
+   "roc_auc": 0.5174832660171628,
+   "brier": 0.08038098993310326,
+   "ece": 0.013380333807041421,
+   "recall_at_far_5": 0.0,
+   "recall_at_far_10": 0.07452179823283814,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.10144927536231886,
+    "tp": 1924,
+    "fp": 21628,
+    "fn": 18674,
+    "tn": 192014,
+    "precision": 0.08169157608695653,
+    "recall": 0.09340712690552481,
+    "false_alarm_rate": 0.10123477593357111
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.07252660622782814,
+    "low_spread_alert_precision": 0.032705296836118024,
+    "low_spread_auprc": 0.054152280454637186
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 4.634095634095634,
+    "recall_by_lead_day": {
+     "1": 0.0,
+     "2": 0.0,
+     "3": 0.22498554077501445,
+     "4": 0.23734177215189872,
+     "5": 0.281203007518797,
+     "6": 0.25035833731485907,
+     "7": 0.0,
+     "8": 0.0,
+     "9": 0.0,
+     "10": 0.0
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 4.060811405438705,
+    "within_1_day": 0.2463257942444777
+   },
+   "spatial_overlap": {
+    "n_maps": 3218,
+    "mean_jaccard": 0.009341982597886886
+   }
+  },
+  "B1": {
+   "description": "Raw ensemble-spread score (spread percentile; ranking score, not a probability)",
+   "is_probability": false,
+   "auprc": 0.1313945126155664,
+   "roc_auc": 0.609381240615031,
+   "brier": null,
+   "ece": null,
+   "recall_at_far_5": 0.1104476162734246,
+   "recall_at_far_10": 0.1949703854743179,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.9153005464480876,
+    "tp": 5161,
+    "fp": 29097,
+    "fn": 15437,
+    "tn": 184545,
+    "precision": 0.15065094284546676,
+    "recall": 0.2505583066317118,
+    "false_alarm_rate": 0.1361951301710338
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.0,
+    "low_spread_alert_precision": null,
+    "low_spread_auprc": 0.057018178552495594
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 6.156558806432862,
+    "recall_by_lead_day": {
+     "1": 0.13873873873873874,
+     "2": 0.18763102725366876,
+     "3": 0.24349334875650666,
+     "4": 0.22257383966244726,
+     "5": 0.24310776942355888,
+     "6": 0.2904921165790731,
+     "7": 0.31112176414189835,
+     "8": 0.28870292887029286,
+     "9": 0.30120481927710846,
+     "10": 0.26941641070645017
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 3.0508668485435186,
+    "within_1_day": 0.3558919299480771
+   },
+   "spatial_overlap": {
+    "n_maps": 3605,
+    "mean_jaccard": 0.08204627409473068
+   }
+  },
+  "B2": {
+   "description": "Calibrated spread-only gradient-boosted model (spread, spread percentile, lead, region, season, init hour)",
+   "is_probability": true,
+   "auprc": 0.13598740493476308,
+   "roc_auc": 0.608682106302211,
+   "brier": 0.07914802432060242,
+   "ece": 0.0071977090408587826,
+   "recall_at_far_5": 0.12103116807457034,
+   "recall_at_far_10": 0.19788328963977087,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.12759871780872345,
+    "tp": 5060,
+    "fp": 27408,
+    "fn": 15538,
+    "tn": 186234,
+    "precision": 0.15584575582111618,
+    "recall": 0.24565491795319935,
+    "false_alarm_rate": 0.1282893813014295
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.0,
+    "low_spread_alert_precision": null,
+    "low_spread_auprc": 0.060311069225619456
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 6.319367588932806,
+    "recall_by_lead_day": {
+     "1": 0.11351351351351352,
+     "2": 0.16719077568134172,
+     "3": 0.2203585887796414,
+     "4": 0.20938818565400844,
+     "5": 0.24360902255639097,
+     "6": 0.30434782608695654,
+     "7": 0.2981783317353787,
+     "8": 0.28498372849837283,
+     "9": 0.30566711289602855,
+     "10": 0.2931110136024572
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 3.07251606089941,
+    "within_1_day": 0.3514916835342779
+   },
+   "spatial_overlap": {
+    "n_maps": 3588,
+    "mean_jaccard": 0.0820070457116011
+   }
+  },
+  "M1": {
+   "description": "B2 + atmospheric state",
+   "is_probability": true,
+   "auprc": 0.13501646354564334,
+   "roc_auc": 0.6105974622744879,
+   "brier": 0.07924019545316696,
+   "ece": 0.009423735451597028,
+   "recall_at_far_5": 0.10462180794251869,
+   "recall_at_far_10": 0.18822215749101853,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.15017907321453094,
+    "tp": 5414,
+    "fp": 30786,
+    "fn": 15184,
+    "tn": 182856,
+    "precision": 0.14955801104972374,
+    "recall": 0.2628410525293718,
+    "false_alarm_rate": 0.14410087904063806
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.0,
+    "low_spread_alert_precision": null,
+    "low_spread_auprc": 0.05899947413399778
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 6.2369782046546,
+    "recall_by_lead_day": {
+     "1": 0.1400900900900901,
+     "2": 0.17714884696016772,
+     "3": 0.26431463273568534,
+     "4": 0.2310126582278481,
+     "5": 0.24561403508771928,
+     "6": 0.2981366459627329,
+     "7": 0.3211888782358581,
+     "8": 0.3110181311018131,
+     "9": 0.33422579205711733,
+     "10": 0.2931110136024572
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 3.080612514300801,
+    "within_1_day": 0.3521957229604858
+   },
+   "spatial_overlap": {
+    "n_maps": 3607,
+    "mean_jaccard": 0.08187834376916923
+   }
+  },
+  "M2": {
+   "description": "B2 + ensemble behaviour",
+   "is_probability": true,
+   "auprc": 0.1364339712139166,
+   "roc_auc": 0.6073980819246474,
+   "brier": 0.07911750674247742,
+   "ece": 0.0078071705826502176,
+   "recall_at_far_5": 0.11467132731333139,
+   "recall_at_far_10": 0.19623264394601417,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.13182225823402405,
+    "tp": 4866,
+    "fp": 25775,
+    "fn": 15732,
+    "tn": 187867,
+    "precision": 0.1588068274534121,
+    "recall": 0.2362365278182348,
+    "false_alarm_rate": 0.12064575317587366
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.0,
+    "low_spread_alert_precision": 0.0,
+    "low_spread_auprc": 0.05817941581312597
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 6.456637895602137,
+    "recall_by_lead_day": {
+     "1": 0.10405405405405406,
+     "2": 0.139937106918239,
+     "3": 0.21168305378831695,
+     "4": 0.2020042194092827,
+     "5": 0.22155388471177945,
+     "6": 0.27424749163879597,
+     "7": 0.2871524448705657,
+     "8": 0.27522082752208277,
+     "9": 0.3034359660865685,
+     "10": 0.3211935059236507
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 3.08369268679046,
+    "within_1_day": 0.3558039250198011
+   },
+   "spatial_overlap": {
+    "n_maps": 3591,
+    "mean_jaccard": 0.08125496194422242
+   }
+  },
+  "M3": {
+   "description": "B2 + large-scale pattern (PCA)",
+   "is_probability": true,
+   "auprc": 0.13582479990290305,
+   "roc_auc": 0.6152876368584819,
+   "brier": 0.07915667444467545,
+   "ece": 0.007982616180673629,
+   "recall_at_far_5": 0.09879599961161278,
+   "recall_at_far_10": 0.1806000582580833,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.13139794766902924,
+    "tp": 4879,
+    "fp": 25860,
+    "fn": 15719,
+    "tn": 187782,
+    "precision": 0.15872344578548425,
+    "recall": 0.23686765705408291,
+    "false_alarm_rate": 0.12104361501951863
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.0,
+    "low_spread_alert_precision": null,
+    "low_spread_auprc": 0.06322356486403174
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 6.523877843820455,
+    "recall_by_lead_day": {
+     "1": 0.08423423423423423,
+     "2": 0.14675052410901468,
+     "3": 0.20358588779641412,
+     "4": 0.18565400843881857,
+     "5": 0.22957393483709274,
+     "6": 0.2718585762064023,
+     "7": 0.30105465004793863,
+     "8": 0.299860529986053,
+     "9": 0.32173136992414103,
+     "10": 0.30144800351031154
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 3.0817565783683887,
+    "within_1_day": 0.35175569831910586
+   },
+   "spatial_overlap": {
+    "n_maps": 3583,
+    "mean_jaccard": 0.07870126042507342
+   }
+  },
+  "M4": {
+   "description": "B2 + forecast evolution",
+   "is_probability": true,
+   "auprc": 0.13804535119801636,
+   "roc_auc": 0.6154899573196997,
+   "brier": 0.07901239395141602,
+   "ece": 0.006401623780533793,
+   "recall_at_far_5": 0.1178269734925721,
+   "recall_at_far_10": 0.20618506651131177,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.13663925230503082,
+    "tp": 4961,
+    "fp": 25807,
+    "fn": 15637,
+    "tn": 187835,
+    "precision": 0.16123894955798232,
+    "recall": 0.24084862608020197,
+    "false_alarm_rate": 0.12079553645818707
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.0,
+    "low_spread_alert_precision": null,
+    "low_spread_auprc": 0.06113015737032262
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 6.407780689377142,
+    "recall_by_lead_day": {
+     "1": 0.11711711711711711,
+     "2": 0.14150943396226415,
+     "3": 0.205320994794679,
+     "4": 0.20411392405063292,
+     "5": 0.22857142857142856,
+     "6": 0.285236502627807,
+     "7": 0.30057526366251197,
+     "8": 0.29242212924221295,
+     "9": 0.31548415885765285,
+     "10": 0.29530495831505044
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 3.0601073660124967,
+    "within_1_day": 0.3529877673149696
+   },
+   "spatial_overlap": {
+    "n_maps": 3581,
+    "mean_jaccard": 0.0823321169580651
+   }
+  },
+  "M5": {
+   "description": "B2 + historical forecast-state memory (analogues)",
+   "is_probability": true,
+   "auprc": 0.1369467150227766,
+   "roc_auc": 0.6121189981266173,
+   "brier": 0.07903768867254257,
+   "ece": 0.006679172575463603,
+   "recall_at_far_5": 0.11656471502087581,
+   "recall_at_far_10": 0.1970579667928925,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.13037250936031342,
+    "tp": 5018,
+    "fp": 27259,
+    "fn": 15580,
+    "tn": 186383,
+    "precision": 0.1554667410230195,
+    "recall": 0.24361588503738227,
+    "false_alarm_rate": 0.12759195289315772
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.0,
+    "low_spread_alert_precision": null,
+    "low_spread_auprc": 0.060710477239332185
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 6.58947787963332,
+    "recall_by_lead_day": {
+     "1": 0.0936936936936937,
+     "2": 0.14255765199161424,
+     "3": 0.20416425679583575,
+     "4": 0.1877637130801688,
+     "5": 0.22155388471177945,
+     "6": 0.27854753941710464,
+     "7": 0.28906999041227227,
+     "8": 0.30962343096234307,
+     "9": 0.3462739848282017,
+     "10": 0.33304080737165426
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 3.10648596321394,
+    "within_1_day": 0.3483235061163425
+   },
+   "spatial_overlap": {
+    "n_maps": 3592,
+    "mean_jaccard": 0.08058848833643646
+   }
+  },
+  "M6": {
+   "description": "B2 + recent verified forecast-error behaviour",
+   "is_probability": true,
+   "auprc": 0.13849912209678872,
+   "roc_auc": 0.6184180065861759,
+   "brier": 0.07897744327783585,
+   "ece": 0.005872085389218042,
+   "recall_at_far_5": 0.09835906398679484,
+   "recall_at_far_10": 0.19642683755704438,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.12808369100093842,
+    "tp": 4783,
+    "fp": 24749,
+    "fn": 15815,
+    "tn": 188893,
+    "precision": 0.16195990789651904,
+    "recall": 0.2322070103893582,
+    "false_alarm_rate": 0.11584332668670018
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.0,
+    "low_spread_alert_precision": null,
+    "low_spread_auprc": 0.06475817908048234
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 6.457662554881873,
+    "recall_by_lead_day": {
+     "1": 0.1036036036036036,
+     "2": 0.1441299790356394,
+     "3": 0.20011567379988432,
+     "4": 0.18670886075949367,
+     "5": 0.21453634085213033,
+     "6": 0.27472527472527475,
+     "7": 0.28475551294343243,
+     "8": 0.2835890283589028,
+     "9": 0.30566711289602855,
+     "10": 0.3010092145677929
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 3.074012144680102,
+    "within_1_day": 0.3522837278887618
+   },
+   "spatial_overlap": {
+    "n_maps": 3588,
+    "mean_jaccard": 0.08012048789670712
+   }
+  },
+  "ALL": {
+   "description": "B2 + every feature group (no validation-based selection)",
+   "is_probability": true,
+   "auprc": 0.13844986598495637,
+   "roc_auc": 0.614383778547424,
+   "brier": 0.07905665040016174,
+   "ece": 0.00884269151888798,
+   "recall_at_far_5": 0.12297310418487231,
+   "recall_at_far_10": 0.17919215457811438,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.12986482679843903,
+    "tp": 5723,
+    "fp": 32442,
+    "fn": 14875,
+    "tn": 181200,
+    "precision": 0.14995414646927813,
+    "recall": 0.2778425089814545,
+    "false_alarm_rate": 0.15185216390035666
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.0,
+    "low_spread_alert_precision": 0.0,
+    "low_spread_auprc": 0.061328882665259224
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 6.234492399091385,
+    "recall_by_lead_day": {
+     "1": 0.1373873873873874,
+     "2": 0.20440251572327045,
+     "3": 0.2839791787160208,
+     "4": 0.24472573839662448,
+     "5": 0.26416040100250626,
+     "6": 0.3115145723841376,
+     "7": 0.3374880153403643,
+     "8": 0.3138075313807531,
+     "9": 0.3386880856760375,
+     "10": 0.3317244405440983
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 3.059667341371117,
+    "within_1_day": 0.35553991023497317
+   },
+   "spatial_overlap": {
+    "n_maps": 3608,
+    "mean_jaccard": 0.08402300718564207
+   }
+  },
+  "FULL": {
+   "description": "Sentinel: B2 inputs + feature groups that improved VALIDATION AUPRC over B2",
+   "is_probability": true,
+   "auprc": 0.13598740493476308,
+   "roc_auc": 0.608682106302211,
+   "brier": 0.07914802432060242,
+   "ece": 0.0071977090408587826,
+   "recall_at_far_5": 0.12103116807457034,
+   "recall_at_far_10": 0.19788328963977087,
+   "operating_point": {
+    "chosen_on": "validation",
+    "target_far": 0.1,
+    "threshold": 0.12759871780872345,
+    "tp": 5060,
+    "fp": 27408,
+    "fn": 15538,
+    "tn": 186234,
+    "precision": 0.15584575582111618,
+    "recall": 0.24565491795319935,
+    "false_alarm_rate": 0.1282893813014295
+   },
+   "hidden_bust": {
+    "n_hidden_busts": 2537,
+    "hidden_bust_recall": 0.0,
+    "low_spread_alert_precision": null,
+    "low_spread_auprc": 0.060311069225619456
+   },
+   "warning_lead": {
+    "mean_lead_day_of_detected_busts": 6.319367588932806,
+    "recall_by_lead_day": {
+     "1": 0.11351351351351352,
+     "2": 0.16719077568134172,
+     "3": 0.2203585887796414,
+     "4": 0.20938818565400844,
+     "5": 0.24360902255639097,
+     "6": 0.30434782608695654,
+     "7": 0.2981783317353787,
+     "8": 0.28498372849837283,
+     "9": 0.30566711289602855,
+     "10": 0.2931110136024572
+    }
+   },
+   "peak_risk_day": {
+    "n_trajectories": 11363,
+    "mean_abs_peak_day_error": 3.07251606089941,
+    "within_1_day": 0.3514916835342779
+   },
+   "spatial_overlap": {
+    "n_maps": 3588,
+    "mean_jaccard": 0.0820070457116011
+   }
+  }
+ },
+ "full_vs_b2": {
+  "auprc_gain": 0.0,
+  "relative_gain": 0.0,
+  "bootstrap": {
+   "mean": 0.0,
+   "ci95": [
+    0.0,
+    0.0
+   ],
+   "p_le_0": 1.0,
+   "n_boot": 300,
+   "block": "initialisation day"
+  },
+  "verdict_rule": "material improvement iff 95% block-bootstrap CI of AUPRC(FULL)-AUPRC(B2) excludes 0 AND relative gain >= 5% (rule fixed before test evaluation)",
+  "material_improvement": false
+ },
+ "by_lead_day": [
+  {
+   "lead_day": 1,
+   "n": 23424,
+   "bust_rate": 0.09477459016393443,
+   "auprc_B2": 0.12916282431830572,
+   "auprc_FULL": 0.12916282431830572,
+   "auprc_B0": 0.08914185303854054
+  },
+  {
+   "lead_day": 2,
+   "n": 23424,
+   "bust_rate": 0.08145491803278689,
+   "auprc_B2": 0.1205602093209288,
+   "auprc_FULL": 0.1205602093209288,
+   "auprc_B0": 0.07868727273051632
+  },
+  {
+   "lead_day": 3,
+   "n": 23424,
+   "bust_rate": 0.07381318306010928,
+   "auprc_B2": 0.13030949592725882,
+   "auprc_FULL": 0.13030949592725882,
+   "auprc_B0": 0.07351395000887226
+  },
+  {
+   "lead_day": 4,
+   "n": 23424,
+   "bust_rate": 0.08094262295081968,
+   "auprc_B2": 0.11899089989497941,
+   "auprc_FULL": 0.11899089989497941,
+   "auprc_B0": 0.08584790753366589
+  },
+  {
+   "lead_day": 5,
+   "n": 23424,
+   "bust_rate": 0.08516905737704918,
+   "auprc_B2": 0.12857156815849563,
+   "auprc_FULL": 0.12857156815849563,
+   "auprc_B0": 0.09485794984862582
+  },
+  {
+   "lead_day": 6,
+   "n": 23424,
+   "bust_rate": 0.08935280054644809,
+   "auprc_B2": 0.1484628293022423,
+   "auprc_FULL": 0.1484628293022423,
+   "auprc_B0": 0.09289178359587284
+  },
+  {
+   "lead_day": 7,
+   "n": 23424,
+   "bust_rate": 0.08905396174863388,
+   "auprc_B2": 0.14215966855089388,
+   "auprc_FULL": 0.14215966855089388,
+   "auprc_B0": 0.10079436836400027
+  },
+  {
+   "lead_day": 8,
+   "n": 23424,
+   "bust_rate": 0.09182889344262295,
+   "auprc_B2": 0.14671024149246073,
+   "auprc_FULL": 0.14671024149246073,
+   "auprc_B0": 0.09606462211059902
+  },
+  {
+   "lead_day": 9,
+   "n": 23424,
+   "bust_rate": 0.09567110655737705,
+   "auprc_B2": 0.15847381554293555,
+   "auprc_FULL": 0.15847381554293555,
+   "auprc_B0": 0.09951525507251507
+  },
+  {
+   "lead_day": 10,
+   "n": 23424,
+   "bust_rate": 0.09729337431693989,
+   "auprc_B2": 0.14138423028009406,
+   "auprc_FULL": 0.14138423028009406,
+   "auprc_B0": 0.11146260491890651
+  }
+ ],
+ "by_season": [
+  {
+   "season": "JF",
+   "n": 37120,
+   "bust_rate": 0.10258620689655172,
+   "auprc_B2": 0.15252148285943845,
+   "auprc_FULL": 0.15252148285943845
+  },
+  {
+   "season": "JJAS",
+   "n": 79360,
+   "bust_rate": 0.07494959677419355,
+   "auprc_B2": 0.09921195954257753,
+   "auprc_FULL": 0.09921195954257753
+  },
+  {
+   "season": "MAM",
+   "n": 58880,
+   "bust_rate": 0.10074728260869566,
+   "auprc_B2": 0.16787216820030737,
+   "auprc_FULL": 0.16787216820030737
+  },
+  {
+   "season": "OND",
+   "n": 58880,
+   "bust_rate": 0.08338994565217392,
+   "auprc_B2": 0.14629486311017498,
+   "auprc_FULL": 0.14629486311017498
+  }
+ ],
+ "selected_groups": [],
+ "q95_sensitivity": {
+  "B0": {
+   "auprc": 0.042121299781271236,
+   "brier": 0.04281651466996881
+  },
+  "B2": {
+   "auprc": 0.08402522460871911,
+   "brier": 0.04219589754939079
+  },
+  "FULL": {
+   "auprc": 0.08402522460871911,
+   "brier": 0.04219589754939079
+  }
+ },
+ "frozen_memory_sensitivity": {
+  "auprc": 0.13598740493476308,
+  "brier": 0.07914802432060242
+ },
+ "by_evidence_level": [
+  {
+   "evidence": "STRONG EVIDENCE",
+   "n": 178485,
+   "bust_rate": 0.08081911645236295,
+   "mean_p_FULL": 0.09021297097206116,
+   "auprc_FULL": 0.11800756959611514
+  },
+  {
+   "evidence": "MODERATE EVIDENCE",
+   "n": 16231,
+   "bust_rate": 0.11311687511551968,
+   "mean_p_FULL": 0.10006821900606155,
+   "auprc_FULL": 0.18002038125052833
+  },
+  {
+   "evidence": "WEAK EVIDENCE",
+   "n": 11380,
+   "bust_rate": 0.10826010544815466,
+   "mean_p_FULL": 0.09176404774188995,
+   "auprc_FULL": 0.15557759467716337
+  },
+  {
+   "evidence": "INSUFFICIENT HISTORICAL SUPPORT",
+   "n": 28144,
+   "bust_rate": 0.11032546901648664,
+   "mean_p_FULL": 0.09503179788589478,
+   "auprc_FULL": 0.19274345106623564
+  }
+ ]
+}

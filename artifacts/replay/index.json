@@ -1,0 +1,89 @@
+{
+ "cases": [
+  {
+   "case_id": "2022020212",
+   "init_time": "2022-02-02 12:00:00",
+   "selection": "stress",
+   "selection_note": "Hidden-bust stress case: 21 hidden-bust region-days at Day 3-7 (selected by verification only; not representative)",
+   "n_alerts": 106
+  },
+  {
+   "case_id": "2022032512",
+   "init_time": "2022-03-25 12:00:00",
+   "selection": "stress",
+   "selection_note": "Hidden-bust stress case: 19 hidden-bust region-days at Day 3-7 (selected by verification only; not representative)",
+   "n_alerts": 15
+  },
+  {
+   "case_id": "2022092912",
+   "init_time": "2022-09-29 12:00:00",
+   "selection": "stress",
+   "selection_note": "Hidden-bust stress case: 19 hidden-bust region-days at Day 3-7 (selected by verification only; not representative)",
+   "n_alerts": 142
+  },
+  {
+   "case_id": "2022043000",
+   "init_time": "2022-04-30 00:00:00",
+   "selection": "stress",
+   "selection_note": "Hidden-bust stress case: 18 hidden-bust region-days at Day 3-7 (selected by verification only; not representative)",
+   "n_alerts": 149
+  },
+  {
+   "case_id": "2022012012",
+   "init_time": "2022-01-20 12:00:00",
+   "selection": "random",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "n_alerts": 47
+  },
+  {
+   "case_id": "2022031400",
+   "init_time": "2022-03-14 00:00:00",
+   "selection": "random",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "n_alerts": 189
+  },
+  {
+   "case_id": "2022042712",
+   "init_time": "2022-04-27 12:00:00",
+   "selection": "random",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "n_alerts": 107
+  },
+  {
+   "case_id": "2022060600",
+   "init_time": "2022-06-06 00:00:00",
+   "selection": "random",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "n_alerts": 55
+  },
+  {
+   "case_id": "2022062612",
+   "init_time": "2022-06-26 12:00:00",
+   "selection": "random",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "n_alerts": 99
+  },
+  {
+   "case_id": "2022071112",
+   "init_time": "2022-07-11 12:00:00",
+   "selection": "random",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "n_alerts": 166
+  },
+  {
+   "case_id": "2022081612",
+   "init_time": "2022-08-16 12:00:00",
+   "selection": "random",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "n_alerts": 70
+  },
+  {
+   "case_id": "2022120612",
+   "init_time": "2022-12-06 12:00:00",
+   "selection": "random",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "n_alerts": 108
+  }
+ ],
+ "selection_rule": "(documented; uses verification only, never model output):\n  * \"stress\" cases: the test initialisations with the most hidden-bust region-days at Day 3-7\n    (NOT representative of overall performance);\n  * \"random\" cases: initialisations drawn uniformly at random (fixed seed) from the test split."
+}

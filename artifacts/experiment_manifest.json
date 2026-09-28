@@ -1,0 +1,517 @@
+{
+ "created": "2026-09-28T13:39:14.678586+00:00",
+ "git_rev": "603b3d3",
+ "python": "3.12.3",
+ "seed": 20260928,
+ "data_config": {
+  "source": {
+   "name": "ECMWF IFS ENS (via WeatherBench 2)",
+   "forecast_store": "gs://weatherbench2/datasets/ifs_ens/2018-2022-64x32_equiangular_conservative.zarr",
+   "reference_store": "gs://weatherbench2/datasets/era5/1959-2023_01_10-6h-64x32_equiangular_conservative.zarr",
+   "climatology_store": "gs://weatherbench2/datasets/era5-hourly-climatology/1990-2017_6h_64x32_equiangular_conservative.zarr",
+   "storage_options": {
+    "token": "anon"
+   },
+   "grid": "64x32 equiangular conservative (5.625 deg)"
+  },
+  "variable": "geopotential",
+  "levels": [
+   500,
+   700,
+   850
+  ],
+  "target_level": 500,
+  "lead_hours": [
+   24,
+   48,
+   72,
+   96,
+   120,
+   144,
+   168,
+   192,
+   216,
+   240
+  ],
+  "target_domain": {
+   "lat_min": -5.0,
+   "lat_max": 40.0,
+   "lon_min": 60.0,
+   "lon_max": 105.0
+  },
+  "context_domain": {
+   "lat_min": -31.0,
+   "lat_max": 65.0,
+   "lon_min": 22.0,
+   "lon_max": 147.0
+  },
+  "block_stride": 2,
+  "init_chunk_size": 4,
+  "cache_dir": "data/cache",
+  "split": {
+   "train": [
+    "2018-01-01",
+    "2020-12-31T23:59"
+   ],
+   "validation": [
+    "2021-01-01",
+    "2021-12-31T23:59"
+   ],
+   "test": [
+    "2022-01-01",
+    "2022-12-31T23:59"
+   ]
+  },
+  "seasons": {
+   "JF": [
+    1,
+    2
+   ],
+   "MAM": [
+    3,
+    4,
+    5
+   ],
+   "JJAS": [
+    6,
+    7,
+    8,
+    9
+   ],
+   "OND": [
+    10,
+    11,
+    12
+   ]
+  },
+  "dev_split": {
+   "train": [
+    "2018-01-01",
+    "2019-12-31T23:59"
+   ],
+   "validation": [
+    "2020-01-01",
+    "2020-12-31T23:59"
+   ],
+   "test": [
+    "2021-01-01",
+    "2021-12-31T23:59"
+   ]
+  }
+ },
+ "model_config": {
+  "seed": 20260928,
+  "labels": {
+   "primary_quantile": 0.9,
+   "sensitivity_quantile": 0.95,
+   "hidden_bust_spread_quantile": 0.25,
+   "conditioning": [
+    "region_id",
+    "lead_day",
+    "season"
+   ]
+  },
+  "signature": {
+   "window": 3,
+   "dominance": 0.6
+  },
+  "pca": {
+   "n_components": 8
+  },
+  "analogues": {
+   "k": 30,
+   "min_analogues": 5,
+   "memory_mode": "causal_online"
+  },
+  "support": {
+   "quantiles": [
+    0.9,
+    0.975,
+    0.995
+   ]
+  },
+  "xgboost": {
+   "n_estimators": 2000,
+   "learning_rate": 0.03,
+   "max_depth": 3,
+   "min_child_weight": 200,
+   "subsample": 0.8,
+   "colsample_bytree": 0.5,
+   "reg_lambda": 10.0,
+   "tree_method": "hist",
+   "early_stopping_rounds": 100,
+   "eval_metric": "aucpr"
+  },
+  "evaluation": {
+   "fixed_far": [
+    0.05,
+    0.1
+   ],
+   "alert_far": 0.1
+  },
+  "priority": {
+   "urgency_halflife_days": 5,
+   "evidence_weight": {
+    "STRONG": 1.0,
+    "MODERATE": 0.85,
+    "WEAK": 0.7,
+    "INSUFFICIENT HISTORICAL SUPPORT": 0.5
+   },
+   "disagreement_bonus": 0.25
+  }
+ },
+ "splits": {
+  "embargo": {
+   "rows": 6400,
+   "inits": 18,
+   "bust_rate": 0.08609375,
+   "hidden_bust_rate": 0.00453125,
+   "first_init": "2020-12-24T00:00:00.000",
+   "last_init": "2021-12-31T12:00:00.000"
+  },
+  "test": {
+   "rows": 234240,
+   "inits": 366,
+   "bust_rate": 0.0879354508,
+   "hidden_bust_rate": 0.0108307719,
+   "first_init": "2022-01-01T00:00:00.000",
+   "last_init": "2022-12-31T12:00:00.000"
+  },
+  "train": {
+   "rows": 698624,
+   "inits": 1096,
+   "bust_rate": 0.1013163018,
+   "hidden_bust_rate": 0.0166069302,
+   "first_init": "2018-01-01T00:00:00.000",
+   "last_init": "2020-12-29T12:00:00.000"
+  },
+  "validation": {
+   "rows": 230656,
+   "inits": 364,
+   "bust_rate": 0.0866441801,
+   "hidden_bust_rate": 0.0119745422,
+   "first_init": "2021-01-01T00:00:00.000",
+   "last_init": "2021-12-28T12:00:00.000"
+  }
+ },
+ "feature_groups": {
+  "SPREAD": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour"
+  ],
+  "ATM": [
+   "anom500",
+   "abs_anom500",
+   "anom700",
+   "anom850",
+   "thick_anom",
+   "grad_x",
+   "grad_y",
+   "grad_mag",
+   "lap500",
+   "nbhd_anom500"
+  ],
+  "ENS": [
+   "m_iqr",
+   "m_p10p90",
+   "m_skew",
+   "m_sign_agree",
+   "spread_nbhd",
+   "spread_hetero",
+   "spread700",
+   "spread850",
+   "spread_growth",
+   "domain_spread",
+   "spread_rel_domain"
+  ],
+  "PAT": [
+   "pc1",
+   "pc2",
+   "pc3",
+   "pc4",
+   "pc5",
+   "pc6",
+   "pc7",
+   "pc8",
+   "pc_norm",
+   "pc_resid"
+  ],
+  "EVO": [
+   "rev_region",
+   "rev_nbhd",
+   "rev_pc",
+   "rev_spread",
+   "rev_available"
+  ],
+  "MEM": [
+   "an_n_within",
+   "an_dist1",
+   "an_dist_mean",
+   "an_bust_rate",
+   "an_err_med",
+   "an_err_q90",
+   "an_n_eligible"
+  ],
+  "REC": [
+   "rec_err",
+   "rec_bias",
+   "rec_bust_rate",
+   "rec_n",
+   "rec_err_nbhd",
+   "rec_err_domain"
+  ]
+ },
+ "feature_sets": {
+  "B2": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour"
+  ],
+  "M1": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour",
+   "anom500",
+   "abs_anom500",
+   "anom700",
+   "anom850",
+   "thick_anom",
+   "grad_x",
+   "grad_y",
+   "grad_mag",
+   "lap500",
+   "nbhd_anom500"
+  ],
+  "M2": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour",
+   "m_iqr",
+   "m_p10p90",
+   "m_skew",
+   "m_sign_agree",
+   "spread_nbhd",
+   "spread_hetero",
+   "spread700",
+   "spread850",
+   "spread_growth",
+   "domain_spread",
+   "spread_rel_domain"
+  ],
+  "M3": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour",
+   "pc1",
+   "pc2",
+   "pc3",
+   "pc4",
+   "pc5",
+   "pc6",
+   "pc7",
+   "pc8",
+   "pc_norm",
+   "pc_resid"
+  ],
+  "M4": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour",
+   "rev_region",
+   "rev_nbhd",
+   "rev_pc",
+   "rev_spread",
+   "rev_available"
+  ],
+  "M5": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour",
+   "an_dist1",
+   "an_dist_mean",
+   "an_bust_rate",
+   "an_err_med",
+   "an_err_q90"
+  ],
+  "M6": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour",
+   "rec_err",
+   "rec_bias",
+   "rec_bust_rate",
+   "rec_err_nbhd",
+   "rec_err_domain"
+  ],
+  "ALL": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour",
+   "anom500",
+   "abs_anom500",
+   "anom700",
+   "anom850",
+   "thick_anom",
+   "grad_x",
+   "grad_y",
+   "grad_mag",
+   "lap500",
+   "nbhd_anom500",
+   "m_iqr",
+   "m_p10p90",
+   "m_skew",
+   "m_sign_agree",
+   "spread_nbhd",
+   "spread_hetero",
+   "spread700",
+   "spread850",
+   "spread_growth",
+   "domain_spread",
+   "spread_rel_domain",
+   "pc1",
+   "pc2",
+   "pc3",
+   "pc4",
+   "pc5",
+   "pc6",
+   "pc7",
+   "pc8",
+   "pc_norm",
+   "pc_resid",
+   "rev_region",
+   "rev_nbhd",
+   "rev_pc",
+   "rev_spread",
+   "rev_available",
+   "an_dist1",
+   "an_dist_mean",
+   "an_bust_rate",
+   "an_err_med",
+   "an_err_q90",
+   "rec_err",
+   "rec_bias",
+   "rec_bust_rate",
+   "rec_err_nbhd",
+   "rec_err_domain"
+  ],
+  "FULL": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour"
+  ]
+ },
+ "selected_groups": [],
+ "descriptions": {
+  "B0": "Climatological bust frequency (TRAIN, per region x lead x season)",
+  "B1": "Raw ensemble-spread score (spread percentile; ranking score, not a probability)",
+  "B2": "Calibrated spread-only gradient-boosted model (spread, spread percentile, lead, region, season, init hour)",
+  "M1": "B2 + atmospheric state",
+  "M2": "B2 + ensemble behaviour",
+  "M3": "B2 + large-scale pattern (PCA)",
+  "M4": "B2 + forecast evolution",
+  "M5": "B2 + historical forecast-state memory (analogues)",
+  "M6": "B2 + recent verified forecast-error behaviour",
+  "ALL": "B2 + every feature group (no validation-based selection)",
+  "FULL": "Sentinel: B2 inputs + feature groups that improved VALIDATION AUPRC over B2"
+ },
+ "fitted": {
+  "B2": {
+   "best_iteration": 1119,
+   "n_features": 6,
+   "validation_auprc_raw": 0.157048702249441
+  },
+  "M1": {
+   "best_iteration": 192,
+   "n_features": 16,
+   "validation_auprc_raw": 0.15385729975413576
+  },
+  "M2": {
+   "best_iteration": 220,
+   "n_features": 17,
+   "validation_auprc_raw": 0.1539514038824278
+  },
+  "M3": {
+   "best_iteration": 206,
+   "n_features": 16,
+   "validation_auprc_raw": 0.15518086186673816
+  },
+  "M4": {
+   "best_iteration": 515,
+   "n_features": 11,
+   "validation_auprc_raw": 0.15558591559867208
+  },
+  "M5": {
+   "best_iteration": 118,
+   "n_features": 11,
+   "validation_auprc_raw": 0.15368299504681188
+  },
+  "M6": {
+   "best_iteration": 264,
+   "n_features": 11,
+   "validation_auprc_raw": 0.15378696431375288
+  },
+  "ALL": {
+   "best_iteration": 182,
+   "n_features": 52,
+   "validation_auprc_raw": 0.1548166824124701
+  },
+  "FULL": {
+   "best_iteration": 1119,
+   "n_features": 6,
+   "validation_auprc_raw": 0.157048702249441,
+   "selected_groups": []
+  }
+ },
+ "support_levels": [
+  "NORMAL SUPPORT",
+  "MODERATE SUPPORT",
+  "WEAK SUPPORT",
+  "INSUFFICIENT HISTORICAL SUPPORT"
+ ],
+ "evidence_levels": [
+  "STRONG EVIDENCE",
+  "MODERATE EVIDENCE",
+  "WEAK EVIDENCE",
+  "INSUFFICIENT HISTORICAL SUPPORT"
+ ],
+ "protocol": "fit on train (early stopping on validation) -> isotonic calibration on validation -> frozen -> single evaluation on test",
+ "runtime_s": 660.9,
+ "software": {
+  "numpy": "2.5.3",
+  "pandas": "3.0.6",
+  "xarray": "2026.7.0",
+  "scikit-learn": "1.9.1",
+  "xgboost": "3.4.1"
+ }
+}

@@ -1,47 +1,52 @@
 # BUILD_PROGRESS
 
-_Last updated: 2026-09-28 (session paused at user request; machine powered off)._
+_Last updated: 2026-09-28, after the final 2022 test run (`scripts/run_all.sh`, exit 0, `logs/run_all.log` kept locally)._
 
-## PROJECT STATUS
+## FINAL STATUS
 
-| Component | Status |
+| Item | Status |
 |---|---|
-| Data | REAL WB2 IFS ENS 64×32 (5.625°) members + ERA5 + ERA5 1990–2017 climatology. Sources verified 2026-09-28. Download of every 2nd 4-init chunk in progress (`logs/download.log`, resumable via `scripts/download_all.sh`). |
-| Verification | DONE — valid-time alignment, exact area-weighted RMSE, tests (+24/48/72/240 h). GATE 1 smoke test passed on real data (`artifacts/smoke_test.json`). |
-| Labels | DONE — TRAIN-only normalisation, Q90 (primary)/Q95 per region×lead×season, hidden busts, purge at split boundaries, failure signatures. |
-| B0 | DONE (climatological frequency) |
-| B1 | DONE (spread percentile score) |
-| B2 | DONE (calibrated spread-only XGBoost, same protocol as Sentinel) |
-| Sentinel | DONE — M1..M6 ablations, ALL, FULL = B2 + validation-selected groups |
-| Calibration | DONE — validation-only isotonic, frozen |
-| Analogue memory | DONE — causal (valid_time ≤ init), causal_online + frozen modes |
-| OOD/support | DONE — Ledoit-Wolf Mahalanobis, TRAIN quantile categories; evidence-strength rules |
-| API | DONE — FastAPI, `scripts/serve.sh` |
-| Frontend | DONE — map, priority queue, trajectory, evidence, analogues, blind replay + reveal, analytics |
-| Replay | DONE — blind forecast.json / separate verification.json; fingerprint store |
-| Testing | 39 pytest + 3 vitest passing (synthetic TEST FIXTURES only) |
-| Metrics | FINAL (2022 test) NOT YET COMPUTED. Only dev-split (2021 dev-test) runs so far, not reported as results. |
+| Data | COMPLETE: 457/457 WB2 IFS ENS 64×32 (5.625°) chunks, 2018–2022 (every 2nd 4-init chunk), ERA5 reference, ERA5 1990–2017 climatology |
+| Split | train 2018–2020 (1096 inits), validation 2021 (364), test 2022 (366), embargo 18 inits purged at boundaries |
+| Final test | COMPLETE: 2022 scored once, after models and calibrators were frozen |
+| B2 (calibrated spread-only) | AUPRC 0.136, ROC AUC 0.609, Brier 0.0791, ECE 0.0072, recall@10% FAR 0.198 |
+| Sentinel (FULL) | AUPRC 0.136, ROC AUC 0.609, Brier 0.0791, ECE 0.0072, recall@10% FAR 0.198 |
+| Sentinel vs B2 | **No improvement established.** No group beat B2 on validation → FULL = B2 inputs → identical predictions; bootstrap CI of ΔAUPRC [0, 0]; pre-registered verdict: `material_improvement: false` |
+| Other baselines | B0 AUPRC 0.091 (ROC 0.517); B1 AUPRC 0.131 (ROC 0.609); test base rate 0.088 |
+| Ablations (test, not selectable) | M1 0.135, M2 0.136, M3 0.136, M4 0.138, M5 0.137, M6 0.138, ALL 0.138 AUPRC |
+| Q95 sensitivity | B0 0.042, B2 0.084, FULL 0.084 AUPRC |
+| Calibration | Validation-only isotonic; test ECE 0.0072 (B2/FULL), 0.0134 (B0) |
+| Hidden bust | 2,537 test hidden busts; recall 0.0 for B2 and Sentinel at the validation-chosen threshold (B0 0.073); low-spread AUPRC 0.060 |
+| Operating point | threshold 0.128 (validation, 10% FAR target) → test precision 0.156, recall 0.246, FAR 0.128 |
+| Warning lead / peak day / spatial | mean lead of detected busts 6.3 d; peak-risk-day MAE 3.07 d (35% within 1 d); mean Jaccard 0.082 |
+| Spread-skill ratio | 0.79 (Day 1) rising to 0.98–1.02 (Days 3–10) |
+| Failure fingerprint | analogue-expected signature top-1 agreement 0.409 vs climatological reference 0.332 |
+| Replay | COMPLETE: 12 real 2022 cases (4 stress, selected by verification only; 8 random); blind file has no verification |
+| Frontend | COMPLETE: built by run_all; consumes `/api/*` served from final `artifacts/` (no hardcoded metrics) |
+| API | Verified with TestClient against final artifacts (health, cases, overview, regions, replay blind/verification, metrics, provenance) |
+| Tests | 46 pytest passed, 0 skipped (incl. the real-data pipeline tests); 3 vitest passed |
+| Docs | README results, limitations (final findings), data_access, explainability; evaluation.md + model_card.md generated from artifacts |
 
-Git checkpoint: see `git log` (latest pushed to origin/main).
+### Change made after the final run
 
-## Dev-split findings so far (development only; not final results)
+`tests/test_real_pipeline.py`: Z500 lower sanity bound 4800 → 4500 m. The full dataset contains one
+real value below 4800 m (4796.8 m at 64.7°N 146°E, Dec 2022; ERA5 reads 4788 m there) at the edge of
+the context domain. This is a test-bound error; data, features and models were not changed.
 
-* Spread-only B2 is strong; with ~170 train inits no extra feature group beat B2 on validation.
-* In-sample "quota effect": analogue bust rate is anti-correlated with the label within TRAIN
-  (thresholds are TRAIN quantiles) but positively correlated in validation/test.
-* Monotone memory-size counts removed from model inputs (hidden timestamps).
-* At 374 train inits (dev): B2 AUPRC 0.171 vs FULL 0.170 on 2021 dev-test (CI spans 0); only ENS was
-  validated. Failure-signature window changed to 7x7 boxes (3x3 put 93% of busts in one class).
+## Known limitations
 
-## NEXT SAFE STEP
+* Native ~5.625° grid boxes, not 5°×5° (bandwidth-limited data product).
+* Geopotential only (Z500/700/850); no wind, MSLP or vorticity features.
+* NCMRWF: adapter interface only, no NCMRWF data ingested.
+* One test year; Sentinel shows no skill gain over spread; hidden busts are not detected.
 
-0. Download was interrupted at 374/457 cached blocks. Resume with `scripts/download_all.sh`
-   (resumable; already-cached blocks are skipped). Stride-4 coverage of all 5 years is complete.
-1. Wait for download to finish (`ls data/cache/ens | wc -l` = 457; log ends with DOWNLOAD_DONE).
-2. `scripts/run_all.sh` (final split): train → evaluate (2022, once) → replay → reports.
-3. Commit artifacts + docs; freeze MVP.
+See `docs/limitations.md`.
 
-## RISKS / BLOCKERS
+## Final commit
 
-* ~1 MB/s link: full member-level 1.5° data infeasible (documented in docs/data_sources.md).
-* Incremental value over B2 may not be established — will be reported honestly.
+See `git log` — commit "feat: complete forecast bust sentinel MVP (final 2022 evaluation)".
+
+## Next step
+
+SIH presentation/demo preparation (`docs/demo.md`). Any future model change must be developed on the
+dev split (`FBS_SPLIT=dev`); 2022 is now inspected and can no longer serve as an untouched test set.

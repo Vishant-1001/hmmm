@@ -99,6 +99,23 @@ reliability curves, ROC AUC, recall at 5/10% FAR, hidden-bust recall, warning le
 spatial overlap, spread-skill ratio, rank histograms, block-bootstrap CIs. **Results:**
 [`docs/evaluation.md`](docs/evaluation.md) (generated from `artifacts/metrics.json`).
 
+**Final 2022 test result (scored once, 366 initialisations, 234,240 region×day cases, bust rate 0.088):**
+
+| Model | AUPRC | ROC AUC | Brier | ECE | Recall @ 10% FAR |
+|---|---:|---:|---:|---:|---:|
+| B0 climatology | 0.091 | 0.517 | 0.0804 | 0.0134 | 0.075 |
+| B1 spread score | 0.131 | 0.609 | — | — | 0.195 |
+| B2 calibrated spread-only | 0.136 | 0.609 | 0.0791 | 0.0072 | 0.198 |
+| Sentinel (FULL) | 0.136 | 0.609 | 0.0791 | 0.0072 | 0.198 |
+
+**Incremental value over B2 was not established.** No feature group improved VALIDATION (2021) AUPRC over
+B2, so under the selection rule fixed in advance FULL uses exactly B2's inputs and its predictions are
+identical to B2's. Some ablations (M4, M6, ALL) score 0.138 on 2022, but they were not selected on
+validation, so choosing one of them now would be selecting on the test year. At the validation-chosen
+operating point, hidden-bust recall is 0.0 for both B2 and the Sentinel. The value demonstrated is the
+calibrated Day 1–10 reliability workflow (baseline comparison, historical evidence, support levels, priority
+queue, blind replay, verification fingerprint), not a skill gain over ensemble spread.
+
 ## 11. Replay
 
 `python -m forecast_bust.replay` builds precomputed **real** 2022 cases. Each case has a blind

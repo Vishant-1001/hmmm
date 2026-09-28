@@ -44,3 +44,18 @@
   analysis would have to stand in for the most recent days.
 * **In-sample quota effect.** Training labels are TRAIN quantiles, which slightly distorts label-rate
   features inside the training period (see methodology). Validation-based group selection mitigates it.
+
+## Findings from the final 2022 test run
+
+* **No incremental skill over the spread baseline.** No feature group beat B2 on 2021 validation AUPRC,
+  so the Sentinel (FULL) is trained on B2's inputs and its 2022 predictions are identical to B2's
+  (AUPRC 0.136 for both; the bootstrap CI of the difference is exactly [0, 0]). Test-year differences of
+  individual ablations (up to +0.002 AUPRC) were not selected on validation and are not claimed.
+* **Hidden busts are not caught.** At the operating threshold chosen on validation (10% FAR target;
+  2022 FAR 0.128), recall on the 2,537 hidden-bust cases (bust with spread ≤ TRAIN P25) is 0.0 for B2
+  and the Sentinel. A spread-driven score cannot flag low-spread cases at that threshold.
+* **Replay stress cases were selected with 2022 verification** (count of hidden-bust region-days), never
+  with model output, and are labelled "not representative"; the 8 random cases are the
+  representative sample.
+* **Dataset mismatch with the problem statement.** Regions are native ~5.625° boxes, not 5°×5°;
+  the research data are geopotential only; NCMRWF is an adapter interface with no data ingested.

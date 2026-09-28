@@ -1,0 +1,20 @@
+{
+ "n_test_busts": 20598,
+ "n_with_analogue_expectation": 20598,
+ "top1_agreement": 0.40902029323235267,
+ "mean_prob_assigned_to_actual": 0.38395700058968335,
+ "reference_climatological_top1": "AMPLITUDE_STRUCTURE",
+ "reference_top1_agreement": 0.33226526847266724,
+ "reference_mean_prob_assigned": 0.3374448635566284,
+ "training_bust_signature_frequencies": {
+  "AMPLITUDE_STRUCTURE": 0.3830069791754966,
+  "POSITION_PHASE": 0.3520527817806787,
+  "RESIDUAL_MIXED": 0.2649402390438247
+ },
+ "actual_test_signature_frequencies": {
+  "POSITION_PHASE": 0.3819788328963977,
+  "AMPLITUDE_STRUCTURE": 0.33226526847266724,
+  "RESIDUAL_MIXED": 0.28575589863093503
+ },
+ "note": "Reference = always predicting the most common TRAIN bust signature / TRAIN frequencies."
+}

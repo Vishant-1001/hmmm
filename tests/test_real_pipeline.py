@@ -21,7 +21,9 @@ def test_real_states_alignment_and_units():
     import xarray as xr
     ds = xr.open_dataset(STATES)
     z = ds["ens_mean"].sel(level=500)
-    assert 4800 < float(z.min()) and float(z.max()) < 6100  # Z500 in metres
+    # Z500 in metres. The context domain reaches ~65N, where winter troughs go below 4800 m
+    # (ERA5 4788 m at 64.7N 146E, Nov 2022); decametres (~500) or m2 s-2 (~50000) still fail.
+    assert 4500 < float(z.min()) and float(z.max()) < 6100
     assert set(ds.lead.values.tolist()) == set(range(24, 241, 24))
     assert int(ds["n_members"].min()) == 50
     # forecast-minus-ERA5 grows with lead on average (sanity of valid-time alignment)
