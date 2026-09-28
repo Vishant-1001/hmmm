@@ -44,7 +44,7 @@ See `docs/limitations.md`.
 
 ## Final commit
 
-See `git log` — commit "feat: complete forecast bust sentinel MVP (final 2022 evaluation)".
+`be8123b` — "feat: complete forecast bust sentinel MVP (final 2022 evaluation)".
 
 ## Next step
 
