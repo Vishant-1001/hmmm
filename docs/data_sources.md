@@ -26,7 +26,7 @@ Ensemble *members* are required (spread, IQR, skewness, sign agreement, rank his
 the 1.5° ensemble-mean store alone is insufficient. The 64×32 product is therefore the only
 member-level product that permits a multi-year chronological experiment on this link. The
 consequences (one grid box per region; RMSE over a region reduces to the absolute error of the
-box-mean Z500; failure signatures computed on a 3×3-box neighbourhood) are listed in
+box-mean Z500; failure signatures computed on a 7×7-box neighbourhood) are listed in
 `docs/limitations.md`. The code is resolution-agnostic (`region_members`, `weighted_rmse`) and
 would use 3–4 grid points per region on the 1.5° product.
 
