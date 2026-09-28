@@ -152,6 +152,86 @@ def download_climatology() -> Path:
     return out
 
 
+EXTRA_VARS = {"u": "u_component_of_wind", "v": "v_component_of_wind", "mslp": "mean_sea_level_pressure"}
+
+
+def extra_block_path(k: int) -> Path:
+    p = cache_dir() / "ens_extra"
+    p.mkdir(parents=True, exist_ok=True)
+    return p / f"block_{k:04d}.nc"
+
+
+def download_extra_block(ds: xr.Dataset, k: int) -> Path:
+    """Ensemble mean and std (ddof=1) of u, v (3 levels) and MSLP for the same initialisations,
+    leads and context domain as geopotential block k. Members are reduced at download time
+    because only these statistics are used (keeps the cache ~25x smaller)."""
+    cfg = data_config()
+    out = extra_block_path(k)
+    if out.exists():
+        return out
+    n = cfg["init_chunk_size"]
+    leads = lead_to_hours(ds["prediction_timedelta"].values)
+    lead_idx = [int(np.where(leads == h)[0][0]) for h in cfg["lead_hours"]]
+    data = {}
+    for short, name in EXTRA_VARS.items():
+        a = ds[name].isel(time=slice(k * n, (k + 1) * n), prediction_timedelta=lead_idx)
+        if "level" in a.dims:
+            a = a.sel(level=cfg["levels"])
+        a = subset_domain(a, cfg["context_domain"]).astype("float32").load()
+        data[f"{short}_mean"] = a.mean("number")
+        data[f"{short}_std"] = a.std("number", ddof=1)
+        data[f"{short}_mean"].attrs["units"] = a.attrs.get("units", "")
+    out_ds = xr.Dataset(data).assign_coords(prediction_timedelta=np.asarray(cfg["lead_hours"], dtype=np.int32))
+    out_ds.attrs.update(source=cfg["source"]["forecast_store"], lead_units="hours", n_members=int(a.sizes["number"]),
+                        downloaded=dt.datetime.now(dt.timezone.utc).isoformat())
+    tmp = out.with_suffix(".tmp")
+    out_ds.to_netcdf(tmp)
+    tmp.rename(out)
+    return out
+
+
+def download_extras() -> None:
+    """Extra variables for exactly the geopotential blocks already cached (same order, resumable)."""
+    cfg = data_config()
+    ds = open_forecast_store()
+    n_blocks = ds.sizes["time"] // cfg["init_chunk_size"]
+    order = [k for k in block_order(n_blocks, cfg["block_stride"]) if block_path(k).exists()]
+    for i, k in enumerate(order):
+        if extra_block_path(k).exists():
+            continue
+        for attempt in range(5):
+            try:
+                t0 = time.time()
+                download_extra_block(ds, k)
+                print(f"extra block {k} ({i + 1}/{len(order)}) {time.time() - t0:.0f}s", flush=True)
+                break
+            except Exception as e:  # network errors: retry with backoff
+                print(f"extra block {k} attempt {attempt} failed: {e!r}", flush=True)
+                time.sleep(10 * (attempt + 1))
+
+
+def extra_climatology_path() -> Path:
+    return cache_dir() / "era5_clim_1990_2017_extra.nc"
+
+
+def download_extra_climatology() -> Path:
+    cfg = data_config()
+    out = extra_climatology_path()
+    if out.exists():
+        return out
+    ds = open_climatology_store()
+    parts = {}
+    for short, name in EXTRA_VARS.items():
+        a = ds[name]
+        if "level" in a.dims:
+            a = a.sel(level=cfg["levels"])
+        parts[short] = subset_domain(a, cfg["context_domain"]).astype("float32").load()
+    sub = xr.Dataset(parts)
+    sub.attrs.update(source=cfg["source"]["climatology_store"], downloaded=dt.datetime.now(dt.timezone.utc).isoformat())
+    sub.to_netcdf(out)
+    return out
+
+
 def write_manifest_entry(key: str, entry: dict) -> None:
     path = ARTIFACT_DIR / "dataset_manifest.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -164,7 +244,7 @@ if __name__ == "__main__":
     import argparse
 
     ap = argparse.ArgumentParser(description="Download WB2 subsets to the local cache")
-    ap.add_argument("what", choices=["forecasts", "reference", "climatology"])
+    ap.add_argument("what", choices=["forecasts", "reference", "climatology", "extras", "extra_climatology"])
     ap.add_argument("--max-blocks", type=int, default=None)
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO)
@@ -172,5 +252,9 @@ if __name__ == "__main__":
         download_forecasts(a.max_blocks)
     elif a.what == "reference":
         print(download_reference())
-    else:
+    elif a.what == "climatology":
         print(download_climatology())
+    elif a.what == "extra_climatology":
+        print(download_extra_climatology())
+    else:
+        download_extras()
