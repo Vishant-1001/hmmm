@@ -32,7 +32,7 @@ export default function App() {
         </nav>
       </header>
       <div className="banner" data-testid="mode-banner">
-        <strong>Historical research replay</strong> — precomputed real ECMWF IFS ENS forecasts from the held-out test period
+        <strong>Historical research replay</strong> — precomputed real ECMWF IFS ENS forecasts from the 2022 test period
         (WeatherBench 2). Not a live feed; NCMRWF integration is architected but not claimed.
         {mode && <span className="muted" data-testid="api-mode"> Server: {mode}.</span>}
       </div>
@@ -56,7 +56,7 @@ function About({ prov }: { prov: any }) {
           large-error threshold (TRAIN Q90 of normalized regional RMSE per region × lead day × season). It does not forecast weather.</li>
         <li>Z500 is the first validated target variable; this does not mean the system handles rainfall, cyclones or heat waves.</li>
         <li>ERA5 is the verification reference analysis, not perfect truth.</li>
-        <li>Regions are 5.625° grid boxes (bandwidth-limited WeatherBench 2 64×32 product) — not local forecasts.</li>
+        <li>Regions are native 5.625° × 5.625° grid boxes (bandwidth-limited WeatherBench 2 64×32 product), not the 5° × 5° cells of the design specification — and not local forecasts.</li>
         <li>Historical failure signatures are evidence from similar past forecast states, not causal proof.</li>
         <li>Relationships learned on ECMWF IFS ENS 2018–2022 need re-learning for NCMRWF NEPS or after model upgrades.</li>
       </ul>

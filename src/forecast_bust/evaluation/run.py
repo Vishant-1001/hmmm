@@ -12,7 +12,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from forecast_bust.config import clean_json, ARTIFACT_DIR, MODEL_DIR, data_config, model_config
+from forecast_bust.config import RUN, clean_json, ARTIFACT_DIR, MODEL_DIR, data_config, model_config
 from forecast_bust.data.assemble import load_states
 from forecast_bust.evaluation import metrics as M
 from forecast_bust.models.sentinel import DESCRIPTIONS, FEATURE_SETS
@@ -53,6 +53,10 @@ def evaluate() -> dict:
             **{f"recall_at_far_{int(f * 100)}": M.recall_at_far(y, p, f) for f in mcfg["evaluation"]["fixed_far"]},
             "operating_point": {"chosen_on": "validation", "target_far": far, **M.confusion_at(y, p, thr)},
             "hidden_bust": M.hidden_bust_metrics(te, p, thr),
+            # hidden-bust recall at fixed overall false-alarm rates (thresholds chosen on VALIDATION)
+            "hidden_bust_at_far": {f"far_{int(f * 100)}": M.hidden_bust_metrics(
+                te, p, M.threshold_at_far(va["bust"].values, va[c].values, f))["hidden_bust_recall"]
+                for f in mcfg["evaluation"]["fixed_far"]},
             "warning_lead": M.warning_lead(te, p, thr),
             "peak_risk_day": M.peak_day_error(te, p),
             "spatial_overlap": M.spatial_overlap(te, p, thr),
@@ -91,6 +95,7 @@ def evaluate() -> dict:
         by_evidence.append({"evidence": ev_names[int(lv)], "n": int(len(g)), "bust_rate": float(g["bust"].mean()),
                             "mean_p_FULL": float(g["p_FULL"].mean()),
                             "auprc_FULL": M.auprc(g["bust"].values, g["p_FULL"].values)})
+    manifest = json.loads((ARTIFACT_DIR / "experiment_manifest.json").read_text())
     full = pd.read_parquet(TABLE, columns=["init_time", "split", "bust"])
     split_info = {s: {"inits": int(g["init_time"].nunique()), "rows": int(len(g)),
                       "first_init": str(g["init_time"].min()), "last_init": str(g["init_time"].max()),
@@ -107,8 +112,11 @@ def evaluate() -> dict:
                                        "excludes 0 AND relative gain >= 5% (rule fixed before test evaluation)",
                        "material_improvement": bool(material)},
         "by_lead_day": by_lead, "by_season": by_season,
-        "selected_groups": json.loads((ARTIFACT_DIR / "experiment_manifest.json").read_text())["selected_groups"],
+        "selected_groups": manifest["selected_groups"],
         "q95_sensitivity": q95, "frozen_memory_sensitivity": frozen, "by_evidence_level": by_evidence,
+        "disagreement_full_vs_b2": M.disagreement_behaviour(y, te["p_FULL"].values, te["p_B2"].values),
+        "run": RUN or "v1", "sentinel_learner": manifest.get("sentinel_learner", "standard"),
+        "test_history": mcfg.get("v2", {}).get("test_history"),
     }
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
     (ARTIFACT_DIR / "metrics.json").write_text(json.dumps(clean_json(out), indent=1, default=float))

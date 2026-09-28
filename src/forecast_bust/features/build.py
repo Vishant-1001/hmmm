@@ -12,6 +12,7 @@ Groups
   EVO    : forecast evolution   revision vs the cycle 24 h earlier for the same valid time
   MEM    : historical memory    analogue statistics (see forecast_bust.analogues.memory)
   REC    : recent verified error behaviour of this NWP system (see forecast_bust.analogues.recent)
+  DYN    : (v2, Group B completion) wind, vorticity, divergence, shear, MSLP (forecast_bust.features.dynamics)
 """
 from __future__ import annotations
 
@@ -26,6 +27,7 @@ from sklearn.decomposition import PCA
 
 from forecast_bust.config import clean_json, ARTIFACT_DIR, MODEL_DIR, data_config, model_config
 from forecast_bust.data.regions import region_members
+from forecast_bust.features.dynamics import DYN, add_dyn_features
 from forecast_bust.labels.build import regions_for
 
 log = logging.getLogger(__name__)
@@ -40,6 +42,9 @@ EVO = ["rev_region", "rev_nbhd", "rev_pc", "rev_spread", "rev_available"]
 MEM = ["an_n_within", "an_dist1", "an_dist_mean", "an_bust_rate", "an_err_med", "an_err_q90", "an_n_eligible"]
 REC = ["rec_err", "rec_bias", "rec_bust_rate", "rec_n", "rec_err_nbhd", "rec_err_domain"]
 GROUPS = {"SPREAD": SPREAD, "ATM": ATM, "ENS": ENS, "PAT": PAT, "EVO": EVO, "MEM": MEM, "REC": REC}
+DYN_ENABLED = bool(model_config().get("v2", {}).get("dyn_features", False))
+if DYN_ENABLED:
+    GROUPS["DYN"] = DYN
 FORBIDDEN_INPUTS = ("era5_z500", "era5_rank", "error_m", "norm_error", "bust", "sig_", "era5_anom_m", "bias_m")
 
 
@@ -192,4 +197,6 @@ def add_features(cases: pd.DataFrame, ds: xr.Dataset) -> pd.DataFrame:
     df = cases.merge(gf, on=["init_time", "lead_hours", "region_id"], how="left", validate="one_to_one")
     df["region_code"] = df["row"] * 100 + df["col"]
     df["init_hour"] = pd.to_datetime(df["init_time"]).dt.hour.astype(np.int8)
+    if DYN_ENABLED:
+        df = add_dyn_features(df, ds)
     return df

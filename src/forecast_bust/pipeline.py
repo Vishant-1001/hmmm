@@ -22,13 +22,13 @@ import pandas as pd
 
 from forecast_bust.analogues.memory import compute_memory_features
 from forecast_bust.analogues.recent import recent_error_features
-from forecast_bust.config import clean_json, ARTIFACT_DIR, INTERIM_DIR, MODEL_DIR, REPO_ROOT, data_config, model_config
+from forecast_bust.config import RUN, clean_json, ARTIFACT_DIR, INTERIM_DIR, MODEL_DIR, REPO_ROOT, data_config, model_config
 from forecast_bust.data.assemble import assemble, load_states, states_path
 from forecast_bust.features.build import GROUPS, add_features
 from forecast_bust.labels.build import build_cases
 from forecast_bust.evaluation.metrics import auprc
-from forecast_bust.models.sentinel import (CANDIDATE_GROUPS, DESCRIPTIONS, FEATURE_SETS, B0Climatology, CalibratedGBM,
-                                           full_feature_set)
+from forecast_bust.models.sentinel import (CANDIDATE_GROUPS, DESCRIPTIONS, FEATURE_SETS, B0Climatology, B2Margin,
+                                           CalibratedGBM, full_feature_set)
 from forecast_bust.support.ood import EVIDENCE_LEVELS, SUPPORT_LEVELS, evidence_strength, fit_support, support_distance
 
 log = logging.getLogger(__name__)
@@ -109,28 +109,48 @@ def train(reassemble: bool = True) -> None:
     models = {"B0": B0Climatology().fit(tr)}
     fitted = {}
     val_auprc = {}
-    for name, feats in FEATURE_SETS.items():
-        m = CalibratedGBM(feats, name).fit(tr, va)
-        models[name] = m
-        val_auprc[name] = auprc(va["bust"].values, m.predict_raw(va))
-        fitted[name] = {"best_iteration": m.best_iteration, "n_features": len(feats),
-                        "validation_auprc_raw": val_auprc[name]}
-        log.info("fitted %s (%d features, best_iter %d, val AUPRC %.4f)", name, len(feats), m.best_iteration,
-                 val_auprc[name])
-    # Group selection on VALIDATION only: keep a group iff B2+group beats B2 on validation AUPRC
-    selected = [g for m, g in CANDIDATE_GROUPS.items() if val_auprc[m] > val_auprc["B2"]]
+    y_va = va["bust"].values
+
+    def _fit(name, feats, base=None, key=None):
+        m = CalibratedGBM(feats, name, base=base).fit(tr, va)
+        key = key or name
+        val_auprc[key] = auprc(y_va, m.predict_raw(va))
+        fitted[key] = {"best_iteration": m.best_iteration, "n_features": len(feats), "learner": m.learner,
+                       "validation_auprc_raw": val_auprc[key]}
+        log.info("fitted %s (%s, %d features, best_iter %d, val AUPRC %.4f)", key, m.learner, len(feats),
+                 m.best_iteration, val_auprc[key])
+        return m
+
+    models["B2"] = _fit("B2", FEATURE_SETS["B2"])
+    # Sentinel learner(s): v1 = "standard" only; v2 config also tries "residual_b2" (boost from the
+    # cross-fitted B2 margin). Everything below is decided on VALIDATION only.
+    learners = model_config().get("v2", {}).get("learners", ["standard"])
+    per_learner = {}
+    for learner in learners:
+        base = B2Margin(models["B2"], tr) if learner == "residual_b2" else None
+        suffix = "" if learner == "standard" else f"@{learner}"
+        cand = {name: _fit(name, feats, base, key=name + suffix) for name, feats in FEATURE_SETS.items()
+                if name != "B2"}
+        # Group selection: keep a group iff B2+group beats B2 on validation AUPRC
+        selected = [g for m, g in CANDIDATE_GROUPS.items() if val_auprc[m + suffix] > val_auprc["B2"]]
+        cand["FULL"] = _fit("FULL", full_feature_set(selected), base, key="FULL" + suffix)
+        fitted["FULL" + suffix]["selected_groups"] = selected
+        per_learner[learner] = {"models": cand, "selected": selected, "base": base,
+                                "val_auprc_full": val_auprc["FULL" + suffix]}
+    # learner choice: higher VALIDATION AUPRC of FULL; ties -> standard (listed first)
+    chosen = max(learners, key=lambda l_: (per_learner[l_]["val_auprc_full"], -learners.index(l_)))
+    selected = per_learner[chosen]["selected"]
+    models.update(per_learner[chosen]["models"])
     FEATURE_SETS_RUN = dict(FEATURE_SETS)
     FEATURE_SETS_RUN["FULL"] = full_feature_set(selected)
-    models["FULL"] = CalibratedGBM(FEATURE_SETS_RUN["FULL"], "FULL").fit(tr, va)
-    val_auprc["FULL"] = auprc(va["bust"].values, models["FULL"].predict_raw(va))
-    fitted["FULL"] = {"best_iteration": models["FULL"].best_iteration, "n_features": len(FEATURE_SETS_RUN["FULL"]),
-                      "validation_auprc_raw": val_auprc["FULL"], "selected_groups": selected}
-    log.info("FULL uses validated groups %s (val AUPRC %.4f)", selected, val_auprc["FULL"])
+    log.info("learner %s; FULL uses validated groups %s (val AUPRC %.4f vs B2 %.4f)", chosen, selected,
+             per_learner[chosen]["val_auprc_full"], val_auprc["B2"])
     # Q95 sensitivity (same protocol, different project-defined criterion)
     tr95, va95 = tr.assign(bust=tr["bust_q95"]), va.assign(bust=va["bust_q95"])
     models["B0_q95"] = B0Climatology().fit(tr95)
     models["B2_q95"] = CalibratedGBM(FEATURE_SETS["B2"], "B2_q95").fit(tr95, va95)
-    models["FULL_q95"] = CalibratedGBM(FEATURE_SETS_RUN["FULL"], "FULL_q95").fit(tr95, va95)
+    base95 = B2Margin(models["B2_q95"], tr95) if chosen == "residual_b2" else None
+    models["FULL_q95"] = CalibratedGBM(FEATURE_SETS_RUN["FULL"], "FULL_q95", base=base95).fit(tr95, va95)
     # Frozen-memory sensitivity: memory restricted to train+validation cases
     dff, _, _ = compute_memory_features(df.drop(columns=GROUPS["MEM"]), mode="frozen")
     models["FULL_frozen_memory"] = models["FULL"]  # same model, different memory feature inputs at test time
@@ -165,9 +185,12 @@ def train(reassemble: bool = True) -> None:
         "data_config": data_config(), "model_config": model_config(),
         "splits": json.loads(split_counts.to_json(orient="index", date_format="iso")),
         "feature_groups": GROUPS, "feature_sets": FEATURE_SETS_RUN, "selected_groups": selected, "descriptions": DESCRIPTIONS,
+        "sentinel_learner": chosen, "learners_tried": learners,
+        "learner_rule": "FULL model with the higher VALIDATION AUPRC (ties -> standard)",
         "fitted": fitted, "support_levels": SUPPORT_LEVELS, "evidence_levels": EVIDENCE_LEVELS,
         "protocol": "fit on train (early stopping on validation) -> isotonic calibration on validation -> "
                     "frozen -> single evaluation on test",
+        "run": RUN or "v1",
         "runtime_s": round(time.time() - t0, 1),
         "software": _versions(),
     }

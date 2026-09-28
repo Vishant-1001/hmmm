@@ -128,3 +128,29 @@ def block_bootstrap_diff(df: pd.DataFrame, p_a: np.ndarray, p_b: np.ndarray, n: 
     diffs = np.array(diffs)
     return {"mean": float(diffs.mean()), "ci95": [float(np.quantile(diffs, 0.025)), float(np.quantile(diffs, 0.975))],
             "p_le_0": float((diffs <= 0).mean()), "n_boot": n, "block": "initialisation day"}
+
+
+def disagreement_behaviour(y, p_model, p_base, margin_pp: float = 5.0) -> dict:
+    """How the model's disagreement with the spread baseline relates to what happened.
+
+    Rows are binned by d = p_model - p_base (percentage points): model higher (> margin),
+    agree (|d| <= margin), model lower (< -margin). Within each bin the observed bust rate
+    is compared with both mean probabilities and both Brier scores, which shows which
+    probability was closer to reality when they disagreed."""
+    y = np.asarray(y, dtype=float)
+    d = 100 * (np.asarray(p_model) - np.asarray(p_base))
+    out = {"margin_pp": margin_pp, "mean_abs_pp": float(np.abs(d).mean()),
+           "share_abs_gt_5pp": float((np.abs(d) > 5).mean()), "share_abs_gt_10pp": float((np.abs(d) > 10).mean()),
+           "quantiles_pp": {str(q): float(np.quantile(d, q)) for q in (0.01, 0.05, 0.5, 0.95, 0.99)}, "bins": []}
+    for name, m in (("model_higher", d > margin_pp), ("agree", np.abs(d) <= margin_pp),
+                    ("model_lower", d < -margin_pp)):
+        if m.any():
+            out["bins"].append({"bin": name, "n": int(m.sum()), "share": float(m.mean()),
+                                "observed_bust_rate": float(y[m].mean()),
+                                "mean_p_model": float(np.mean(np.asarray(p_model)[m])),
+                                "mean_p_base": float(np.mean(np.asarray(p_base)[m])),
+                                "brier_model": brier(y[m], np.asarray(p_model)[m]),
+                                "brier_base": brier(y[m], np.asarray(p_base)[m])})
+        else:
+            out["bins"].append({"bin": name, "n": 0, "share": 0.0})
+    return out

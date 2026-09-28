@@ -138,6 +138,7 @@ def build() -> None:
         rows = table[(table["init_time"] == t)].sort_values(["region_id", "lead_day"])
         pos = rows.index.to_numpy()
         contrib = full.contributions(rows)
+        base_m = full.base_margin_of(rows) if hasattr(full, "base_margin_of") else None
         pr = priority_score(rows["p_FULL"].values, rows["p_B2"].values, rows["lead_day"].values,
                             rows["evidence_level"].values)
         per_region = {}
@@ -152,7 +153,8 @@ def build() -> None:
                                       "bust": int(a["bust"]), "normalized_error": _r(a["norm_error"], 3),
                                       "signature": a["sig_class"] if int(a["bust"]) else None})
             exp = expected_signature(nb[0] if nb else None, table)
-            ex = explain_row(row, contrib[k], full.features, ref, float(row["p_FULL"]), float(row["p_B2"]), base_rate)
+            ex = explain_row(row, contrib[k], full.features, ref, float(row["p_FULL"]), float(row["p_B2"]), base_rate,
+                             baseline_logodds=None if base_m is None else float(base_m[k]))
             attribution_note = ex.pop("attribution_note")
             for dr in ex["drivers"]:
                 dr["value"] = _r(dr["value"], 3)

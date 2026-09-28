@@ -12,11 +12,19 @@ CONFIG_DIR = REPO_ROOT / "config"
 # FBS_SPLIT=dev runs the whole pipeline on a development split (train 2018-2019,
 # validation 2020, dev-test 2021) so that iteration never touches the 2022 test year.
 DEV = os.environ.get("FBS_SPLIT", "final") == "dev"
-_suffix = "dev" if DEV else ""
+# FBS_RUN names a run namespace (e.g. "v2") so a rebuilt pipeline never overwrites the
+# artifacts, models or interim tables of an earlier final evaluation. Empty = original v1 paths.
+RUN = os.environ.get("FBS_RUN", "")
+_suffix = Path(RUN) / ("dev" if DEV else "")
 ARTIFACT_DIR = Path(os.environ.get("FBS_ARTIFACT_DIR", REPO_ROOT / "artifacts")) / _suffix
 DATA_DIR = Path(os.environ.get("FBS_DATA_DIR", REPO_ROOT / "data"))
 MODEL_DIR = REPO_ROOT / "models" / _suffix
 INTERIM_DIR = REPO_ROOT / "data" / "interim" / _suffix
+
+
+def run_config_name() -> str:
+    """Model config file for this run namespace: config/model_<run>.yaml if present, else model.yaml."""
+    return f"model_{RUN}" if RUN and (CONFIG_DIR / f"model_{RUN}.yaml").exists() else "model"
 
 
 @lru_cache(maxsize=None)
@@ -33,7 +41,7 @@ def data_config() -> dict:
 
 
 def model_config() -> dict:
-    return load_config("model")
+    return load_config(run_config_name())
 
 
 def cache_dir() -> Path:

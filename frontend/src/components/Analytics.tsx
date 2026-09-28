@@ -3,7 +3,8 @@ import { api } from "../api";
 import { BarRow, ReliabilityDiagram } from "./Charts";
 
 const f = (v: number | null | undefined, n = 3) => (v == null || Number.isNaN(v) ? "—" : v.toFixed(n));
-const ORDER = ["B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "M6", "ALL", "FULL"];
+const ORDER = ["B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "ALL", "FULL"];
+const BIN_LABEL: Record<string, string> = { model_higher: "Sentinel higher than B2 by > 5 pp", agree: "Within ±5 pp", model_lower: "Sentinel lower than B2 by > 5 pp" };
 
 export function Analytics() {
   const [m, setM] = useState<any>(null);
@@ -26,7 +27,9 @@ export function Analytics() {
           {" "}Difference {f(fv.auprc_gain)} ({(100 * fv.relative_gain).toFixed(1)}% relative), 95% block-bootstrap CI [{f(fv.bootstrap.ci95[0])}, {f(fv.bootstrap.ci95[1])}].
         </p>
         <p className="muted">{fv.verdict_rule}. Test base rate {f(mt.test_base_rate)} over {mt.n_test_rows.toLocaleString()} region×day cases.
-          Data: {ds.source}; reference: {ds.reference}.</p>
+          Data: {ds.source}; reference: {ds.reference}.
+          {mt.run && <> Run: <strong>{mt.run}</strong>; Sentinel learner: {mt.sentinel_learner ?? "standard"}; validated feature groups: {(mt.selected_groups ?? []).join(", ") || "none"}.</>}</p>
+        {mt.test_history && <p className="muted" data-testid="test-history"><strong>Test-set history:</strong> {mt.test_history}</p>}
         <div className="table-wrap">
           <table>
             <thead><tr><th>Split</th><th>Initialisations</th><th>First</th><th>Last</th><th>Bust rate</th></tr></thead>
@@ -42,14 +45,16 @@ export function Analytics() {
         <div className="table-wrap">
           <table data-testid="model-table">
             <thead><tr><th>Model</th><th>Description</th><th>AUPRC</th><th>ROC AUC</th><th>Brier</th><th>ECE</th>
-              <th>Recall @ FAR 10%</th><th>Hidden-bust recall</th><th>Mean lead day of detected busts</th></tr></thead>
+              <th>Recall @ FAR 10%</th><th>Hidden-bust recall</th><th>Hidden-bust recall @ FAR 5% / 10%</th><th>Mean lead day of detected busts</th></tr></thead>
             <tbody>{ORDER.filter((k) => models[k]).map((k) => {
               const r = models[k];
               return (
                 <tr key={k} style={k === "FULL" || k === "B2" ? { fontWeight: 600 } : undefined}>
                   <td>{k}</td><td className="muted">{r.description}</td><td>{f(r.auprc)}</td><td>{f(r.roc_auc)}</td>
                   <td>{f(r.brier, 4)}</td><td>{f(r.ece, 4)}</td><td>{f(r.recall_at_far_10)}</td>
-                  <td>{f(r.hidden_bust.hidden_bust_recall)}</td><td>{f(r.warning_lead.mean_lead_day_of_detected_busts, 2)}</td>
+                  <td>{f(r.hidden_bust.hidden_bust_recall)}</td>
+                  <td>{r.hidden_bust_at_far ? `${f(r.hidden_bust_at_far.far_5)} / ${f(r.hidden_bust_at_far.far_10)}` : "—"}</td>
+                  <td>{f(r.warning_lead.mean_lead_day_of_detected_busts, 2)}</td>
                 </tr>
               );
             })}</tbody>
@@ -97,6 +102,16 @@ export function Analytics() {
               <tr><td>Mean probability assigned to actual signature (analogues / reference)</td><td>{f(m.fingerprint_metrics.mean_prob_assigned_to_actual)} / {f(m.fingerprint_metrics.reference_mean_prob_assigned)}</td></tr>
             </>}
           </tbody></table>
+          {mt.disagreement_full_vs_b2 && <>
+            <h3>Sentinel vs B2 disagreement (TEST)</h3>
+            <p className="muted">Mean |Δ| {f(mt.disagreement_full_vs_b2.mean_abs_pp, 2)} pp; |Δ| &gt; 5 pp on {(100 * mt.disagreement_full_vs_b2.share_abs_gt_5pp).toFixed(1)}% of cases.
+              In each bin, the lower Brier score marks the probability that matched outcomes better.</p>
+            <table data-testid="disagreement-table"><thead><tr><th>Bin</th><th>n</th><th>Observed bust rate</th><th>Mean p Sentinel / B2</th><th>Brier Sentinel / B2</th></tr></thead>
+              <tbody>{mt.disagreement_full_vs_b2.bins.map((b: any) => (
+                <tr key={b.bin}><td>{BIN_LABEL[b.bin] ?? b.bin}</td><td>{b.n}</td><td>{f(b.observed_bust_rate)}</td>
+                  <td>{f(b.mean_p_model)} / {f(b.mean_p_base)}</td><td>{f(b.brier_model, 4)} / {f(b.brier_base, 4)}</td></tr>
+              ))}</tbody></table>
+          </>}
           <h3>Evidence strength vs outcome (TEST)</h3>
           <table><thead><tr><th>Evidence</th><th>n</th><th>Mean Sentinel p</th><th>Observed bust rate</th></tr></thead>
             <tbody>{mt.by_evidence_level.map((r: any) => (

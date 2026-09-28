@@ -1,0 +1,53 @@
+# v2a: interim dev-only ablation of v2 (residual learner, no DYN group). Not used for any final result.
+seed: 20260928
+labels:
+  primary_quantile: 0.90          # project-defined bust criterion
+  sensitivity_quantile: 0.95
+  hidden_bust_spread_quantile: 0.25  # documented diagnostic, not a universal constant
+  conditioning: [region_id, lead_day, season]
+signature:
+  window: 3            # half-width in grid boxes: 7x7 window (~39 deg, synoptic wavelength scale)
+  dominance: 0.6       # share of MSE needed to call a phase or amplitude signature
+pca:
+  n_components: 8
+analogues:
+  k: 30
+  min_analogues: 5
+  memory_mode: causal_online   # analogue verified (valid_time <= query init) ; alternative: frozen
+support:
+  quantiles: [0.90, 0.975, 0.995]   # training distances -> NORMAL / MODERATE / WEAK / INSUFFICIENT
+xgboost:
+  n_estimators: 2000
+  learning_rate: 0.03
+  max_depth: 3
+  min_child_weight: 200
+  subsample: 0.8
+  colsample_bytree: 0.5
+  reg_lambda: 10.0
+  tree_method: hist
+  early_stopping_rounds: 100
+  eval_metric: aucpr
+evaluation:
+  fixed_far: [0.05, 0.10]
+  alert_far: 0.10      # product alert threshold chosen on VALIDATION to give 10% false-alarm rate
+priority:
+  # score = p_bust * urgency(lead) * evidence_weight + disagreement_bonus * max(0, disagreement)
+  urgency_halflife_days: 5
+  evidence_weight: {STRONG: 1.0, MODERATE: 0.85, WEAK: 0.7, "INSUFFICIENT HISTORICAL SUPPORT": 0.5}
+  disagreement_bonus: 0.25
+v2:
+  # Pre-declared design changes, developed on the dev split only (FBS_SPLIT=dev, never 2022).
+  # 1. Sentinel learner: "standard" (v1: boost from the base rate) or "residual_b2" (boost from the
+  #    cross-fitted B2 log-odds margin so extra trees can only model information beyond spread).
+  #    Both are fitted; the one whose FULL model has the higher VALIDATION AUPRC is used (ties -> standard).
+  learners: [standard, residual_b2]
+  crossfit: year        # B2 margins for TRAIN rows come from leave-one-year-out B2 fits
+  # 2. Feature Group B completion: wind (500/850 hPa), vorticity, divergence, shear and MSLP,
+  #    from the ensemble mean/std of the same IFS ENS store (DYN group). Requires data/cache/ens_extra.
+  dyn_features: false
+  # Disclosure carried into metrics.json: the 2022 test year was already scored once by v1.
+  test_history: >-
+    2022 was scored once before, by the v1 pipeline (commit be8123b; Sentinel == B2). v2 design
+    changes were fixed in advance by the SIH specification and selected on the dev split and
+    validation only; no v2 decision used 2022 data. 2022 is nevertheless a second look, not an
+    untouched test set.

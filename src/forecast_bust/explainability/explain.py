@@ -13,7 +13,7 @@ from forecast_bust.features.build import GROUPS
 
 GROUP_NAMES = {"SPREAD": "Ensemble spread (baseline information)", "ATM": "Atmospheric state",
                "ENS": "Ensemble behaviour", "REC": "Recent verified error behaviour", "PAT": "Large-scale pattern", "EVO": "Forecast evolution",
-               "MEM": "Historical forecast-state memory"}
+               "MEM": "Historical forecast-state memory", "DYN": "Wind / vorticity / MSLP state"}
 FEATURE_LABELS = {
     "spread_m": "Z500 ensemble spread (m)", "spread_pct": "spread percentile vs training (same region/lead/season)",
     "lead_day": "lead day", "init_hour": "initialisation hour (UTC)", "region_code": "region", "season_code": "season",
@@ -38,6 +38,15 @@ FEATURE_LABELS = {
     "rec_bust_rate": "recent verified bust fraction, this region", "rec_n": "recent verified cases (5 d)",
     "rec_err_nbhd": "recent verified normalized error, neighbours", "rec_err_domain": "recent verified normalized error, domain",
 }
+FEATURE_LABELS.update({
+    "u500_anom": "500 hPa zonal wind anomaly (m/s)", "v500_anom": "500 hPa meridional wind anomaly (m/s)",
+    "ws500": "500 hPa wind speed (m/s)", "ws850": "850 hPa wind speed (m/s)",
+    "shear_500_850": "500-850 hPa vector wind shear (m/s)", "vort500": "500 hPa relative vorticity (1e-5/s)",
+    "vort850": "850 hPa relative vorticity (1e-5/s)", "div500": "500 hPa divergence (1e-5/s)",
+    "div850": "850 hPa divergence (1e-5/s)", "mslp_anom": "MSLP anomaly (hPa)",
+    "mslp_grad": "MSLP gradient (hPa/100 km)", "wspread500": "500 hPa vector-wind spread (m/s)",
+    "wspread850": "850 hPa vector-wind spread (m/s)", "mslp_spread": "MSLP ensemble spread (hPa)",
+})
 for i in range(1, 21):
     FEATURE_LABELS[f"pc{i}"] = f"pattern PC{i} coordinate"
 
@@ -66,8 +75,12 @@ def train_percentile(value: float, ref_sorted: np.ndarray) -> float | None:
 
 
 def explain_row(row: pd.Series, contrib_row: np.ndarray, features: list[str], ref: dict,
-                p_full: float, p_b2: float, base_rate: float, top: int = 6) -> dict:
-    """Structured explanation for one (init, region, lead) case."""
+                p_full: float, p_b2: float, base_rate: float, top: int = 6,
+                baseline_logodds: float | None = None) -> dict:
+    """Structured explanation for one (init, region, lead) case.
+
+    `baseline_logodds`: for the residual learner, the B2 spread-baseline margin the trees start
+    from; the feature contributions then describe only the adjustment beyond B2."""
     c = contrib_row[:-1]
     order = np.argsort(-np.abs(c))[:top]
     drivers = []
@@ -84,6 +97,9 @@ def explain_row(row: pd.Series, contrib_row: np.ndarray, features: list[str], re
         idx = [i for i, f in enumerate(features) if f in fs]
         if idx:
             groups[g] = {"name": GROUP_NAMES[g], "contribution_logodds": float(c[idx].sum())}
+    if baseline_logodds is not None:
+        groups = {"BASE": {"name": "Spread baseline B2 (starting log-odds)",
+                           "contribution_logodds": float(baseline_logodds)}, **groups}
     ev = []
     sp = row.get("spread_pct")
     if sp is not None and np.isfinite(sp):
@@ -125,6 +141,10 @@ def explain_row(row: pd.Series, contrib_row: np.ndarray, features: list[str], re
     ev.append({"kind": "E. Baseline disagreement",
                "text": f"Sentinel {100 * p_full:.0f}% vs calibrated spread-only baseline {100 * p_b2:.0f}% "
                        f"({100 * (p_full - p_b2):+.0f} percentage points)."})
-    return {"drivers": drivers, "groups": groups, "evidence": ev,
-            "attribution_note": "TreeSHAP contributions (log-odds, before isotonic calibration). They describe "
-                                "what the model used; they are associations, not physical causes."}
+    note = ("TreeSHAP contributions (log-odds, before isotonic calibration). They describe what the model used; "
+            "they are associations, not physical causes.")
+    if baseline_logodds is not None:
+        note = ("Sentinel starts from the B2 spread-baseline log-odds and adds trees for information beyond spread; "
+                "the listed TreeSHAP contributions (log-odds, before isotonic calibration) are that adjustment only. "
+                "They describe what the model used; they are associations, not physical causes.")
+    return {"drivers": drivers, "groups": groups, "evidence": ev, "attribution_note": note}
