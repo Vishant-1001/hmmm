@@ -60,10 +60,14 @@ def main():
     w(f"* Difference {f(fv['auprc_gain'], 4)} ({100 * fv['relative_gain']:.1f}% relative); 95% block-bootstrap CI "
       f"[{f(fv['bootstrap']['ci95'][0], 4)}, {f(fv['bootstrap']['ci95'][1], 4)}], {fv['bootstrap']['n_boot']} resamples "
       f"of {fv['bootstrap']['block']}s; P(diff ≤ 0) = {f(fv['bootstrap']['p_le_0'], 3)}.\n")
-    w("## Model comparison and ablation (TEST, n = {:,} region×day cases)\n".format(m["n_test_rows"]))
+    for e, x in (m.get("experimental") or {}).items():
+        w(f"* {e} ({x['status']}): AUPRC gain vs B2 {f(x['auprc_gain_vs_b2'], 4)} "
+          f"({100 * x['relative_gain']:.1f}% relative), CI [{f(x['bootstrap']['ci95'][0], 4)}, "
+          f"{f(x['bootstrap']['ci95'][1], 4)}].")
+    w("\n## Model comparison and ablation (TEST, n = {:,} region×day cases)\n".format(m["n_test_rows"]))
     w("| Model | Description | AUPRC | ROC AUC | Brier | ECE | Recall@FAR5% | Recall@FAR10% | Hidden-bust recall | "
       "Low-spread AUPRC | Mean lead day of detected busts |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
-    for k in [k for k in ("B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "ALL", "FULL") if k in M]:
+    for k in [k for k in ("B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "ALL", "FULL", "EXP_RESIDUAL_B2") if k in M]:
         r = M[k]
         w(f"| {k} | {r['description']} | {f(r['auprc'])} | {f(r['roc_auc'])} | {f(r['brier'], 4)} | {f(r['ece'], 4)} | "
           f"{f(r['recall_at_far_5'])} | {f(r['recall_at_far_10'])} | {f(r['hidden_bust']['hidden_bust_recall'])} | "

@@ -125,8 +125,11 @@ def train(reassemble: bool = True) -> None:
     # Sentinel learner(s): v1 = "standard" only; v2 config also tries "residual_b2" (boost from the
     # cross-fitted B2 margin). Everything below is decided on VALIDATION only.
     learners = model_config().get("v2", {}).get("learners", ["standard"])
+    exp_learners = model_config().get("v2", {}).get("experimental_learners", [])
+    if learners != ["standard"]:
+        raise ValueError("the Sentinel must use the frozen-spec standard learner; others are experimental only")
     per_learner = {}
-    for learner in learners:
+    for learner in learners + exp_learners:
         base = B2Margin(models["B2"], tr) if learner == "residual_b2" else None
         suffix = "" if learner == "standard" else f"@{learner}"
         cand = {name: _fit(name, feats, base, key=name + suffix) for name, feats in FEATURE_SETS.items()
@@ -137,10 +140,13 @@ def train(reassemble: bool = True) -> None:
         fitted["FULL" + suffix]["selected_groups"] = selected
         per_learner[learner] = {"models": cand, "selected": selected, "base": base,
                                 "val_auprc_full": val_auprc["FULL" + suffix]}
-    # learner choice: higher VALIDATION AUPRC of FULL; ties -> standard (listed first)
-    chosen = max(learners, key=lambda l_: (per_learner[l_]["val_auprc_full"], -learners.index(l_)))
+    # The Sentinel is always the frozen-spec standard learner (never chosen by score)
+    chosen = "standard"
     selected = per_learner[chosen]["selected"]
     models.update(per_learner[chosen]["models"])
+    # Experimental comparison only: FULL of each experimental learner, kept under EXP_* names
+    exp_models = {f"EXP_{l_.upper()}": per_learner[l_]["models"]["FULL"] for l_ in exp_learners}
+    models.update(exp_models)
     FEATURE_SETS_RUN = dict(FEATURE_SETS)
     FEATURE_SETS_RUN["FULL"] = full_feature_set(selected)
     log.info("learner %s; FULL uses validated groups %s (val AUPRC %.4f vs B2 %.4f)", chosen, selected,
@@ -164,6 +170,8 @@ def train(reassemble: bool = True) -> None:
     preds["s_B1"] = rows["spread_pct"].values
     for name in FEATURE_SETS_RUN:
         preds[f"p_{name}"] = models[name].predict(rows)
+    for name in exp_models:
+        preds[f"p_{name}"] = models[name].predict(rows)
     preds["p_B0_q95"] = models["B0_q95"].predict(rows)
     preds["p_B2_q95"] = models["B2_q95"].predict(rows)
     preds["p_FULL_q95"] = models["FULL_q95"].predict(rows)
@@ -185,8 +193,11 @@ def train(reassemble: bool = True) -> None:
         "data_config": data_config(), "model_config": model_config(),
         "splits": json.loads(split_counts.to_json(orient="index", date_format="iso")),
         "feature_groups": GROUPS, "feature_sets": FEATURE_SETS_RUN, "selected_groups": selected, "descriptions": DESCRIPTIONS,
-        "sentinel_learner": chosen, "learners_tried": learners,
-        "learner_rule": "FULL model with the higher VALIDATION AUPRC (ties -> standard)",
+        "sentinel_learner": chosen, "experimental_learners": exp_learners,
+        "experimental_models": {k: {"learner": m.learner, "selected_groups": per_learner[m.learner]["selected"],
+                                    "n_features": len(m.features)} for k, m in exp_models.items()},
+        "learner_rule": "Sentinel = frozen-spec single shared GBT (standard learner), fixed a priori; "
+                        "experimental learners are reported for comparison only and never promoted",
         "fitted": fitted, "support_levels": SUPPORT_LEVELS, "evidence_levels": EVIDENCE_LEVELS,
         "protocol": "fit on train (early stopping on validation) -> isotonic calibration on validation -> "
                     "frozen -> single evaluation on test",

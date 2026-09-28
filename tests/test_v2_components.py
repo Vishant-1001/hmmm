@@ -81,3 +81,13 @@ def test_disagreement_behaviour_bins():
     assert b["agree"]["n"] == 2 and b["model_lower"]["n"] == 2
     assert b["model_higher"]["brier_model"] < b["model_higher"]["brier_base"]
     assert abs(out["share_abs_gt_5pp"] - 4 / 6) < 1e-12
+
+
+def test_sentinel_is_frozen_standard_learner():
+    """Frozen spec §23: the Sentinel is one shared GBT; residual/stacked learners are experimental only."""
+    import yaml
+    from forecast_bust.config import CONFIG_DIR
+    for name in ("model_v2", "model_v2a"):
+        v2 = yaml.safe_load((CONFIG_DIR / f"{name}.yaml").read_text())["v2"]
+        assert v2["learners"] == ["standard"]
+        assert "standard" not in v2.get("experimental_learners", [])

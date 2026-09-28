@@ -50,6 +50,8 @@ DESCRIPTIONS = {
     "M7": "B2 + wind / vorticity / divergence / MSLP state (v2 Group B completion)",
     "ALL": "B2 + every feature group (no validation-based selection)",
     "FULL": "Sentinel: B2 inputs + feature groups that improved VALIDATION AUPRC over B2",
+    "EXP_RESIDUAL_B2": "EXPERIMENTAL (not the Sentinel): stacked model boosting from cross-fitted B2 log-odds, "
+                       "validation-selected groups",
 }
 
 

@@ -20,6 +20,7 @@ from forecast_bust.pipeline import PRED, TABLE
 
 log = logging.getLogger(__name__)
 MODELS = ["B0", "B1"] + list(FEATURE_SETS) + ["FULL"]
+EXPERIMENTAL = ["EXP_RESIDUAL_B2"]  # reported only if present in predictions; never the Sentinel
 
 
 def _score_col(name: str) -> str:
@@ -41,7 +42,7 @@ def evaluate() -> dict:
         raise RuntimeError("no test rows")
     far = mcfg["evaluation"]["alert_far"]
     results, ablation = {}, []
-    for name in MODELS:
+    for name in MODELS + [e for e in EXPERIMENTAL if f"p_{e}" in te.columns]:
         c = _score_col(name)
         thr = M.threshold_at_far(va["bust"].values, va[c].values, far)  # chosen on VALIDATION
         y, p = te["bust"].values, te[c].values
@@ -70,6 +71,16 @@ def evaluate() -> dict:
     y = te["bust"].values
     base_rate = float(y.mean())
     boot = M.block_bootstrap_diff(te, te["p_FULL"].values, te["p_B2"].values, n=300, seed=mcfg["seed"])
+    experimental = {}
+    for e in EXPERIMENTAL:
+        if f"p_{e}" in te.columns:
+            b_e = M.block_bootstrap_diff(te, te[f"p_{e}"].values, te["p_B2"].values, n=300, seed=mcfg["seed"])
+            g_e = results[e]["auprc"] - results["B2"]["auprc"]
+            experimental[e] = {"status": "EXPERIMENTAL comparison only - not the Sentinel, not promoted",
+                               "auprc_gain_vs_b2": g_e, "relative_gain": g_e / results["B2"]["auprc"],
+                               "bootstrap": b_e,
+                               "disagreement_vs_b2": M.disagreement_behaviour(te["bust"].values, te[f"p_{e}"].values,
+                                                                              te["p_B2"].values)}
     gain = results["FULL"]["auprc"] - results["B2"]["auprc"]
     # verdict rule fixed in advance: CI of the AUPRC difference must exclude 0 AND relative gain >= 5%
     material = boot["ci95"][0] > 0 and gain / results["B2"]["auprc"] >= 0.05
@@ -115,6 +126,7 @@ def evaluate() -> dict:
         "selected_groups": manifest["selected_groups"],
         "q95_sensitivity": q95, "frozen_memory_sensitivity": frozen, "by_evidence_level": by_evidence,
         "disagreement_full_vs_b2": M.disagreement_behaviour(y, te["p_FULL"].values, te["p_B2"].values),
+        "experimental": experimental,
         "run": RUN or "v1", "sentinel_learner": manifest.get("sentinel_learner", "standard"),
         "test_history": mcfg.get("v2", {}).get("test_history"),
     }
@@ -131,7 +143,7 @@ def evaluate() -> dict:
     (ARTIFACT_DIR / "feature_importance.json").write_text(json.dumps(clean_json(
         {n: models[n].importance() for n in list(FEATURE_SETS) + ["FULL"]}), indent=1))
     (ARTIFACT_DIR / "feature_diagnostics.json").write_text(json.dumps(clean_json(feature_diagnostics()), indent=1))
-    keep = ["case_id", "init_time", "valid_time", "region_id", "lead_day", "season", "error_m", "norm_error",
+    keep = [f"p_{e}" for e in EXPERIMENTAL if f"p_{e}" in te.columns] + ["case_id", "init_time", "valid_time", "region_id", "lead_day", "season", "error_m", "norm_error",
             "bust", "hidden_bust", "spread_m", "p_B0", "p_B2", "p_FULL", "evidence_level", "support_level"]
     te[keep].to_parquet(ARTIFACT_DIR / "predictions_test.parquet", index=False)
     log.info("AUPRC B2 %.4f FULL %.4f (base rate %.3f) material=%s", results["B2"]["auprc"],

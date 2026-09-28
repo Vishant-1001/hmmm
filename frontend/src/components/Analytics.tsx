@@ -3,7 +3,7 @@ import { api } from "../api";
 import { BarRow, ReliabilityDiagram } from "./Charts";
 
 const f = (v: number | null | undefined, n = 3) => (v == null || Number.isNaN(v) ? "—" : v.toFixed(n));
-const ORDER = ["B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "ALL", "FULL"];
+const ORDER = ["B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "ALL", "FULL", "EXP_RESIDUAL_B2"];
 const BIN_LABEL: Record<string, string> = { model_higher: "Sentinel higher than B2 by > 5 pp", agree: "Within ±5 pp", model_lower: "Sentinel lower than B2 by > 5 pp" };
 
 export function Analytics() {
@@ -49,8 +49,8 @@ export function Analytics() {
             <tbody>{ORDER.filter((k) => models[k]).map((k) => {
               const r = models[k];
               return (
-                <tr key={k} style={k === "FULL" || k === "B2" ? { fontWeight: 600 } : undefined}>
-                  <td>{k}</td><td className="muted">{r.description}</td><td>{f(r.auprc)}</td><td>{f(r.roc_auc)}</td>
+                <tr key={k} style={k === "FULL" || k === "B2" ? { fontWeight: 600 } : k.startsWith("EXP_") ? { fontStyle: "italic" } : undefined}>
+                  <td>{k}{k.startsWith("EXP_") && <span className="muted"> (experimental, not the Sentinel)</span>}</td><td className="muted">{r.description}</td><td>{f(r.auprc)}</td><td>{f(r.roc_auc)}</td>
                   <td>{f(r.brier, 4)}</td><td>{f(r.ece, 4)}</td><td>{f(r.recall_at_far_10)}</td>
                   <td>{f(r.hidden_bust.hidden_bust_recall)}</td>
                   <td>{r.hidden_bust_at_far ? `${f(r.hidden_bust_at_far.far_5)} / ${f(r.hidden_bust_at_far.far_10)}` : "—"}</td>
