@@ -1,6 +1,6 @@
 # BUILD_PROGRESS
 
-_Last updated: 2026-09-28 03:45 local._
+_Last updated: 2026-09-28 (session paused at user request; machine powered off)._
 
 ## PROJECT STATUS
 
@@ -30,10 +30,14 @@ Git checkpoint: see `git log` (latest pushed to origin/main).
 * In-sample "quota effect": analogue bust rate is anti-correlated with the label within TRAIN
   (thresholds are TRAIN quantiles) but positively correlated in validation/test.
 * Monotone memory-size counts removed from model inputs (hidden timestamps).
+* At 374 train inits (dev): B2 AUPRC 0.171 vs FULL 0.170 on 2021 dev-test (CI spans 0); only ENS was
+  validated. Failure-signature window changed to 7x7 boxes (3x3 put 93% of busts in one class).
 
 ## NEXT SAFE STEP
 
-1. Wait for download to finish (`grep -c block logs/download.log`; 457 blocks).
+0. Download was interrupted at 374/457 cached blocks. Resume with `scripts/download_all.sh`
+   (resumable; already-cached blocks are skipped). Stride-4 coverage of all 5 years is complete.
+1. Wait for download to finish (`ls data/cache/ens | wc -l` = 457; log ends with DOWNLOAD_DONE).
 2. `scripts/run_all.sh` (final split): train → evaluate (2022, once) → replay → reports.
 3. Commit artifacts + docs; freeze MVP.
 
