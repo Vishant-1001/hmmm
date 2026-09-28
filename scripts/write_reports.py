@@ -11,6 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ART = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "artifacts"
+# v2 (and later runs) write their own documents so the v1 record is never overwritten
+SUFFIX = "" if ART.name == "artifacts" else f"_{ART.name}"
 
 
 def load(name):
@@ -45,7 +47,12 @@ def main():
             s = sp[k]
             w(f"| {k} | {s['inits']} | {s['first_init'][:13]} | {s['last_init'][:13]} | {s['rows']} | {f(s['bust_rate'])} |")
     w("\n`embargo` = rows whose verification falls after the end of their period (purged from fitting).\n")
-    w("## Headline: does Sentinel beat the calibrated spread-only baseline (B2)?\n")
+    if m.get("run"):
+        w(f"* Run: **{m['run']}**; Sentinel learner: {m.get('sentinel_learner', 'standard')}; validated feature "
+          f"groups in FULL: {', '.join(m['selected_groups']) or 'none'}.")
+    if m.get("test_history"):
+        w(f"* **Test-set history:** {m['test_history']}")
+    w("\n## Headline: does Sentinel beat the calibrated spread-only baseline (B2)?\n")
     verdict = ("**Material improvement established**" if fv["material_improvement"]
                else "**Incremental predictive value NOT established**")
     w(f"{verdict} under the rule fixed before the test evaluation ({fv['verdict_rule']}).\n")
@@ -56,7 +63,7 @@ def main():
     w("## Model comparison and ablation (TEST, n = {:,} region×day cases)\n".format(m["n_test_rows"]))
     w("| Model | Description | AUPRC | ROC AUC | Brier | ECE | Recall@FAR5% | Recall@FAR10% | Hidden-bust recall | "
       "Low-spread AUPRC | Mean lead day of detected busts |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
-    for k in ("B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "M6", "ALL", "FULL"):
+    for k in [k for k in ("B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "ALL", "FULL") if k in M]:
         r = M[k]
         w(f"| {k} | {r['description']} | {f(r['auprc'])} | {f(r['roc_auc'])} | {f(r['brier'], 4)} | {f(r['ece'], 4)} | "
           f"{f(r['recall_at_far_5'])} | {f(r['recall_at_far_10'])} | {f(r['hidden_bust']['hidden_bust_recall'])} | "
@@ -69,6 +76,22 @@ def main():
         o = M[k]["operating_point"]
         w(f"| {k} | {f(o['threshold'])} | {f(o['precision'])} | {f(o['recall'])} | {f(o['false_alarm_rate'])} | "
           f"{M[k]['hidden_bust']['n_hidden_busts']} |")
+    if "hidden_bust_at_far" in M["FULL"]:
+        w("\n### Hidden-bust recall at fixed overall false-alarm rate (thresholds chosen on validation)\n")
+        w("| Model | FAR 5% | FAR 10% |\n|---|---:|---:|")
+        for k in ("B0", "B1", "B2", "FULL"):
+            h = M[k]["hidden_bust_at_far"]
+            w(f"| {k} | {f(h['far_5'])} | {f(h['far_10'])} |")
+    if m.get("disagreement_full_vs_b2"):
+        d = m["disagreement_full_vs_b2"]
+        w("\n### Sentinel vs B2 disagreement (TEST)\n")
+        w(f"Mean |p_FULL − p_B2| = {f(d['mean_abs_pp'], 2)} pp; |Δ| > 5 pp on {100 * d['share_abs_gt_5pp']:.2f}% and "
+          f"> 10 pp on {100 * d['share_abs_gt_10pp']:.2f}% of cases.\n")
+        w("| Bin | n | Observed bust rate | Mean p FULL | Mean p B2 | Brier FULL | Brier B2 |\n|---|---:|---:|---:|---:|---:|---:|")
+        for b in d["bins"]:
+            if b["n"]:
+                w(f"| {b['bin']} | {b['n']} | {f(b['observed_bust_rate'])} | {f(b['mean_p_model'])} | {f(b['mean_p_base'])} | "
+                  f"{f(b['brier_model'], 4)} | {f(b['brier_base'], 4)} |")
     w("\n### By lead day (AUPRC)\n\n| Day | Bust rate | B0 | B2 | FULL |\n|---:|---:|---:|---:|---:|")
     for r in m["by_lead_day"]:
         w(f"| {r['lead_day']} | {f(r['bust_rate'])} | {f(r['auprc_B0'])} | {f(r['auprc_B2'])} | {f(r['auprc_FULL'])} |")
@@ -111,7 +134,7 @@ def main():
             w(f"| {k} | {v:.3f} |")
     w("\n## How to reproduce\n\n```bash\nscripts/download_all.sh\npython -m forecast_bust.train\npython -m forecast_bust.evaluate\n"
       "python -m forecast_bust.replay\npython scripts/write_reports.py\n```")
-    (ROOT / "docs" / "evaluation.md").write_text("\n".join(L) + "\n")
+    (ROOT / "docs" / f"evaluation{SUFFIX}.md").write_text("\n".join(L) + "\n")
 
     card = {
         "name": "Forecast Bust Sentinel (FULL)", "version": "0.1.0",
@@ -138,10 +161,12 @@ def main():
           "* Chronological split: " + "; ".join(f"{k} {v['first_init'][:10]}..{v['last_init'][:10]} ({v['inits']} inits)"
                                                 for k, v in sp.items()),
           "\n## Target and label\n", f"* {card['bust_definition']}", f"* Sensitivity: {card['sensitivity']}",
-          "\n## Model\n", f"* {card['model']}; hyperparameters fixed in `config/model.yaml`; early stopping on validation.",
-          "* Feature groups: SPREAD (B2 inputs), ATM, ENS, PAT (frozen TRAIN PCA), EVO, MEM (causal analogue memory).",
+          "\n## Model\n", f"* {card['model']}; hyperparameters fixed in `config/model{'_' + m['run'] if m.get('run', 'v1') != 'v1' else ''}.yaml`; early stopping on validation.",
+          "* Feature groups: " + ", ".join(man["feature_groups"]) + f"; FULL uses {', '.join(m['selected_groups']) or 'only B2 inputs'} "
+          f"(validation-selected); learner: {m.get('sentinel_learner', 'standard')}." if man else "",
           "\n## Validation / test methodology\n",
-          "* Development on a separate dev split (2018–19 / 2020 / 2021); final 2022 test evaluated once.",
+          "* Development on a separate dev split (2018–19 / 2020 / 2021); final 2022 test evaluated once per run.",
+          *([f"* Test-set history: {m['test_history']}"] if m.get("test_history") else []),
           f"* Primary metric AUPRC; verdict rule: {fv['verdict_rule']}.",
           "\n## Results (TEST)\n", "| Model | AUPRC | Brier | ROC AUC |", "|---|---:|---:|---:|"]
     C += [f"| {k} | {f(v['auprc'])} | {f(v['brier'], 4)} | {f(v['roc_auc'])} |" for k, v in card["metrics"].items()]
@@ -152,8 +177,8 @@ def main():
           "* Relationships are specific to ECMWF IFS ENS 2018–2022 and to the 5.625° grid; NWP upgrades cause drift.",
           "* ERA5 is a reference analysis, not truth; Q90 bust criterion is project-defined; Z500 only.",
           "* Full list: `docs/limitations.md`. Full metrics: `docs/evaluation.md`."]
-    (ROOT / "docs" / "model_card.md").write_text("\n".join(C) + "\n")
-    print("wrote docs/evaluation.md, docs/model_card.md, model_card.json")
+    (ROOT / "docs" / f"model_card{SUFFIX}.md").write_text("\n".join(C) + "\n")
+    print(f"wrote docs/evaluation{SUFFIX}.md, docs/model_card{SUFFIX}.md, model_card.json")
 
 
 if __name__ == "__main__":
