@@ -1,69 +1,72 @@
-# Deploying the Forecast Bust Sentinel demo (Render API + Vercel UI)
+# Deploying the Forecast Bust Sentinel demo on Render
 
-- **API**: the existing FastAPI app (`forecast_bust.api.app:app`) as a native Python 3.12 web
-  service on Render. It serves the committed runtime artifacts (`artifacts/demo/`,
-  `artifacts/replay/`, metrics JSONs) and runs the frozen exported boosters on stored forecast
-  states. It doesn't download data, train, or run evaluation.
-- **UI**: the existing Vite/React app in `frontend/`, deployed as a static site on Vercel. It calls
-  the API at `VITE_API_URL`.
+The demo runs as two Render services from this one repository:
+
+- **API**: the existing FastAPI app (`forecast_bust.api.app:app`), deployed as a native Python 3.12 **Web
+  Service**. It serves the committed runtime artifacts (`artifacts/demo/`, `artifacts/replay/`, the
+  metrics JSONs) and runs the frozen exported boosters on stored forecast states. It doesn't download
+  data, train, or run evaluation.
+- **UI**: the existing Vite/React app in `frontend/`, deployed as a **Static Site**. It calls the API at
+  `VITE_API_URL`.
 
 The site is a **historical replay** demonstration on real ECMWF IFS ENS cases, not a live NCMRWF feed
 (every API response carries this `mode` label and the UI shows it).
 
 ## 1. Connect the GitHub repository
 
-Connect GitHub to both Render and Vercel and grant them access to `Vishant-1001/hmmm`.
+In Render, connect GitHub and grant it access to `Vishant-1001/hmmm`.
 
-## 2. Render: API web service
+The quickest path is **New → Blueprint** with branch `main`: `render.yaml` creates both services and
+asks for `VITE_API_URL` (step 3). To set things up by hand instead, use the values below.
 
-**New → Blueprint**, pick the repository, branch `main`. Render reads `render.yaml`:
+## 2. API: Web Service
 
 | Setting | Value |
 |---|---|
-| Runtime | Python (native), `PYTHON_VERSION=3.12.3` |
-| Build command | `pip install -r requirements.txt && pip install --no-deps .` |
-| Start command | `python -m uvicorn forecast_bust.api.app:app --host 0.0.0.0 --port $PORT` |
-| Health check path | `/health` |
-| Env | `MALLOC_ARENA_MAX=2`, `OMP_NUM_THREADS=1`; `FBS_CORS_ORIGINS` optional (below) |
+| Runtime | Python 3 |
+| Root Directory | *(empty: repository root)* |
+| Build Command | `pip install -r requirements.txt && pip install --no-deps .` |
+| Start Command | `python -m uvicorn forecast_bust.api.app:app --host 0.0.0.0 --port $PORT` |
+| Health Check Path | `/health` |
+| Environment | `PYTHON_VERSION=3.12.3`, `MALLOC_ARENA_MAX=2`, `OMP_NUM_THREADS=1` |
 
-Apply, wait for **Live**, then check it:
+Once it's **Live**, check it:
 
 ```bash
 curl https://<api>.onrender.com/health            # {"status":"ok"}
 curl https://<api>.onrender.com/api/demo/health   # cases=5, memory_rows=1169920
 ```
 
-## 3. Vercel: UI
-
-**Add New → Project**, import the repository, then:
+## 3. UI: Static Site
 
 | Setting | Value |
 |---|---|
 | Root Directory | `frontend` |
-| Framework preset | Vite (auto; `frontend/vercel.json`) |
-| Build / output | `npm run build` → `dist` |
-| Environment variable | `VITE_API_URL=https://<api>.onrender.com` (no trailing slash) |
+| Build Command | `npm ci && npm run build` |
+| Publish Directory | `dist` |
+| Environment | `VITE_API_URL=https://<api>.onrender.com` (the API URL from step 2, no trailing slash), `NODE_VERSION=22` |
 
-Deploy. From the CLI instead: `cd frontend && npx vercel --prod`, with `VITE_API_URL` set in the
-Vercel project settings.
+`VITE_API_URL` is baked in at build time. If you change it, trigger **Manual Deploy → Clear build
+cache & deploy**.
 
 ## 4. CORS
 
-The API allows `https://*.vercel.app` and local dev origins. For a custom domain, set
-`FBS_CORS_ORIGINS=https://your.domain` on the Render service (comma-separated for several).
+The API allows `https://*.onrender.com` (and `*.vercel.app`) plus local dev origins, with no
+credentials. For a custom domain, set `FBS_CORS_ORIGINS=https://your.domain` on the API
+(comma-separated for several).
 
 ## 5. Verify
 
-Open the Vercel URL and walk through Overview → Reliability → select a region → Why Flagged →
+Open the Static Site URL and walk through Overview → Reliability → select a region → Why Flagged →
 Verification → Reveal → Model trust.
 
 ## Troubleshooting
 
-- **The first load after idle shows "Running Sentinel…" for up to about a minute.** Render free
-  instances sleep when idle. The UI waits, and if a request fails it shows the error with a
+- **The first load after idle shows "Running Sentinel…" for up to about a minute.** Free Render
+  web services sleep when idle. The UI waits, and if a request fails it shows the error with a
   **Retry** button.
-- **`DATA UNAVAILABLE (...)` / network error in the UI**: `VITE_API_URL` is missing or wrong. It's
-  baked in at build time, so redeploy on Vercel after changing it.
-- **`FileNotFoundError ... config/model.yaml`**: the service isn't running from the repository
-  checkout. `forecast_bust.config` finds the project root from the install location or the working
-  directory; set `FBS_PROJECT_ROOT` to the checkout path if the layout differs.
+- **`DATA UNAVAILABLE (404)` in the UI**: `VITE_API_URL` wasn't set when the static site was built,
+  so the UI called its own origin. Set it and redeploy the static site.
+- **`FileNotFoundError ... config/model.yaml`**: the API isn't running from the repository checkout.
+  `forecast_bust.config` finds the project root from the install location or the working directory;
+  set `FBS_PROJECT_ROOT` to the checkout path if the layout differs.

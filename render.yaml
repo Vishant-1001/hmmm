@@ -1,4 +1,4 @@
-# Render Blueprint: the demo API only (the UI is hosted on Vercel, see docs/render_deploy.md).
+# Render Blueprint: the demo API (web service) + the React UI (static site).
 services:
   - type: web
     name: forecast-bust-sentinel-api
@@ -17,3 +17,16 @@ services:
         value: "1"
       - key: FBS_CORS_ORIGINS
         sync: false
+
+  - type: web
+    name: forecast-bust-sentinel
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: NODE_VERSION
+        value: "22"

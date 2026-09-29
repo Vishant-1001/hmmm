@@ -30,6 +30,8 @@ export default function DemoApp() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [attempt, setAttempt] = useState(0);
+  const retry = () => { setErr(null); setRun(null); setAttempt((n) => n + 1); };
 
   useEffect(() => {
     const on = () => setRoute(routeFromHash());
@@ -44,7 +46,7 @@ export default function DemoApp() {
       const first = c.cases.find((x) => x.selection === "random") ?? c.cases[0];
       if (first) setSel({ caseId: first.case_id, regionId: null, day: 3 });
     }).catch((e) => setErr(String(e.message ?? e)));
-  }, []);
+  }, [attempt]);
 
   useEffect(() => {
     if (!sel?.caseId) return;
@@ -55,7 +57,7 @@ export default function DemoApp() {
       setSel((s) => s && s.caseId === r.case.case_id && !s.regionId
         ? { ...s, regionId: r.priority_queue[0]?.region_id ?? r.regions[0].region_id, day: r.priority_queue[0]?.lead_day ?? s.day } : s);
     }).catch((e) => setErr(String(e.message ?? e))).finally(() => setLoading(false));
-  }, [sel?.caseId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sel?.caseId, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectCase = (id: string) => { setRun(null); setSel({ caseId: id, regionId: null, day: 3 }); };
   const setRegion = (regionId: string) => setSel((s) => s && { ...s, regionId });
@@ -110,8 +112,8 @@ export default function DemoApp() {
           {mode && <span className="muted">{mode}</span>}
         </div>
         <main className="content">
-          {err && <div className="panel err" data-testid="error">{err}</div>}
-          {!err && (loading || !run || !sel) && route !== "trust" && <div className="panel muted" data-testid="loading">Running Sentinel and B2 on the stored forecast state…</div>}
+          {err && <div className="panel err" data-testid="error">{err} <button className="btn" data-testid="retry" onClick={retry}>Retry</button></div>}
+          {!err && (loading || !run || !sel) && route !== "trust" && <div className="panel muted" data-testid="loading">Running Sentinel and B2 on the stored forecast state… <span className="muted">(first request after idle can take up to a minute while the demo server wakes)</span></div>}
           {run && sel && !loading && (
             <>
               {route === "overview" && <OverviewScreen run={run} sel={sel} setDay={setDay} focus={focus} />}

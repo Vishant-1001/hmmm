@@ -4,8 +4,11 @@ import type { CaseIndexItem, ForecastCase, Verification } from "./types";
 
 export class ApiError extends Error {}
 
+// Empty = same origin (FastAPI serving the built UI); set VITE_API_URL for a separately hosted API.
+const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
 async function get<T>(path: string): Promise<T> {
-  const r = await fetch(path);
+  const r = await fetch(API_BASE + path);
   if (!r.ok) {
     let detail = `${r.status}`;
     try {

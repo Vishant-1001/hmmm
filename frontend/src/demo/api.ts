@@ -3,8 +3,11 @@ import type { CaseList, Explanation, Fields, RegionDetail, Reveal, RunResult } f
 
 export class ApiError extends Error {}
 
+// Empty = same origin (FastAPI serving the built UI); set VITE_API_URL for a separately hosted API.
+const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
 async function call<T>(path: string, method: "GET" | "POST" = "GET"): Promise<T> {
-  const r = await fetch(path, { method });
+  const r = await fetch(API_BASE + path, { method });
   if (!r.ok) {
     let detail = `${r.status}`;
     try { detail = (await r.json()).detail ?? detail; } catch { /* non-JSON body */ }
