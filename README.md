@@ -130,6 +130,26 @@ forecast states for 5 registered cases, and ERA5 verification appears only on *R
 download or retraining. It uses the completed available research feature set; the wind/MSLP extension is
 pending. See [docs/demo.md](docs/demo.md). Screenshots of the running app are in `artifacts/screenshots/`.
 
+**Hosted demo (Render):** an API web service plus a static site for the UI, both from this repository
+(`render.yaml`). Step-by-step setup: [docs/render_deploy.md](docs/render_deploy.md). The hosted API serves the
+committed runtime bundle (`artifacts/demo/`, `artifacts/replay/`, metrics JSONs) and never downloads data or
+trains.
+
+## Data status
+
+| | Status |
+|---|---|
+| ECMWF IFS ENS geopotential (Z500/700/850, 50 members, 5.625°), 2018–2022 | **Available**: 457/457 blocks; all v1 results, replay cases and the demo use it |
+| ERA5 verification reference + 1990–2017 climatology | **Available** |
+| IFS ENS wind (u/v at 500/700/850 hPa) and MSLP ensemble statistics | **Pending**: download paused at 61/457 blocks (`scripts/download_extras.sh`, resumable) |
+| NCMRWF NEPS | **Not available**: adapter interface only |
+
+**Depends on the pending wind/MSLP data:** the v2 DYN feature group (wind speed, shear, vorticity, divergence,
+MSLP anomaly, gradient and spread; `features/dynamics.py`, unit-tested) and therefore the v2 evaluation. When
+the download completes, run `scripts/run_v2.sh dev` then `scripts/run_v2.sh final`. v2 writes to its own
+namespace (`artifacts/v2/`), and the v1 results and demo stay unchanged. No result in this README, the docs or
+the UI uses wind/MSLP data.
+
 ## 12–17. Install, train, evaluate, run
 
 ```bash
