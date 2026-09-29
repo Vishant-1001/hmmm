@@ -26,7 +26,7 @@ MODE = "Historical research replay - precomputed real ECMWF IFS ENS cases; not a
 
 app = FastAPI(title="Forecast Bust Sentinel API", version="0.1.0",
               description="Regional Day 1-10 forecast-bust probability over existing NWP (SIH26079 research prototype)")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
@@ -170,6 +170,97 @@ def replay_full(case_id: str):
 def verification(case_id: str):
     _case(case_id)
     return _read(ART / "replay" / case_id / "verification.json")
+
+
+# ---------------------------------------------------------------------------------------------
+# Live inference demo (v1 frozen models executed at request time on stored forecast states)
+# ---------------------------------------------------------------------------------------------
+from forecast_bust.demo import schemas as S  # noqa: E402
+
+DEMO_MODE = ("Historical replay research prototype - the frozen Sentinel/B2 models execute live on stored real "
+             "ECMWF IFS ENS forecast states; not a live or NCMRWF feed")
+
+
+@lru_cache(maxsize=1)
+def _engine():
+    from forecast_bust.demo.engine import engine
+    try:
+        return engine()
+    except FileNotFoundError as e:
+        raise HTTPException(503, detail=f"NOT YET COMPUTED: {e}")
+
+
+def _demo(fn, *a):
+    from forecast_bust.demo.engine import CaseNotFound
+    try:
+        return fn(*a)
+    except CaseNotFound as e:
+        raise HTTPException(404, detail=f"unknown case/region/lead {e}")
+
+
+def _lead(lead_day: int) -> int:
+    if not 1 <= lead_day <= 10:
+        raise HTTPException(400, detail="lead_day must be 1..10")
+    return lead_day
+
+
+@app.on_event("startup")
+def _warm_engine():
+    """Load models + historical memory once at startup (FBS_DEMO_WARM=0 disables)."""
+    if os.environ.get("FBS_DEMO_WARM", "1") == "1":
+        try:
+            _engine()
+        except HTTPException:
+            pass
+
+
+@app.get("/api/demo/cases", response_model=S.CaseList)
+def demo_cases():
+    e = _engine()
+    return {"mode": DEMO_MODE, **e.registry}
+
+
+@app.get("/api/demo/model", response_model=S.ModelSummary)
+def demo_model():
+    return _engine().model_summary()
+
+
+@app.get("/api/demo/health")
+def demo_health():
+    e = _engine()
+    return {"status": "ok", "mode": DEMO_MODE, "startup_ms": e.startup_ms, "cases": len(e.registry["cases"]),
+            "memory_rows": int(len(e.mem))}
+
+
+@app.post("/api/demo/cases/{case_id}/run", response_model=S.RunResult)
+def demo_run(case_id: str, fresh: bool = True):
+    """Executes the models for all regions x Day 1-10 of one initialisation (blind: no verification).
+    Every call re-runs inference (fresh=true); region/explain/reveal reuse the latest run of the case."""
+    e = _engine()
+    _demo(e.run, case_id, fresh)
+    return {"mode": DEMO_MODE, **_demo(e.overview, case_id)}
+
+
+@app.get("/api/demo/cases/{case_id}/regions/{region_id}", response_model=S.RegionDetail)
+def demo_region(case_id: str, region_id: str):
+    return _demo(_engine().region, case_id, region_id)
+
+
+@app.get("/api/demo/cases/{case_id}/regions/{region_id}/explain", response_model=S.Explanation)
+def demo_explain(case_id: str, region_id: str, lead_day: int):
+    return _demo(_engine().explain, case_id, region_id, _lead(lead_day))
+
+
+@app.get("/api/demo/cases/{case_id}/fields")
+def demo_fields(case_id: str):
+    """Ensemble-mean and spread Z500 fields of the initialisation (forecast-time information)."""
+    return _demo(_engine().fields, case_id)
+
+
+@app.post("/api/demo/cases/{case_id}/regions/{region_id}/reveal", response_model=S.Reveal)
+def demo_reveal(case_id: str, region_id: str, lead_day: int):
+    """Explicit user action: returns the ERA5 verification and failure fingerprint."""
+    return _demo(_engine().reveal, case_id, region_id, _lead(lead_day))
 
 
 _dist = REPO_ROOT / "frontend" / "dist"

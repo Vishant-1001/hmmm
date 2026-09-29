@@ -1,0 +1,120 @@
+{
+ "model_artifact": "models/models.joblib",
+ "model_version": "v1-final (603b3d3)",
+ "experiment_created": "2026-09-28T13:39:14.678586+00:00",
+ "retrained_for_demo": false,
+ "training_window": "2018-01-01 .. 2020-12-29",
+ "calibration_window": "2021-01-01 .. 2021-12-28",
+ "calibration": "isotonic regression fitted on validation (2021) predictions only, then frozen",
+ "learner": "XGBoost CPU hist (one shared model: region, lead day, season + forecast-state features)",
+ "sentinel_features": [
+  "spread_m",
+  "spread_pct",
+  "lead_day",
+  "region_code",
+  "season_code",
+  "init_hour"
+ ],
+ "b2_features": [
+  "spread_m",
+  "spread_pct",
+  "lead_day",
+  "region_code",
+  "season_code",
+  "init_hour"
+ ],
+ "selected_groups": [],
+ "selection_note": "No candidate feature group beat B2 on 2021 validation AUPRC, so the validated Sentinel uses B2's inputs and its probabilities equal B2's. The UI shows this as measured.",
+ "pca": "models/pca.joblib (TRAIN-only fit, frozen); PCs are packaged in the forecast state",
+ "features_available": {
+  "SPREAD": [
+   "spread_m",
+   "spread_pct",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour"
+  ],
+  "ATM": [
+   "anom500",
+   "abs_anom500",
+   "anom700",
+   "anom850",
+   "thick_anom",
+   "grad_x",
+   "grad_y",
+   "grad_mag",
+   "lap500",
+   "nbhd_anom500"
+  ],
+  "ENS": [
+   "m_iqr",
+   "m_p10p90",
+   "m_skew",
+   "m_sign_agree",
+   "spread_nbhd",
+   "spread_hetero",
+   "spread700",
+   "spread850",
+   "spread_growth",
+   "domain_spread",
+   "spread_rel_domain"
+  ],
+  "PAT": [
+   "pc1",
+   "pc2",
+   "pc3",
+   "pc4",
+   "pc5",
+   "pc6",
+   "pc7",
+   "pc8",
+   "pc_norm",
+   "pc_resid"
+  ],
+  "EVO": [
+   "rev_region",
+   "rev_nbhd",
+   "rev_pc",
+   "rev_spread",
+   "rev_available"
+  ],
+  "MEM": [
+   "an_n_within",
+   "an_dist1",
+   "an_dist_mean",
+   "an_bust_rate",
+   "an_err_med",
+   "an_err_q90",
+   "an_n_eligible"
+  ],
+  "REC": [
+   "rec_err",
+   "rec_bias",
+   "rec_bust_rate",
+   "rec_n",
+   "rec_err_nbhd",
+   "rec_err_domain"
+  ]
+ },
+ "pending": "Current demo uses the completed available research feature set; wind/MSLP extension is pending (download stopped, incomplete; not used anywhere in this demo).",
+ "hyperparameters": {
+  "n_estimators": 2000,
+  "learning_rate": 0.03,
+  "max_depth": 3,
+  "min_child_weight": 200,
+  "subsample": 0.8,
+  "colsample_bytree": 0.5,
+  "reg_lambda": 10.0,
+  "tree_method": "hist",
+  "early_stopping_rounds": 100,
+  "eval_metric": "aucpr"
+ },
+ "seed": 20260928,
+ "alert_threshold": 0.12759871780872345,
+ "alert_threshold_definition": "Sentinel probability giving a 10% false-alarm rate on VALIDATION (2021)",
+ "confidence_definition": "reliability confidence = 1 - P(bust)",
+ "exported_from": "models/models.joblib -> artifacts/demo/model/ (identical predictions, parity-tested)",
+ "bundle_git_rev": "3010b66",
+ "target": "geopotential 500 hPa (Z500)"
+}

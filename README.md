@@ -123,6 +123,13 @@ queue, blind replay, verification fingerprint), not a skill gain over ensemble s
 served only on "Reveal". Case selection is documented: 4 hidden-bust stress cases chosen by verification only
 (not representative) + 8 random test initialisations.
 
+## Interactive demo (live inference)
+
+`scripts/serve.sh`, then open http://127.0.0.1:8000. The frozen Sentinel/B2 models execute on stored real 2022
+forecast states for 5 registered cases, and ERA5 verification appears only on *Reveal*. The demo needs no
+download or retraining. It uses the completed available research feature set; the wind/MSLP extension is
+pending. See [docs/demo.md](docs/demo.md). Screenshots of the running app are in `artifacts/screenshots/`.
+
 ## 12–17. Install, train, evaluate, run
 
 ```bash

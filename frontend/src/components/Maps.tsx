@@ -8,8 +8,8 @@ export function riskClass(p: number): number {
   return RISK_BINS.length - 2;
 }
 
-interface Box { lon0: number; lon1: number; lat0: number; lat1: number; w: number; }
-function proj(b: Box) {
+export interface Box { lon0: number; lon1: number; lat0: number; lat1: number; w: number; }
+export function proj(b: Box) {
   const h = (b.w * (b.lat1 - b.lat0)) / (b.lon1 - b.lon0) / Math.cos((((b.lat0 + b.lat1) / 2) * Math.PI) / 180);
   return {
     h,
@@ -18,7 +18,7 @@ function proj(b: Box) {
   };
 }
 
-function Coast({ p }: { p: ReturnType<typeof proj> }) {
+export function Coast({ p }: { p: ReturnType<typeof proj> }) {
   return (
     <g fill="none" stroke="var(--text-muted)" strokeWidth={0.8} pointerEvents="none">
       {(coast as { lines: number[][][] }).lines.map((l, i) => (
@@ -28,7 +28,7 @@ function Coast({ p }: { p: ReturnType<typeof proj> }) {
   );
 }
 
-function Graticule({ p, b }: { p: ReturnType<typeof proj>; b: Box }) {
+export function Graticule({ p, b }: { p: ReturnType<typeof proj>; b: Box }) {
   const lons = [];
   for (let lo = Math.ceil(b.lon0 / 10) * 10; lo <= b.lon1; lo += 10) lons.push(lo);
   const lats = [];

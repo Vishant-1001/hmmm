@@ -50,3 +50,16 @@ See `docs/limitations.md`.
 
 SIH presentation/demo preparation (`docs/demo.md`). Any future model change must be developed on the
 dev split (`FBS_SPLIT=dev`); 2022 is now inspected and can no longer serve as an untouched test set.
+
+## Interactive demo (2026-09-29)
+
+* Live-inference demo: `src/forecast_bust/demo/` (engine, bundle builder, API schemas), `/api/demo/*`, React
+  app `frontend/src/demo/` (Overview, Reliability, Evidence/Why flagged, Priority, Verification, Trust).
+* Model: the frozen v1 `models/models.joblib` exported unchanged to `artifacts/demo/model/`, with a parity
+  test. It was not retrained and no model, threshold or feature changed. Sentinel = B2 is shown as measured.
+* Bundle: `artifacts/demo/` (5 registered 2022 cases under a fixed rule, plus the historical memory store
+  `memory.parquet`), committed so a clone runs without the research cache.
+* Measured: server ready about 2 s; per-case run about 260 ms (model inference about 15 ms); UI screens under 1 s.
+* Tests: pytest includes engine parity, causality, blind API, and a headless-browser E2E that checks
+  UI = API values; vitest covers the demo flow on real API responses.
+* Wind/MSLP: pending, not used. NCMRWF: adapter interface only.
