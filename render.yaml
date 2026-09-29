@@ -1,0 +1,19 @@
+# Render Blueprint: the demo API only (the UI is hosted on Vercel, see docs/render_deploy.md).
+services:
+  - type: web
+    name: forecast-bust-sentinel-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && pip install --no-deps .
+    startCommand: python -m uvicorn forecast_bust.api.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: FBS_CORS_ORIGINS
+        sync: false

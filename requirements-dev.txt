@@ -1,0 +1,16 @@
+# Full research pipeline (data download, training, evaluation) and tests.
+# The hosted demo API only needs requirements.txt.
+numpy>=1.26
+pandas>=2.1
+xarray>=2024.1
+zarr>=2.16
+gcsfs>=2024.2
+scipy>=1.11
+scikit-learn>=1.4
+xgboost>=2.0
+pyarrow>=14
+pyyaml>=6
+fastapi>=0.110
+uvicorn>=0.27
+pytest>=8
+httpx>=0.27

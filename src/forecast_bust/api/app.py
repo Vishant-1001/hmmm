@@ -26,7 +26,12 @@ MODE = "Historical research replay - precomputed real ECMWF IFS ENS cases; not a
 
 app = FastAPI(title="Forecast Bust Sentinel API", version="0.1.0",
               description="Regional Day 1-10 forecast-bust probability over existing NWP (SIH26079 research prototype)")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
+# CORS: local dev origins, any *.vercel.app deployment, plus FBS_CORS_ORIGINS (comma-separated) for
+# a custom frontend domain. No credentials are used, so no cookies/auth are exposed cross-origin.
+_origins = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173", "http://127.0.0.1:4173"]
+_origins += [o.strip().rstrip("/") for o in os.environ.get("FBS_CORS_ORIGINS", "").split(",") if o.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=_origins, allow_origin_regex=r"https://[a-z0-9-]+\.vercel\.app",
+                   allow_methods=["GET", "POST"], allow_headers=["*"])
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
@@ -51,6 +56,12 @@ def _region(case_id: str, region_id: str) -> dict:
         if r["region_id"] == region_id:
             return r
     raise HTTPException(404, detail=f"unknown region {region_id}")
+
+
+@app.get("/health")
+def health_light():
+    """Liveness probe: no model loading, no file reads."""
+    return {"status": "ok"}
 
 
 @app.get("/api/health")

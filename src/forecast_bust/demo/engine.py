@@ -103,16 +103,50 @@ class Engine:
     def _load_memory(self, path: Path) -> None:
         if not path.exists():
             raise FileNotFoundError(f"historical memory store {path} missing: run python -m forecast_bust.demo.build")
-        mem = pd.read_parquet(path)
-        mem = mem.sort_values(["region_id", "lead_day", "valid_time"], kind="stable").reset_index(drop=True)
-        X = ((mem[self.space].to_numpy(dtype=float) - self.mu) / self.sd).astype(np.float32)
-        self.mem_X = np.nan_to_num(X)
-        self.mem = mem[["case_id", "init_time", "valid_time", "region_id", "lead_day", "split", "bust", "norm_error",
-                        "sig_class"]]
+        # Memory-lean load so the demo fits a 512 MB instance; results are identical to reading the
+        # whole table with pd.read_parquet (parity-checked on every case/region/lead output).
+        # Columns are streamed in batches and put into sorted order one at a time; low-cardinality
+        # strings become categoricals with sorted categories (so sorting orders exactly as on the
+        # strings); X is standardised per column in float64 before the float32 cast, as before.
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+        from pandas.api.types import union_categoricals
+
+        keep = ["case_id", "init_time", "valid_time", "region_id", "lead_day", "split", "bust", "norm_error",
+                "sig_class"]
+        strs = {"region_id", "split", "sig_class"}  # low-cardinality; case_id is unique per row
+        pf, pool = pq.ParquetFile(path), pa.default_memory_pool()
+
+        def column(c: str) -> pd.Series:
+            parts = []
+            for batch in pf.iter_batches(batch_size=1 << 17, columns=[c]):
+                s = batch.column(0).to_pandas()
+                parts.append(s.astype("category") if c in strs else s)
+                pool.release_unused()
+            out = (pd.Series(union_categoricals(parts, sort_categories=True)) if c in strs
+                   else pd.concat(parts, ignore_index=True))
+            pool.release_unused()
+            return out
+
+        sort_keys = ["region_id", "lead_day", "valid_time"]
+        cols = {c: column(c) for c in sort_keys}
+        order = pd.DataFrame(cols).sort_values(sort_keys, kind="stable").index.to_numpy()
+        cols = {c: s.take(order).reset_index(drop=True) for c, s in cols.items()}
+        X = np.empty((len(order), len(self.space)), dtype=np.float32)
+        for j, c in enumerate(self.space):
+            X[:, j] = (column(c).to_numpy(dtype=float)[order] - self.mu[j]) / self.sd[j]
+        self.mem_X = np.nan_to_num(X, copy=False)
+        for c in keep:
+            if c not in cols:
+                cols[c] = column(c).take(order).reset_index(drop=True)
+        mem = pd.DataFrame({c: cols.pop(c) for c in keep})
+        self.mem = mem
         self.mem_valid = mem["valid_time"].values.astype("datetime64[ns]")
-        self.mem_groups = {k: (int(v.min()), int(v.max()) + 1) for k, v in mem.groupby(["region_id", "lead_day"]).indices.items()}
+        self.mem_groups = {k: (int(v.min()), int(v.max()) + 1)
+                           for k, v in mem.groupby(["region_id", "lead_day"], observed=True).indices.items()}
         self.mem_bust = mem["bust"].to_numpy(float)
         self.mem_err = mem["norm_error"].to_numpy(float)
+        pool.release_unused()
 
     def memory_lookup(self, rows: pd.DataFrame) -> tuple[pd.DataFrame, list]:
         """MEM features exactly as forecast_bust.analogues.memory (causal_online): candidates of the same

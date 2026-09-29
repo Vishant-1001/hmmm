@@ -7,7 +7,29 @@ from pathlib import Path
 
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+def _project_root() -> Path:
+    """Project root holding config/, artifacts/, models/ and frontend/.
+
+    config/ is runtime configuration, not package data, so it is never looked for beside
+    site-packages. Resolution order: FBS_PROJECT_ROOT (set in the Docker image), then the
+    first ancestor of this source file (in-tree / editable install), then of the working
+    directory, that contains config/model.yaml.
+    """
+    env = os.environ.get("FBS_PROJECT_ROOT")
+    if env:
+        root = Path(env).resolve()
+        if not (root / "config" / "model.yaml").is_file():
+            raise FileNotFoundError(f"FBS_PROJECT_ROOT={env} does not contain config/model.yaml")
+        return root
+    for start in (Path(__file__).resolve().parent, Path.cwd().resolve()):
+        for d in (start, *start.parents):
+            if (d / "config" / "model.yaml").is_file():
+                return d
+    raise FileNotFoundError("cannot locate the project root (a directory containing config/model.yaml); "
+                            "set FBS_PROJECT_ROOT to the repository checkout")
+
+
+REPO_ROOT = _project_root()
 CONFIG_DIR = REPO_ROOT / "config"
 # FBS_SPLIT=dev runs the whole pipeline on a development split (train 2018-2019,
 # validation 2020, dev-test 2021) so that iteration never touches the 2022 test year.
