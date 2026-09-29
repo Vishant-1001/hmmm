@@ -59,7 +59,8 @@ export default function DemoApp() {
     }).catch((e) => setErr(String(e.message ?? e))).finally(() => setLoading(false));
   }, [sel?.caseId, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selectCase = (id: string) => { setRun(null); setSel({ caseId: id, regionId: null, day: 3 }); };
+  // Re-selecting the current case must not clear the run: the run effect only fires on a case change.
+  const selectCase = (id: string) => { if (id === sel?.caseId) return; setRun(null); setSel({ caseId: id, regionId: null, day: 3 }); };
   const setRegion = (regionId: string) => setSel((s) => s && { ...s, regionId });
   const setDay = (day: number) => setSel((s) => s && { ...s, day });
   const focus = (regionId: string, day: number, r?: Route) => { setSel((s) => s && { ...s, regionId, day }); if (r) go(r); };

@@ -86,4 +86,28 @@ describe("demo app (live-inference API)", () => {
     await waitFor(() => expect(screen.getByTestId("error").textContent).toContain("NOT YET COMPUTED"));
     expect(screen.queryByTestId("n-alerts")).toBeNull();
   });
+
+  it("Retry re-issues the failed request and recovers", async () => {
+    const real = globalThis.fetch;
+    let failed = false;
+    globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (!failed) { failed = true; return { ok: false, status: 503, json: async () => ({ detail: "waking up" }) } as Response; }
+      return (real as any)(url, init);
+    }) as any;
+    render(<DemoApp />);
+    await waitFor(() => expect(screen.getByTestId("error").textContent).toContain("waking up"));
+    fireEvent.click(screen.getByTestId("retry"));
+    await waitFor(() => expect(screen.getByTestId("n-alerts")).toBeTruthy());
+    expect(screen.queryByTestId("error")).toBeNull();
+  });
+
+  it("re-selecting the current case keeps the loaded run (no endless loading)", async () => {
+    render(<DemoApp />);
+    await waitFor(() => expect(screen.getByTestId("n-alerts")).toBeTruthy());
+    const runs = calls.filter((u) => u.endsWith("/run")).length;
+    fireEvent.change(screen.getByTestId("case-select"), { target: { value: cid } });
+    expect(screen.queryByTestId("loading")).toBeNull();
+    expect(screen.getByTestId("n-alerts")).toBeTruthy();
+    expect(calls.filter((u) => u.endsWith("/run")).length).toBe(runs);
+  });
 });
