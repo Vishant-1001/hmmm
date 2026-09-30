@@ -1,29 +1,26 @@
 # AGENT_STATE
 
-Persistent execution state for the autonomous final pass. Update at every checkpoint.
+Persistent execution state. Update at every checkpoint.
 
 | Field | Value |
 |---|---|
-| CURRENT PHASE | 4: v2 pipeline (data complete and validated) |
-| LAST COMPLETED ACTION | Wind/MSLP download COMPLETE 17:17 IST (457/457, 0 failures, 0 restarts); validator: 457/457 valid, 1828 inits 2018-01-01 -> 2022-12-31, climatology OK (artifacts/extras_validation.json) |
-| CURRENT ACTION | scripts/run_v2.sh dev (log logs/v2_dev.log) |
-| CURRENT GIT COMMIT | (see `git log -1`) |
-| FILES CHANGED | src/forecast_bust/demo/engine.py, AGENT_STATE.md |
-| TEST STATUS | 79 pytest + 8 vitest passing (77a74f2) |
-| RENDER STATUS | VERIFIED 2026-09-30 07:10 IST at 77a74f2: one web service serves the UI at / and the API at /api (auto-deploy from main) |
-| PUBLIC FRONTEND URL | https://forecast-bust-sentinel-g0py.onrender.com/ (verified) |
-| BACKEND URL | https://forecast-bust-sentinel-g0py.onrender.com |
-| WIND/MSLP DOWNLOAD STATUS | DATA STATUS: COMPLETE and validated (2026-09-30 17:20 IST). Supervisor exited by itself |
-| DOWNLOAD CHECKPOINT | `ls data/cache/ens_extra/block_*.nc \| wc -l`; logs/download_supervisor.log, logs/download_extras.log |
-| MODEL STATUS | v1 frozen (Sentinel = B2, no gain). v2 (DYN group) code exists and is unit-tested; not trained (data-blocked) |
-| EVALUATION STATUS | v1 final 2022 evaluation complete (be8123b) and reproduced exactly (artifacts/diagnosis/v1_audit.json). v2 not run |
-| KNOWN ISSUES | Render free tier: ~60 s cold start, ~6 s per model run. No Render API access from this machine |
-| DATA-BLOCKED ITEMS | none (wind/MSLP available) |
-| EXACT NEXT ACTION | Finish scripts/run_v2.sh dev; review the dev/validation results; then scripts/run_v2.sh final (single disclosed second look at 2022) |
+| CURRENT PHASE | 5: v2 final run (configuration LOCKED at 8b196ee, before any v2 scoring of 2022) |
+| LAST COMPLETED ACTION | Dev-split optimisation finished: diagnosis, 20-config search (B2 and Sentinel same grid), seed-averaged ablation, dev-test 2021 check (gain did not transfer), two-period stability rule → groups ATM+EVO+MEM+REC; DYN rejected |
+| CURRENT ACTION | `scripts/run_v2.sh final` (detached; log `logs/v2_final.log`; lock hashes `logs/v2_lock_hashes.txt`) |
+| LOCKED CONFIG | `config/model_v2.yaml` v2.b2_xgboost / sentinel_xgboost / sentinel_groups; learner standard |
+| MODEL STATUS | v1 frozen (Sentinel = B2). v2 locked; final fit running |
+| EVALUATION STATUS | v1 2022 result unchanged. v2 2022 = single disclosed second look (running) |
+| SERVING | `config.SERVED_ARTIFACT_DIR`: artifacts/v2 once `artifacts/v2/metrics.json` and `artifacts/v2/demo/registry.json` exist, else v1 `artifacts/` |
+| RENDER | Verified at 77a74f2 (v1). Needs redeploy + browser verification after v2 bundle is committed |
+| PUBLIC URL | https://forecast-bust-sentinel-g0py.onrender.com/ |
+| DATA | Geopotential 457/457 blocks; wind/MSLP extras 457/457 blocks (validated). Nothing to download |
+| KNOWN ISSUES | Session crash on 2026-09-30 ~21:55 killed an in-session v2 run (it was a child of the session). All long jobs now run under `setsid nohup` |
+| EXACT NEXT ACTION | When `RUN_V2_final_DONE` is in logs/v2_final.log: read artifacts/v2/metrics.json; `FBS_RUN=v2 python -m forecast_bust.demo.build`; full pytest + vitest; commit artifacts/v2 + bundle; push; verify Render |
 
-## Processes
+## Background processes
 
 | Purpose | Identity | Log | Stop condition |
 |---|---|---|---|
-| Wind/MSLP download supervisor | `logs/download_supervisor.pid` (flock `logs/download_supervisor.lock`) | logs/download_supervisor.log | exits when 457/457 extras blocks exist, or after 40 restarts |
-| Downloader (child) | `scripts/download_extras.sh` → `python -m forecast_bust.data.wb2 extras` | logs/download_extras.log | exits when all blocks are done; killed by the supervisor after a 30 min stall |
+| v2 final run | `pgrep -f "run_v2.sh final"` | logs/v2_final.log | prints RUN_V2_final_DONE or exits non-zero |
+
+No download supervisors or log watchers are running.

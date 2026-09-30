@@ -27,7 +27,7 @@ import pandas as pd
 import xgboost as xgb
 
 from forecast_bust.config import model_config
-from forecast_bust.demo.build import DEMO_DIR, MEMORY_PATH
+from forecast_bust.demo.build import SERVED_DEMO_DIR
 from forecast_bust.explainability.explain import FEATURE_LABELS, explain_row
 from forecast_bust.explainability.priority import EVIDENCE_NAMES, formula, priority_score
 from forecast_bust.labels.signature import CLASSES, LABELS
@@ -73,7 +73,8 @@ class CaseRun:
 
 
 class Engine:
-    def __init__(self, demo_dir: Path = DEMO_DIR, memory_path: Path = MEMORY_PATH):
+    def __init__(self, demo_dir: Path = SERVED_DEMO_DIR, memory_path: Path | None = None):
+        memory_path = memory_path or demo_dir / "memory.parquet"
         t0 = time.perf_counter()
         self.dir = demo_dir
         self.registry = json.loads((demo_dir / "registry.json").read_text())
@@ -201,14 +202,15 @@ class Engine:
             rows = pd.read_parquet(self.dir / "cases" / case_id / "forecast_state.parquet")
             rows = rows.sort_values(["region_id", "lead_day"]).reset_index(drop=True)
             t["load_inputs"] = time.perf_counter() - t0
+            # memory first: the Sentinel may use MEM features (v2), which exist only after the causal lookup
+            t0 = time.perf_counter()
+            rows, neigh = self.memory_lookup(rows)
+            t["memory_lookup"] = time.perf_counter() - t0
             t0 = time.perf_counter()
             rows["p_sentinel"] = self.sentinel.calibrate(self.sentinel.predict_raw(rows))
             rows["p_b2"] = self.b2.calibrate(self.b2.predict_raw(rows))
             rows["p_b0"] = self.b0_predict(rows)
             t["model_inference"] = time.perf_counter() - t0
-            t0 = time.perf_counter()
-            rows, neigh = self.memory_lookup(rows)
-            t["memory_lookup"] = time.perf_counter() - t0
             t0 = time.perf_counter()
             dist, lvl = support_distance(rows, self.support)
             rows["support_distance"], rows["support_level"] = dist, lvl
@@ -394,11 +396,11 @@ class Engine:
         return json.loads((self.dir / "cases" / case_id / "fields.json").read_text())
 
     def model_summary(self) -> dict:
-        m = self.meta
+        m = {"not_in_sentinel": [], **self.meta}  # v1 bundles predate this field
         return {k: m.get(k) for k in ("model_version", "model_artifact", "exported_from", "retrained_for_demo",
                                       "training_window", "calibration_window", "calibration", "learner",
                                       "sentinel_features", "b2_features", "selected_groups", "selection_note",
-                                      "pending", "alert_threshold", "alert_threshold_definition",
+                                      "not_in_sentinel", "alert_threshold", "alert_threshold_definition",
                                       "confidence_definition", "target")}
 
 

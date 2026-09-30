@@ -9,7 +9,7 @@ export interface ModelSummary {
   model_version: string; model_artifact: string; exported_from: string; retrained_for_demo: boolean;
   training_window: string; calibration_window: string; calibration: string; learner: string;
   sentinel_features: string[]; b2_features: string[]; selected_groups: string[]; selection_note: string;
-  pending: string; alert_threshold: number; alert_threshold_definition: string; confidence_definition: string; target: string;
+  not_in_sentinel: string[]; alert_threshold: number; alert_threshold_definition: string; confidence_definition: string; target: string;
 }
 export interface Cell {
   lead_day: number; valid_time: string; bust_probability: number; reliability_confidence: number;

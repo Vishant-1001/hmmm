@@ -19,9 +19,9 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from forecast_bust.config import REPO_ROOT
+from forecast_bust.config import REPO_ROOT, served_run
 
-ART = Path(os.environ.get("FBS_ARTIFACT_DIR", REPO_ROOT / "artifacts"))
+ART = served_run()[0]
 MODE = "Historical research replay - precomputed real ECMWF IFS ENS cases; not a live or NCMRWF feed"
 
 app = FastAPI(title="Forecast Bust Sentinel API", version="0.1.0",

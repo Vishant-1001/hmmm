@@ -75,8 +75,9 @@ def walkthrough(url: str, shots: Path | None = None, video: Path | None = None, 
         case = next(c for c in cases if c["selection"] == "random")
         assert page.input_value("[data-testid=case-select]") == case["case_id"]
         run = _api(url, f"/api/demo/cases/{case['case_id']}/run", "POST")
-        day = 3
-        check("overview alerts Day 3", page.inner_text("[data-testid=n-alerts]"),
+        # after a run the UI selects the top-priority region and ITS lead day (DemoApp.tsx)
+        day = run["priority_queue"][0]["lead_day"] if run["priority_queue"] else 3
+        check(f"overview alerts Day {day}", page.inner_text("[data-testid=n-alerts]"),
               str(run["lead_summary"][day - 1]["n_alerts"]))
         wait(4)
         shot(page, "01_overview.png")
@@ -92,7 +93,7 @@ def walkthrough(url: str, shots: Path | None = None, video: Path | None = None, 
         page.wait_for_selector("[data-testid=n-alerts]")
         wait(2)
 
-        # region selection via the model's priority queue (Day 3 table)
+        # region selection via the model's priority queue (table for the selected day)
         top = sorted(run["regions"], key=lambda r: -r["days"][day - 1]["priority_score"])[0]
         rid = top["region_id"]
         t0 = time.perf_counter()

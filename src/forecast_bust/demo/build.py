@@ -32,12 +32,14 @@ import numpy as np
 import pandas as pd
 
 from forecast_bust.analogues.memory import analogue_space
-from forecast_bust.config import ARTIFACT_DIR, INTERIM_DIR, MODEL_DIR, REPO_ROOT, clean_json, data_config
+from forecast_bust.config import (ARTIFACT_DIR, INTERIM_DIR, MODEL_DIR, REPO_ROOT, SERVED_ARTIFACT_DIR, clean_json,
+                                  data_config)
 from forecast_bust.features.build import FORBIDDEN_INPUTS, GROUPS
 from forecast_bust.verification.alignment import season_of
 
-DEMO_DIR = ARTIFACT_DIR / "demo"
+DEMO_DIR = ARTIFACT_DIR / "demo"          # where `build` writes (this run's namespace)
 MEMORY_PATH = DEMO_DIR / "memory.parquet"
+SERVED_DEMO_DIR = SERVED_ARTIFACT_DIR / "demo"   # what the engine/API serve
 ID_COLS = ["case_id", "init_time", "valid_time", "lead_hours", "lead_day", "region_id", "row", "col", "lat", "lon",
            "season", "season_code", "region_code", "init_hour"]
 # MEM features are recomputed live by the engine from the memory store, so they are not packaged.
@@ -152,23 +154,27 @@ def build() -> None:
     met = json.loads((ARTIFACT_DIR / "metrics.json").read_text())
     meta = {
         "model_artifact": str((MODEL_DIR / "models.joblib").relative_to(REPO_ROOT)),
-        "model_version": f"v1-final ({em['git_rev']})", "experiment_created": em["created"],
+        "model_version": f"{em.get('run', 'v1')}-final ({em['git_rev']})", "experiment_created": em["created"],
         "retrained_for_demo": False,
         "training_window": em["splits"]["train"]["first_init"][:10] + " .. " + em["splits"]["train"]["last_init"][:10],
         "calibration_window": em["splits"]["validation"]["first_init"][:10] + " .. "
                               + em["splits"]["validation"]["last_init"][:10],
-        "calibration": "isotonic regression fitted on validation (2021) predictions only, then frozen",
+        "calibration": "isotonic regression fitted on validation predictions only, then frozen",
         "learner": "XGBoost CPU hist (one shared model: region, lead day, season + forecast-state features)",
         "sentinel_features": em["feature_sets"]["FULL"], "b2_features": em["feature_sets"]["B2"],
         "selected_groups": em["selected_groups"],
-        "selection_note": "No candidate feature group beat B2 on 2021 validation AUPRC, so the validated Sentinel uses "
-                          "B2's inputs and its probabilities equal B2's. The UI shows this as measured.",
+        "selection_note": (f"Sentinel = B2 inputs + {', '.join(em['selected_groups'])} (groups locked before the test "
+                           "year was scored). Measured test result vs B2: see /api/metrics full_vs_b2."
+                           if em["selected_groups"] else
+                           "No candidate feature group passed validation, so the Sentinel uses B2's inputs and its "
+                           "probabilities equal B2's. The UI shows this as measured."),
         "pca": "models/pca.joblib (TRAIN-only fit, frozen); PCs are packaged in the forecast state",
         "features_available": {g: fs for g, fs in GROUPS.items()},
-        "pending": "Current demo uses the completed available research feature set; wind/MSLP extension is pending (download stopped, incomplete; not used anywhere in this demo).",
-        "hyperparameters": em["model_config"]["xgboost"], "seed": em["seed"],
+        "not_in_sentinel": sorted(set(em["feature_groups"]) - set(em["selected_groups"]) - {"SPREAD"}),
+        "hyperparameters": em.get("hyperparameters", {}).get("sentinel") or em["model_config"]["xgboost"],
+        "seed": em["seed"],
         "alert_threshold": met["models"]["FULL"]["operating_point"]["threshold"],
-        "alert_threshold_definition": "Sentinel probability giving a 10% false-alarm rate on VALIDATION (2021)",
+        "alert_threshold_definition": "Sentinel probability giving a 10% false-alarm rate on VALIDATION",
         "confidence_definition": "reliability confidence = 1 - P(bust)",
         "exported_from": "models/models.joblib -> artifacts/demo/model/ (identical predictions, parity-tested)",
         "bundle_git_rev": _git_rev(), "target": data_config()["variable"] + " 500 hPa (Z500)",

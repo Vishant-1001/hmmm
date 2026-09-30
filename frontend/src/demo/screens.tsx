@@ -383,7 +383,7 @@ export function VerificationScreen({ run, sel, region, setDay, revealed, onRevea
 export function TrustScreen({ model }: { model: ModelSummary | null }) {
   return (
     <div className="screen">
-      <div className="screen-h"><div><h2>Model trust</h2><p className="muted">Genuine evaluation artifacts of the frozen models (2022 test year, scored once). Nothing here is recomputed for the demo.</p></div></div>
+      <div className="screen-h"><div><h2>Model trust</h2><p className="muted">Genuine evaluation artifacts of the frozen models on the 2022 test year (scored once by v1 and once by v2 after every v2 choice was locked: a disclosed second look). Nothing here is recomputed for the demo.</p></div></div>
       {model && (
         <Card title="Model running in this demo" testid="model-card">
           <table className="tbl compact"><tbody>
@@ -397,7 +397,7 @@ export function TrustScreen({ model }: { model: ModelSummary | null }) {
             <tr><td>Validated extra groups</td><td>{model.selected_groups.length ? model.selected_groups.join(", ") : "none"} — {model.selection_note}</td></tr>
             <tr><td>Alert threshold</td><td>{pct(model.alert_threshold)} — {model.alert_threshold_definition}</td></tr>
             <tr><td>Target</td><td>{model.target}; ERA5 verification</td></tr>
-            <tr><td>Pending</td><td>{model.pending}</td></tr>
+            <tr><td>Evaluated, not in Sentinel</td><td>{model.not_in_sentinel.length ? model.not_in_sentinel.join(", ") + " — did not pass the validation stability rule" : "none"}</td></tr>
             <tr><td>NCMRWF</td><td>Adapter interface only; no NCMRWF data ingested; no operational integration.</td></tr>
           </tbody></table>
         </Card>

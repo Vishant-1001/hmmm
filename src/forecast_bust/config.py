@@ -44,6 +44,24 @@ MODEL_DIR = REPO_ROOT / "models" / _suffix
 INTERIM_DIR = REPO_ROOT / "data" / "interim" / _suffix
 
 
+def served_run() -> tuple[Path, str]:
+    """(artifact dir, run name) the API/demo SERVE (read-only): FBS_ARTIFACT_DIR if set (run name from
+    FBS_SERVE_RUN, default ""); else artifacts/<FBS_SERVE_RUN> (default v2) when that run's final metrics and
+    demo bundle exist; else the v1 artifacts/. Read at call time, so an environment override applies to
+    modules (re)imported afterwards. Pipelines still write to ARTIFACT_DIR."""
+    env = os.environ.get("FBS_ARTIFACT_DIR")
+    if env:
+        return Path(env), os.environ.get("FBS_SERVE_RUN", "")
+    run = os.environ.get("FBS_SERVE_RUN", "v2")
+    p = REPO_ROOT / "artifacts" / run
+    if run and (p / "metrics.json").is_file() and (p / "demo" / "registry.json").is_file():
+        return p, run
+    return REPO_ROOT / "artifacts", ""
+
+
+SERVED_ARTIFACT_DIR, SERVED_RUN = served_run()
+
+
 def run_config_name() -> str:
     """Model config file for this run namespace: config/model_<run>.yaml if present, else model.yaml."""
     return f"model_{RUN}" if RUN and (CONFIG_DIR / f"model_{RUN}.yaml").exists() else "model"

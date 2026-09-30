@@ -40,7 +40,7 @@ class ModelSummary(BaseModel):
     b2_features: list[str]
     selected_groups: list[str]
     selection_note: str
-    pending: str
+    not_in_sentinel: list[str]
     alert_threshold: float
     alert_threshold_definition: str
     confidence_definition: str

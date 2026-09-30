@@ -7,9 +7,20 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from forecast_bust.config import INTERIM_DIR, MODEL_DIR
-from forecast_bust.demo.build import DEMO_DIR, MEMORY_PATH
+from forecast_bust.config import REPO_ROOT, SERVED_RUN
+from forecast_bust.demo.build import SERVED_DEMO_DIR as DEMO_DIR
 from forecast_bust.features.build import FORBIDDEN_INPUTS
+
+MEMORY_PATH = DEMO_DIR / "memory.parquet"
+# research outputs of the SAME run the engine serves (v2 -> models/v2, data/interim/v2)
+MODEL_DIR = REPO_ROOT / "models" / SERVED_RUN
+INTERIM_DIR = REPO_ROOT / "data" / "interim" / SERVED_RUN
+
+
+def _state_with_memory(eng, case_id):
+    """Stored forecast state + MEM features from the engine's causal memory lookup (as in Engine.run)."""
+    st = pd.read_parquet(DEMO_DIR / "cases" / case_id / "forecast_state.parquet")
+    return eng.memory_lookup(st.sort_values(["region_id", "lead_day"]).reset_index(drop=True))[0]
 
 pytestmark = pytest.mark.skipif(not (DEMO_DIR / "registry.json").exists() or not MEMORY_PATH.exists(),
                                 reason="demo bundle not built (python -m forecast_bust.demo.build)")
@@ -59,7 +70,7 @@ def test_live_inference_reproduces_frozen_pipeline(eng):
 def test_exported_models_equal_joblib(eng):
     import joblib
     m = joblib.load(MODEL_DIR / "models.joblib")
-    st = pd.read_parquet(DEMO_DIR / "cases" / eng.registry["cases"][0]["case_id"] / "forecast_state.parquet")
+    st = _state_with_memory(eng, eng.registry["cases"][0]["case_id"])
     np.testing.assert_allclose(eng.sentinel.calibrate(eng.sentinel.predict_raw(st)), m["FULL"].predict(st), atol=1e-6)
     np.testing.assert_allclose(eng.b2.calibrate(eng.b2.predict_raw(st)), m["B2"].predict(st), atol=1e-6)
     np.testing.assert_allclose(eng.sentinel.contributions(st), m["FULL"].contributions(st), atol=1e-5)
@@ -67,7 +78,7 @@ def test_exported_models_equal_joblib(eng):
 
 def test_inference_depends_on_inputs(eng):
     """The probabilities are computed from the inputs, not looked up: perturbing spread changes them."""
-    st = pd.read_parquet(DEMO_DIR / "cases" / eng.registry["cases"][0]["case_id"] / "forecast_state.parquet")
+    st = _state_with_memory(eng, eng.registry["cases"][0]["case_id"])
     p0 = eng.sentinel.calibrate(eng.sentinel.predict_raw(st))
     st2 = st.assign(spread_pct=1.0)
     p1 = eng.sentinel.calibrate(eng.sentinel.predict_raw(st2))
