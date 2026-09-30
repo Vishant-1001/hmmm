@@ -20,7 +20,13 @@ that enforces it and the test that checks it.
 | Calibration on test | Isotonic regression fitted on VALIDATION predictions, frozen | `models/sentinel.py::CalibratedGBM` | protocol in `experiment_manifest.json` |
 | Operating threshold on test | Alert threshold chosen on VALIDATION (10% FAR) | `evaluation/run.py` | `metrics.json:operating_point.chosen_on` |
 | Random splits | Chronological split: train 2018–2020, validation 2021, test 2022 | `config/data.yaml` | `test_season_and_split` |
+| Re-using an inspected test year | 2022 was scored by v1 and once more by v2 (locked config); disclosed as a second look in `metrics.json:test_history`, README and UI | `config/model_v2.yaml:test_history` | – |
 | Iterating against test | All development used a separate **dev split** (train 2018–19, validation 2020, dev-test 2021; `FBS_SPLIT=dev`). 2022 was evaluated once with the frozen configuration. | `config.py` | BUILD_PROGRESS log |
+| v2 B2 input `spread_thr_ratio` | Forecast spread divided by TRAIN constants (Q90 × scale per region/lead/season); never reads the row's error or label | `labels/build.py::spread_threshold_ratio` | `test_spread_threshold_ratio_uses_no_verification` |
+| v2 flow tendencies | Differences along the lead axis of the SAME forecast; no other cycle, no verification | `features/dynamics.py::tendency_fields` | `test_tendency_fields_are_within_forecast_rates` |
+| v2 wind / MSLP features | Ensemble mean/std of the forecast only; anomalies vs 1990–2017 climatology | `features/dynamics.py` | `test_feature_builders_never_read_verification_fields`, `artifacts/extras_validation.json` |
+| v2 hyper-parameter / group tuning on test | All search, ablation and selection ran on the dev split (train 2018–19, val 2020, dev-test 2021); `scripts/optimize_v2.py` asserts the dev namespace and raises if 2022 (`unused`) is requested; configuration locked (`8b196ee`) before v2 scored 2022 | `scripts/optimize_v2.py`, `config/model_v2.yaml` | `artifacts/v2/dev/optimization/*.json`, `logs` lock hashes |
+| Live demo using memory built after the case | Engine computes MEM features before inference with the same `valid_time <= init` rule | `demo/engine.py::memory_lookup` | `test_live_inference_reproduces_frozen_pipeline`, `test_memory_is_causal` |
 | Support thresholds from labels | Mahalanobis support thresholds are TRAIN distance quantiles; no labels used | `support/ood.py` | code review |
 
 Known, documented compromise: XGBoost early stopping monitors VALIDATION log-loss/AUPRC, and the

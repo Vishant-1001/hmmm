@@ -1,5 +1,46 @@
 # BUILD_PROGRESS
 
+_Last updated: 2026-09-30, after the v2 final run (`scripts/run_v2.sh final`, exit 0, 22 min)._
+
+PROJECT: Forecast Bust Sentinel (SIH26079)
+
+## CURRENT STATUS (v2, served)
+
+| Item | Status |
+|---|---|
+| Environment | Python 3.12.3 `.venv`; `requirements-lock.txt` (exact, uv) + pinned `requirements.txt`; Node 22 |
+| Data access | COMPLETE: geopotential 457/457 blocks; wind/MSLP 457/457 blocks (validated); ERA5 reference + climatology |
+| Smoke test / verification / labels | COMPLETE (unchanged from v1; `artifacts/smoke_test.json`, `docs/diagnosis_v1.md` audit) |
+| B0 / B1 | COMPLETE |
+| B2 | COMPLETE, strengthened: + `spread_thr_ratio`; tuned with the same grid as the Sentinel |
+| Sentinel | COMPLETE: B2 inputs + ATM + EVO + MEM + REC (locked `8b196ee`, dev-split selection) |
+| Optimisation | COMPLETE: `docs/optimization_v2.md` (diagnosis, 20-config search, ablation, dev-test check, stability rule) |
+| Calibration | Validation-only isotonic (2021) |
+| Historical memory / OOD / explainability / failure signature | COMPLETE (unchanged mechanisms; MEM now a Sentinel input, computed live and causally) |
+| Evaluation | COMPLETE: 2022 second look — B2 0.1434 [0.1308, 0.1572], Sentinel 0.1428 [0.1306, 0.1565]; Δ −0.0007 CI [−0.0028, +0.0017]; **incremental value not established**; hidden-bust recall 0 for both |
+| API / Frontend / Replay | COMPLETE: serves `artifacts/v2` (`config.served_run()`); v2 replay + live-demo bundle |
+| Tests | 83 pytest (incl. real-data pipeline, engine parity, headless E2E) + 8 vitest passing |
+| Documentation | README, methodology, data, leakage, limitations, demo, architecture, evaluation_v2, model_card_v2, optimization_v2, BUILD_SPEC_COMPLIANCE |
+| Git checkpoint | see `git log`; v2 lock `8b196ee`, evaluation `a30bff2`, integration `16918b2` |
+
+LAST VERIFIED COMMAND: `scripts/run_v2.sh final` → `RUN_V2_final_DONE`; `pytest` 83 passed.
+
+LAST VERIFIED RESULT: `artifacts/v2/metrics.json: full_vs_b2.material_improvement = false`.
+
+BLOCKERS: none. RISKS: 2022 is a second look; one test year; year-to-year non-stationarity of beyond-spread signals.
+
+NEXT SAFE STEP: presentation. Any further model change must be developed on the dev split and cannot reuse 2022 as a test claim.
+
+### Change made after the v2 final run
+
+Provenance only: `pipeline.write_dataset_manifest` now records the wind/MSLP source (`forecast_extras`) and
+`artifacts/v2/dataset_manifest.json` was regenerated; the demo bundle's `exported_from` string was corrected. No
+model, feature, threshold or metric changed.
+
+---
+
+# v1 record (2026-09-28)
+
 _Last updated: 2026-09-28, after the final 2022 test run (`scripts/run_all.sh`, exit 0, `logs/run_all.log` kept locally)._
 
 ## FINAL STATUS

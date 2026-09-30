@@ -1,12 +1,15 @@
 # Demo guide: live-inference Forecast Bust Sentinel (about 3 minutes)
 
-**Historical replay research prototype.** The frozen v1 Sentinel and B2 models **execute at request time** on
-stored, real ECMWF IFS ENS (WeatherBench 2, 5.625 degrees) Z500 forecast states from the 2022 test year. ERA5
-verification is stored in a separate file and served only after the user clicks *Reveal verification*.
-There is no live feed and no NCMRWF data.
+**Historical replay research prototype.** The locked v2 Sentinel and B2 models **execute at request time** on
+stored, real ECMWF IFS ENS (WeatherBench 2, 5.625 degrees) forecast states from the 2022 test year. Historical
+memory (analogue) features are computed live from the memory store with the causal rule (only cases verified
+by the initialisation time), before the model runs. ERA5 verification is stored in a separate file and served
+only after the user clicks *Reveal verification*. There is no live feed and no NCMRWF data.
 
-Current demo uses the completed available research feature set; wind/MSLP extension is pending (the download
-was stopped, is incomplete, and is not used anywhere in the demo).
+Served bundle: `artifacts/v2/demo/` (selected by `config.served_run()`; set `FBS_SERVE_RUN=` to fall back to
+the v1 bundle in `artifacts/demo/`). The v2 Sentinel uses B2's inputs plus ATM, EVO, MEM and REC; wind/MSLP
+(DYN) was evaluated and not selected. On 2022 the Sentinel and B2 are statistically indistinguishable
+(`docs/evaluation_v2.md`); say so when presenting.
 
 ## Start
 
@@ -17,7 +20,7 @@ cd frontend && npm install && npm run build && cd ..
 ```
 
 Open http://127.0.0.1:8000. You do not need a download, retraining or the research cache: everything the demo
-loads is committed under `artifacts/demo/`. Stop the server with `kill $(cat logs/api.pid)`.
+loads is committed under `artifacts/v2/demo/`. Stop the server with `kill $(cat logs/api.pid)`.
 
 Scripted run of the real UI (headless Chromium). It checks every displayed value against the API and captures
 screenshots and, optionally, a paced video:
@@ -29,26 +32,29 @@ screenshots and, optionally, a paced video:
 
 ## What runs on "select case"
 
-`POST /api/demo/cases/{id}/run` loads `artifacts/demo/cases/{id}/forecast_state.parquet` (64 regions x
+`POST /api/demo/cases/{id}/run` loads `artifacts/v2/demo/cases/{id}/forecast_state.parquet` (64 regions x
 Day 1-10, which holds no verification column) and then does the following:
-1. it evaluates the exported Sentinel and B2 XGBoost boosters and their validation-fitted isotonic calibrators,
+1. it looks up the historical forecast-state memory. Candidates are restricted to the same region and lead
+   day, verified no later than the init time; the resulting MEM features are Sentinel inputs in v2;
+2. it evaluates the exported Sentinel and B2 XGBoost boosters and their validation-fitted isotonic calibrators,
    plus the B0 climatology table;
-2. it looks up the historical forecast-state memory. Candidates are restricted to the same region and lead
-   day, verified no later than the init time;
 3. it computes Mahalanobis support/OOD, evidence strength and the transparent priority score;
 4. it computes TreeSHAP attributions of the Sentinel booster.
 
 The measured cost is about 15 ms model inference and about 260 ms total per case. The sidebar shows the live
 timing.
 
-The model is `models/models.joblib` (v1 final, commit 603b3d3), exported unchanged to `artifacts/demo/model/`,
-and a parity test shows it gives identical predictions. It was **not retrained**. Training covers 2018-2020;
-isotonic calibration uses 2021 only.
+The model is `models/v2/models.joblib` (v2 final, locked configuration `8b196ee`), exported unchanged to
+`artifacts/v2/demo/model/`; a parity test shows the live engine reproduces the research pipeline's
+predictions and memory features. It was **not retrained** for the demo. Training covers 2018-2020; early
+stopping and isotonic calibration use 2021 only.
 
-The validated Sentinel equals B2. No feature group beat B2 on 2021 validation, so the Sentinel uses B2's six
-inputs and the UI shows disagreement = 0 pp. This is shown as measured, not adjusted.
+The v2 Sentinel = B2 inputs + ATM, EVO, MEM, REC. Its probabilities differ from B2's by 1.3 percentage points
+on average on 2022 (|Δ| > 5 pp on 1.4% of region-days), and on 2022 it is not better than B2 (AUPRC 0.1428 vs
+0.1434). Disagreement is shown as measured; it is not evidence of skill. The v1 bundle (Sentinel = B2) remains
+in `artifacts/demo/` as the historical record.
 
-## Case registry (`artifacts/demo/registry.json`)
+## Case registry (`artifacts/v2/demo/registry.json`, same rule and cases as v1)
 
 The rule was fixed before any demo output was viewed. From the existing 2022 replay set it takes the earliest
 random (fixed-seed) case in each season, plus the earliest hidden-bust stress case.

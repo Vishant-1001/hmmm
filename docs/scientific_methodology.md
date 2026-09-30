@@ -44,9 +44,13 @@ each region is one grid box, so RMSE_r equals |F̄ − A| of the box-mean Z500.
 |---|---|
 | B0 | TRAIN bust frequency per (region, lead, season) |
 | B1 | TRAIN-percentile of the regional ensemble spread (ranking score) |
-| B2 | Same XGBoost learner and protocol as Sentinel, inputs: spread, spread percentile, lead day, region, season, initialisation hour (00/12 UTC); isotonic calibration on VALIDATION |
+| B2 | Same XGBoost learner, protocol and (v2) tuning budget as Sentinel, inputs: spread, spread percentile, **spread_thr_ratio** (v2), lead day, region, season, initialisation hour (00/12 UTC); isotonic calibration on VALIDATION |
 
 B2 is deliberately strong: it learns region/lead/season-specific spread-skill relationships.
+`spread_thr_ratio = spread·√(1 + 1/M) / (Q90_TRAIN · scale_TRAIN)` (M = 50 members) is the spread relative to
+the bust threshold in metres; for a reliable Gaussian ensemble P(bust) = 2Φ(−1/ratio). It uses only the
+forecast spread and TRAIN constants. It was added because, on the dev split, this textbook spread probability
+beat the v1 tree B2 on validation (0.181 vs 0.170 AUPRC): trees approximate the ratio poorly.
 
 ## 6. Sentinel features (all available at T)
 
@@ -57,14 +61,16 @@ B2 is deliberately strong: it learns region/lead/season-specific spread-skill re
 | PAT large-scale pattern | 8 PCs of the ensemble-mean Z500 anomaly over the context domain (20°E–146°E, 31°S–65°N), fitted on TRAIN only and frozen; PC-space norm; unexplained-variance fraction |
 | EVO forecast evolution | revision vs the cycle 24 h earlier for the same valid time (regional, neighbourhood RMS, PC-space), spread change; missing when that cycle is not in the downloaded sample (XGBoost handles NaN) |
 | MEM historical memory | see §7 |
+| DYN (v2) wind / pressure state | ensemble-mean u/v anomaly (500 hPa), wind speed (500/850), 500–850 hPa vector shear, relative vorticity and divergence (500/850; spherical centred differences), MSLP anomaly and gradient, vector-wind spread (500/850), MSLP spread, and in-forecast tendencies \|dZ500/dt\|, \|dMSLP/dt\|, \|dζ500/dt\| around the target lead (same forecast only) — `features/dynamics.py` |
 | REC recent verified error | mean normalized error, mean signed error and bust fraction of this region's Day 1–3 forecasts verified in the 5 days up to initialisation; neighbour and domain means (`analogues/recent.py`) |
 
 **Model inputs vs displayed evidence.** Counts that grow monotonically with the size of the memory
 (`an_n_eligible`, `an_n_within`, `rec_n`) act as hidden timestamps and are excluded from model inputs;
 they are shown to the forecaster as evidence only.
 
-**FULL model.** A feature group enters FULL only if "B2 + group" beats B2 on VALIDATION AUPRC (never
-on test). "ALL" (every group) is also reported so the effect of the selection is visible.
+**FULL model.** v1: a feature group enters FULL only if "B2 + group" beats B2 on VALIDATION AUPRC (never
+on test). v2: groups, hyper-parameters and learner were chosen on the dev split and locked in
+`config/model_v2.yaml` (§13a). "ALL" (every group) is also reported so the effect of the selection is visible.
 
 **In-sample quota effect (found on the dev split).** Because bust labels are TRAIN quantiles within
 each (region, lead, season) group, a training case whose analogues were busts is slightly *less*
@@ -132,6 +138,25 @@ boundaries. Model development used a separate dev split (train 2018–19, valida
 dev-test 2021). The primary metric is AUPRC. Material improvement over B2 requires, by a rule
 fixed before the test evaluation, (i) the 95% block-bootstrap CI (blocks = initialisation days)
 of AUPRC(FULL) − AUPRC(B2) to exclude 0 and (ii) a relative gain ≥ 5%.
+
+## 13a. v2 optimisation protocol (dev split only)
+
+Full log with every experiment: `docs/optimization_v2.md` (generated from `artifacts/v2/dev/optimization/`).
+
+1. **Diagnosis** on train 2018–19 / validation 2020: prevalence, spread-only predictability ceiling (AUPRC a
+   spread-only model could reach if the ensemble were perfectly reliable), spread-conditional information of
+   every feature (ROC AUC within lead-day × spread-decile strata), low-spread (hidden-bust) separability, and
+   the v1 hyper-parameters on v2 features (Sentinel stopped after 57 trees vs 821 for B2).
+2. **Search**: the same 12-configuration grid (depth 2/3/5 × min_child_weight 50/300 × colsample 0.5/1.0) and
+   an 8-configuration regularised refinement for B2, the standard Sentinel and the residual (B2-margin)
+   learner; class weights 3 and 9; seeds 1–3. Primary criterion validation AUPRC.
+3. **Ablation** (B2 + each group) with 3-seed means.
+4. **One dev-test check** on 2021 of the validation-selected configuration: the +2.8% validation gain became
+   −0.6% (CI [−0.0038, +0.0019]).
+5. **Two-period stability rule** (fixed before it ran): keep a group only if its 3-seed mean gain over B2 is
+   positive on both 2020 and 2021. Result: ATM, EVO, MEM, REC kept; DYN, ENS, PAT rejected.
+6. **Lock** (`config/model_v2.yaml`, commit `8b196ee`) → final protocol: train 2018–20, early stopping and
+   calibration on 2021, one scoring of 2022 (a disclosed second look; v1 scored it first).
 
 ## References (positioning, not copied)
 

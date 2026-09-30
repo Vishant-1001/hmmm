@@ -49,6 +49,14 @@ Isotonic calibration is then fitted on validation, as for every model.
 
 ## Selection protocol (validation only)
 
+> **Superseded 2026-09-30 (before any v2 scoring of 2022).** The final v2 configuration was chosen by the
+> dev-split optimisation in `docs/optimization_v2.md`: tuned hyper-parameters (same grid for B2 and Sentinel),
+> learner by validation AUPRC (standard won; the residual learner stays an experimental comparison), and
+> groups by a two-period stability rule, all locked in `config/model_v2.yaml`. B2 gained the spread-only
+> `spread_thr_ratio` input and DYN gained in-forecast tendencies. The single-seed per-run rule below is still
+> computed and recorded (`experiment_manifest.json: fitted.FULL.single_seed_rule_on_this_validation`) for
+> information only.
+
 Sentinel (standard learner, fixed a priori): B2 + each candidate group (M1…M7) is fitted; a group
 is kept iff it beats B2's **validation** AUPRC; FULL is refitted on B2 + kept groups. The
 experimental residual learner repeats the same validation-only group selection independently and

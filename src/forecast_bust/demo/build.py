@@ -176,7 +176,8 @@ def build() -> None:
         "alert_threshold": met["models"]["FULL"]["operating_point"]["threshold"],
         "alert_threshold_definition": "Sentinel probability giving a 10% false-alarm rate on VALIDATION",
         "confidence_definition": "reliability confidence = 1 - P(bust)",
-        "exported_from": "models/models.joblib -> artifacts/demo/model/ (identical predictions, parity-tested)",
+        "exported_from": f"{(MODEL_DIR / 'models.joblib').relative_to(REPO_ROOT)} -> "
+                         f"{(DEMO_DIR / 'model').relative_to(REPO_ROOT)}/ (identical predictions, parity-tested)",
         "bundle_git_rev": _git_rev(), "target": data_config()["variable"] + " 500 hPa (Z500)",
     }
     (DEMO_DIR / "model_meta.json").write_text(json.dumps(clean_json(meta), indent=1))

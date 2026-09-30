@@ -46,6 +46,9 @@ FEATURE_LABELS.update({
     "div850": "850 hPa divergence (1e-5/s)", "mslp_anom": "MSLP anomaly (hPa)",
     "mslp_grad": "MSLP gradient (hPa/100 km)", "wspread500": "500 hPa vector-wind spread (m/s)",
     "wspread850": "850 hPa vector-wind spread (m/s)", "mslp_spread": "MSLP ensemble spread (hPa)",
+    "spread_thr_ratio": "spread relative to the bust threshold (spread / TRAIN Q90 error, m/m)",
+    "z500_tend": "Z500 change per day in this forecast (m/day)", "mslp_tend": "MSLP change per day in this forecast (hPa/day)",
+    "vort500_tend": "500 hPa vorticity change per day in this forecast (1e-5/s/day)",
 })
 for i in range(1, 21):
     FEATURE_LABELS[f"pc{i}"] = f"pattern PC{i} coordinate"

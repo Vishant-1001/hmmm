@@ -18,7 +18,7 @@
 8. **Historical failure signatures are evidence-derived, not causal proof.**
 9. **Historical relationships change when the NWP system changes** (IFS cycle upgrades during
    2018–2022 are part of the data). A drift monitor is future work.
-10. **Performance must be measured before claiming improvement** — see `docs/evaluation.md` for
+10. **Performance must be measured before claiming improvement** — see `docs/evaluation_v2.md` for
     the measured result, including whether improvement over B2 was established.
 11. **Research-dataset performance ≠ operational NCMRWF performance.**
 12. **Regional outputs are 5.625° boxes**, not high-resolution local predictions.
@@ -34,18 +34,36 @@
   cases) and never for Day 10 (needs +264 h, not downloaded).
 * **50 perturbed members only.** The WB2 IFS ENS store has no control member.
 * **Short history.** Three training years; Q90 thresholds per (region, lead, season) rest on
-  ~100–300 training cases each. Validation (2021) is used both for early stopping and calibration.
+  ~100–300 training cases each. Validation (2021) is used for early stopping and calibration; hyper-parameters
+  and groups were chosen on the dev split (2020 validation, 2021 dev-test).
 * **Single test year (2022).** Year-to-year variability of skill is not captured by one year;
   bootstrap CIs account for sampling within the year only.
-* **Variables.** Only geopotential (500/700/850 hPa) was downloaded; winds, MSLP and humidity
-  features are not used. "Wind" information enters only through Z500 gradients.
+* **Variables.** Geopotential (500/700/850 hPa), u/v wind (500/700/850 hPa) and MSLP are used, as
+  ensemble mean/std only (members were reduced at download time). Humidity, precipitation and surface
+  temperature are not used. Vorticity/divergence at 5.625° describe the resolved synoptic scale only.
+* **Year-to-year non-stationarity.** On the dev split the wind/MSLP group improved 2020 validation AUPRC
+  by +0.0056 but lost 0.0005 on 2021; the anomaly-sign signal was stronger in 2020 than in 2018–19. With
+  only 2–3 training years, beyond-spread relationships measured in one year may not hold in the next.
 * **Recent verified-error features assume timely verification.** They use ERA5 up to the
   initialisation time; ERA5 is released with ~5-day latency, so operationally the NWP centre's own
   analysis would have to stand in for the most recent days.
 * **In-sample quota effect.** Training labels are TRAIN quantiles, which slightly distorts label-rate
   features inside the training period (see methodology). Validation-based group selection mitigates it.
 
-## Findings from the final 2022 test run
+## Findings from the v2 run (2022 second look, configuration locked at 8b196ee)
+
+* **Incremental value over B2 not established.** Sentinel AUPRC 0.1428 vs B2 0.1434; difference −0.0007,
+  95% init-day block-bootstrap CI [−0.0028, +0.0017]. The Sentinel beats B2 in 28 of 64 regions.
+* **A stronger baseline, measured.** Adding the spread-only `spread_thr_ratio` input raised B2 from 0.1360
+  (v1) to 0.1434 on 2022; a textbook spread probability is hard to beat at single-grid-point scale.
+* **Hidden busts are still not caught** at the validation-chosen 10% FAR threshold (recall 0 on 2,537
+  hidden busts for B2 and the Sentinel; also 0 at 5% FAR).
+* **2022 is a second look.** v1 scored it first; v2 choices were made on the dev split only. Test-year
+  ablation rows (e.g. ALL 0.147, M3 0.146) were rejected on validation before 2022 was read and are not claimed.
+* **Validation optimism is real.** The dev-split selection gained +2.8% on 2020 validation and −0.6% on 2021;
+  selection used a two-period stability rule as a consequence (`docs/optimization_v2.md`).
+
+## Findings from the v1 final 2022 test run (historical record)
 
 * **No incremental skill over the spread baseline.** No feature group beat B2 on 2021 validation AUPRC,
   so the Sentinel (FULL) is trained on B2's inputs and its 2022 predictions are identical to B2's
@@ -58,4 +76,4 @@
   with model output, and are labelled "not representative"; the 8 random cases are the
   representative sample.
 * **Dataset mismatch with the problem statement.** Regions are native ~5.625° boxes, not 5°×5°;
-  the research data are geopotential only; NCMRWF is an adapter interface with no data ingested.
+  v1 used geopotential only (v2 adds wind/MSLP); NCMRWF is an adapter interface with no data ingested.

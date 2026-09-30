@@ -167,7 +167,7 @@
  "alert_threshold": 0.13442391157150269,
  "alert_threshold_definition": "Sentinel probability giving a 10% false-alarm rate on VALIDATION",
  "confidence_definition": "reliability confidence = 1 - P(bust)",
- "exported_from": "models/models.joblib -> artifacts/demo/model/ (identical predictions, parity-tested)",
- "bundle_git_rev": "8b196ee",
+ "exported_from": "models/v2/models.joblib -> artifacts/v2/demo/model/ (identical predictions, parity-tested)",
+ "bundle_git_rev": "16918b2",
  "target": "geopotential 500 hPa (Z500)"
 }

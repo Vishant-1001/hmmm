@@ -10,15 +10,20 @@
  labels/build.py  ── regional RMSE, TRAIN normalisation, TRAIN Q90/Q95, hidden busts, failure signatures
         ▼                                         (artifacts/preprocessing.json, thresholds.json)
  features/build.py ── ATM / ENS / PAT (frozen TRAIN PCA) / EVO           (models/pca.joblib, artifacts/pca.json)
+ features/dynamics.py ── v2 DYN: wind, shear, vorticity, divergence, MSLP, in-forecast tendencies (data/cache/ens_extra)
+ analogues/recent.py ── causal recent verified error (REC)
  analogues/memory.py ── causal historical forecast-state memory          (artifacts/analogue_memory_*.json)
  support/ood.py ── Mahalanobis support + evidence strength               (artifacts/support_diagnostics.json)
         ▼
- models/sentinel.py ── B0, B1, B2, M1..M5, FULL (XGBoost hist + validation isotonic)  (models/models.joblib)
+ models/sentinel.py ── B0, B1, B2, M1..M7, ALL, FULL (+ EXP residual) (XGBoost hist + validation isotonic)
+                       v1: models/models.joblib   v2: models/v2/models.joblib (config/model_v2.yaml, locked)
+ scripts/optimize_v2.py ── dev-split diagnosis / search / ablation / stability rule (artifacts/v2/dev/optimization)
         ▼
  evaluation/run.py ── single TEST evaluation, ablation, calibration, spread-skill (artifacts/metrics.json ...)
  replay/build.py ── blind forecast.json + separate verification.json per case; fingerprint store
         ▼
- api/app.py (FastAPI) ──► frontend/ (React + TypeScript + Vite; served by FastAPI from frontend/dist)
+ demo/build.py + demo/engine.py ── live inference on stored forecast states (artifacts/v2/demo; causal memory first)
+ api/app.py (FastAPI; serves config.served_run() = artifacts/v2) ──► frontend/ (React + TypeScript + Vite; frontend/dist)
 ```
 
 ## Product workflow represented in software

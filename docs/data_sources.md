@@ -9,6 +9,7 @@ Machine-readable provenance is written to `artifacts/dataset_manifest.json` by t
 |---|---|---|
 | Forecast (features) | `gs://weatherbench2/datasets/ifs_ens/2018-2022-64x32_equiangular_conservative.zarr` | ECMWF IFS ENS, 50 members (`number` 1..50), initialisations 00/12 UTC 2018-01-01 .. 2022-12-31 (3652), `prediction_timedelta` 0..360 h every 6 h (int64, attribute `units: hours`), levels 500/700/850 hPa, 64×32 conservative grid (5.625°), geopotential in m² s⁻². Zarr chunks `(4 inits, 50, 1 lead, 3, 64, 32)` ≈ 3.5 MB compressed. |
 | Verification reference (labels only) | `gs://weatherbench2/datasets/era5/1959-2023_01_10-6h-64x32_equiangular_conservative.zarr` | ERA5, 6-hourly to 2023-01-10T18, 13 levels, same 64×32 grid. Bucket contains the Copernicus licence. |
+| Forecast wind / pressure (v2 DYN features) | same IFS ENS store | u, v at 500/700/850 hPa and mean sea-level pressure for exactly the cached initialisations; the 50 members are reduced to ensemble mean and std (ddof = 1) at download (`python -m forecast_bust.data.wb2 extras`). 457/457 blocks, 1,828 initialisations 2018-01-01 .. 2022-12-31, validated for alignment, variables, value ranges and completeness (`artifacts/extras_validation.json`). Anomalies use the ERA5 1990–2017 u/v/MSLP climatology. |
 | Anomaly climatology | `gs://weatherbench2/datasets/era5-hourly-climatology/1990-2017_6h_64x32_equiangular_conservative.zarr` | ERA5 1990–2017, hour (0/6/12/18) × day-of-year. Pre-dates every experiment year → no leakage. |
 
 ## Why the 5.625° product (and not 1.5° or 0.25°)

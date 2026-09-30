@@ -18,6 +18,10 @@ Sentinel (FULL) model. They are on the log-odds scale, **before** isotonic calib
 These show what the model relied on. They are associations, not physical causes, and the API
 returns this caveat (`attribution_note`) alongside the contributions.
 
+**v2 note.** The served v2 Sentinel uses MEM (analogue) features. They are recomputed live and causally by
+the engine *before* the booster runs, so the TreeSHAP attributions of MEM inputs describe the same values the
+prediction used (parity-tested against the research pipeline).
+
 ## 2. Evidence statements
 
 Template sentences filled with computed values:
