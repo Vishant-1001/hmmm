@@ -64,6 +64,27 @@ def main():
         w(f"* {e} ({x['status']}): AUPRC gain vs B2 {f(x['auprc_gain_vs_b2'], 4)} "
           f"({100 * x['relative_gain']:.1f}% relative), CI [{f(x['bootstrap']['ci95'][0], 4)}, "
           f"{f(x['bootstrap']['ci95'][1], 4)}].")
+    if m.get("bootstrap_ci"):
+        bc = m["bootstrap_ci"]
+        w(f"\n### 95% confidence intervals ({bc['n_boot']} resamples of whole {bc['block']}s)\n")
+        w("| Model | AUPRC | Brier | Recall@FAR10% | Hidden-bust recall at alert |\n|---|---|---|---|---|")
+        for k, r in bc["models"].items():
+            w(f"| {k} | " + " | ".join(f"{f(r[s]['point'], 4)} [{f(r[s]['ci95'][0], 4)}, {f(r[s]['ci95'][1], 4)}]"
+                                        for s in ("auprc", "brier", "recall_at_far_10", "hidden_bust_recall_at_alert")) + " |")
+        for k, r in bc["difference_vs_reference"].items():
+            w(f"| {k} − {bc['reference']} | " + " | ".join(
+                f"{f(r[s]['point'], 4)} [{f(r[s]['ci95'][0], 4)}, {f(r[s]['ci95'][1], 4)}]"
+                for s in ("auprc", "brier", "recall_at_far_10", "hidden_bust_recall_at_alert")) + " |")
+    if (ROOT / "artifacts" / "v2" / "dev" / "optimization" / "selection.json").exists() and SUFFIX == "_v2":
+        w("\n### How the v2 configuration was chosen (dev split only; 2022 never read)\n")
+        w("All experiments are kept in `artifacts/v2/dev/optimization/` (diagnosis, search, ablation, transfer, "
+          "selection, dev-test confirmation) and summarised in `docs/optimization_v2.md`.")
+    if m.get("by_region"):
+        rs = m["by_region"]
+        better = sum(1 for r in rs if r["auprc_FULL"] is not None and r["auprc_B2"] is not None
+                     and r["auprc_FULL"] > r["auprc_B2"])
+        w(f"\n### Regional stability\n\nFULL AUPRC exceeds B2 in {better} of {len(rs)} regions "
+          "(per-region values in `metrics.json:by_region`).")
     w("\n## Model comparison and ablation (TEST, n = {:,} region×day cases)\n".format(m["n_test_rows"]))
     w("| Model | Description | AUPRC | ROC AUC | Brier | ECE | Recall@FAR5% | Recall@FAR10% | Hidden-bust recall | "
       "Low-spread AUPRC | Mean lead day of detected busts |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")

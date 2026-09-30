@@ -1,0 +1,277 @@
+{
+ "name": "Forecast Bust Sentinel (FULL)",
+ "version": "0.1.0",
+ "intended_use": "Research decision support: regional Day 1-10 probability that an existing NWP ensemble-mean Z500 forecast exceeds a project-defined large-error threshold; forecaster triage.",
+ "not_intended_use": [
+  "weather-event probabilities",
+  "replacement NWP forecast",
+  "local/point forecasts",
+  "operational warnings without forecaster review",
+  "NCMRWF forecasts (not trained on them)"
+ ],
+ "dataset": {
+  "source": "ECMWF IFS ENS (via WeatherBench 2)",
+  "forecast_store": "gs://weatherbench2/datasets/ifs_ens/2018-2022-64x32_equiangular_conservative.zarr",
+  "reference": "ERA5 (WeatherBench 2) - verification reference analysis, not perfect truth",
+  "target": "Z500 ensemble-mean regional error",
+  "splits": {
+   "embargo": {
+    "inits": 18,
+    "rows": 6400,
+    "first_init": "2020-12-24 00:00:00",
+    "last_init": "2021-12-31 12:00:00",
+    "bust_rate": 0.08609375
+   },
+   "test": {
+    "inits": 366,
+    "rows": 234240,
+    "first_init": "2022-01-01 00:00:00",
+    "last_init": "2022-12-31 12:00:00",
+    "bust_rate": 0.08793545081967213
+   },
+   "train": {
+    "inits": 1096,
+    "rows": 698624,
+    "first_init": "2018-01-01 00:00:00",
+    "last_init": "2020-12-29 12:00:00",
+    "bust_rate": 0.10131630175888603
+   },
+   "validation": {
+    "inits": 364,
+    "rows": 230656,
+    "first_init": "2021-01-01 00:00:00",
+    "last_init": "2021-12-28 12:00:00",
+    "bust_rate": 0.08664418007769145
+   }
+  }
+ },
+ "target": "Z500 regional error of the IFS ENS ensemble mean vs ERA5",
+ "bust_definition": "bust = normalized_error > Q90 of TRAIN normalized_error within (region, lead_day, season). The 90th-percentile threshold is a project-defined operational bust criterion.",
+ "sensitivity": "Q95 of the same TRAIN distribution",
+ "feature_groups": {
+  "SPREAD": [
+   "spread_m",
+   "spread_pct",
+   "spread_thr_ratio",
+   "lead_day",
+   "region_code",
+   "season_code",
+   "init_hour"
+  ],
+  "ATM": [
+   "anom500",
+   "abs_anom500",
+   "anom700",
+   "anom850",
+   "thick_anom",
+   "grad_x",
+   "grad_y",
+   "grad_mag",
+   "lap500",
+   "nbhd_anom500"
+  ],
+  "ENS": [
+   "m_iqr",
+   "m_p10p90",
+   "m_skew",
+   "m_sign_agree",
+   "spread_nbhd",
+   "spread_hetero",
+   "spread700",
+   "spread850",
+   "spread_growth",
+   "domain_spread",
+   "spread_rel_domain"
+  ],
+  "PAT": [
+   "pc1",
+   "pc2",
+   "pc3",
+   "pc4",
+   "pc5",
+   "pc6",
+   "pc7",
+   "pc8",
+   "pc_norm",
+   "pc_resid"
+  ],
+  "EVO": [
+   "rev_region",
+   "rev_nbhd",
+   "rev_pc",
+   "rev_spread",
+   "rev_available"
+  ],
+  "MEM": [
+   "an_n_within",
+   "an_dist1",
+   "an_dist_mean",
+   "an_bust_rate",
+   "an_err_med",
+   "an_err_q90",
+   "an_n_eligible"
+  ],
+  "REC": [
+   "rec_err",
+   "rec_bias",
+   "rec_bust_rate",
+   "rec_n",
+   "rec_err_nbhd",
+   "rec_err_domain"
+  ],
+  "DYN": [
+   "u500_anom",
+   "v500_anom",
+   "ws500",
+   "ws850",
+   "shear_500_850",
+   "vort500",
+   "vort850",
+   "div500",
+   "div850",
+   "mslp_anom",
+   "mslp_grad",
+   "wspread500",
+   "wspread850",
+   "mslp_spread",
+   "z500_tend",
+   "mslp_tend",
+   "vort500_tend"
+  ]
+ },
+ "model": "XGBoost (hist, CPU) + isotonic calibration on validation",
+ "hyperparameters": {
+  "n_estimators": 2000,
+  "learning_rate": 0.03,
+  "max_depth": 3,
+  "min_child_weight": 200,
+  "subsample": 0.8,
+  "colsample_bytree": 0.5,
+  "reg_lambda": 10.0,
+  "tree_method": "hist",
+  "early_stopping_rounds": 100,
+  "eval_metric": "aucpr"
+ },
+ "chronology": {
+  "embargo": {
+   "first_init": "2020-12-24 00:00:00",
+   "last_init": "2021-12-31 12:00:00",
+   "inits": 18
+  },
+  "test": {
+   "first_init": "2022-01-01 00:00:00",
+   "last_init": "2022-12-31 12:00:00",
+   "inits": 366
+  },
+  "train": {
+   "first_init": "2018-01-01 00:00:00",
+   "last_init": "2020-12-29 12:00:00",
+   "inits": 1096
+  },
+  "validation": {
+   "first_init": "2021-01-01 00:00:00",
+   "last_init": "2021-12-28 12:00:00",
+   "inits": 364
+  }
+ },
+ "metrics": {
+  "B0": {
+   "auprc": 0.0907542853665033,
+   "brier": 0.08038098993310326,
+   "roc_auc": 0.5174832660171628
+  },
+  "B1": {
+   "auprc": 0.1313945126155664,
+   "brier": null,
+   "roc_auc": 0.609381240615031
+  },
+  "B2": {
+   "auprc": 0.14344550084314628,
+   "brier": 0.07876189798116684,
+   "roc_auc": 0.6191927254005454
+  },
+  "M1": {
+   "auprc": 0.14253500676778266,
+   "brier": 0.07897142320871353,
+   "roc_auc": 0.6158699742019329
+  },
+  "M2": {
+   "auprc": 0.1416142794689516,
+   "brier": 0.07888424396514893,
+   "roc_auc": 0.6140099104887182
+  },
+  "M3": {
+   "auprc": 0.14588932465710286,
+   "brier": 0.07870451360940933,
+   "roc_auc": 0.622446694014205
+  },
+  "M4": {
+   "auprc": 0.14327327539537354,
+   "brier": 0.07874944061040878,
+   "roc_auc": 0.6211512509610524
+  },
+  "M5": {
+   "auprc": 0.14328081070171672,
+   "brier": 0.07879211753606796,
+   "roc_auc": 0.6185730281339342
+  },
+  "M6": {
+   "auprc": 0.14293925078171596,
+   "brier": 0.07883233577013016,
+   "roc_auc": 0.6217410559260921
+  },
+  "M7": {
+   "auprc": 0.14467486895261483,
+   "brier": 0.07882074266672134,
+   "roc_auc": 0.6172782210170914
+  },
+  "ALL": {
+   "auprc": 0.1471042961634122,
+   "brier": 0.0787568986415863,
+   "roc_auc": 0.6219831638215046
+  },
+  "FULL": {
+   "auprc": 0.14279311905979974,
+   "brier": 0.07885151356458664,
+   "roc_auc": 0.62049134722628
+  },
+  "EXP_RESIDUAL_B2": {
+   "auprc": 0.14313541333174012,
+   "brier": 0.07884550094604492,
+   "roc_auc": 0.618169451953174
+  }
+ },
+ "full_vs_b2": {
+  "auprc_gain": -0.000652381783346534,
+  "relative_gain": -0.004547941758451494,
+  "bootstrap": {
+   "mean": -0.000552367012495578,
+   "ci95": [
+    -0.0027589919991921437,
+    0.0017307278013904551
+   ],
+   "p_le_0": 0.6566666666666666,
+   "n_boot": 300,
+   "block": "initialisation day"
+  },
+  "verdict_rule": "material improvement iff 95% block-bootstrap CI of AUPRC(FULL)-AUPRC(B2) excludes 0 AND relative gain >= 5% (rule fixed before test evaluation)",
+  "material_improvement": false
+ },
+ "pca": {
+  "fitted_on": "train initialisations only, all Day 1-10 leads pooled",
+  "field": "ensemble-mean Z500 anomaly vs ERA5 1990-2017 climatology, sqrt(cos lat) weighted, context domain",
+  "n_components": 8,
+  "explained_variance_ratio": [
+   0.19097,
+   0.13559,
+   0.08863,
+   0.07854,
+   0.05003,
+   0.04375,
+   0.03824,
+   0.03096
+  ],
+  "n_train_fields": 10960
+ },
+ "limitations": "docs/limitations.md"
+}

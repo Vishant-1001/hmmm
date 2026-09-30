@@ -1,0 +1,145 @@
+[
+ {
+  "model": "B0",
+  "description": "Climatological bust frequency (TRAIN, per region x lead x season)",
+  "auprc": 0.0907542853665033,
+  "roc_auc": 0.5174832660171628,
+  "brier": 0.08038098993310326,
+  "ece": 0.013380333807041421,
+  "hidden_bust_recall": 0.07252660622782814,
+  "recall_at_far_10": 0.07452179823283814,
+  "mean_lead_day_of_detected_busts": 4.634095634095634
+ },
+ {
+  "model": "B1",
+  "description": "Raw ensemble-spread score (spread percentile; ranking score, not a probability)",
+  "auprc": 0.1313945126155664,
+  "roc_auc": 0.609381240615031,
+  "brier": null,
+  "ece": null,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.1949703854743179,
+  "mean_lead_day_of_detected_busts": 6.156558806432862
+ },
+ {
+  "model": "B2",
+  "description": "Calibrated spread-only gradient-boosted model (spread, spread percentile, spread / bust threshold, lead, region, season, init hour)",
+  "auprc": 0.14344550084314628,
+  "roc_auc": 0.6191927254005454,
+  "brier": 0.07876189798116684,
+  "ece": 0.006149857532413665,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.21278764928633848,
+  "mean_lead_day_of_detected_busts": 6.360382775119617
+ },
+ {
+  "model": "M1",
+  "description": "B2 + atmospheric state",
+  "auprc": 0.14253500676778266,
+  "roc_auc": 0.6158699742019329,
+  "brier": 0.07897142320871353,
+  "ece": 0.009460205286283226,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.19550441790465092,
+  "mean_lead_day_of_detected_busts": 6.181248881731974
+ },
+ {
+  "model": "M2",
+  "description": "B2 + ensemble behaviour",
+  "auprc": 0.1416142794689516,
+  "roc_auc": 0.6140099104887182,
+  "brier": 0.07888424396514893,
+  "ece": 0.006950857371850132,
+  "hidden_bust_recall": 0.0015766653527788726,
+  "recall_at_far_10": 0.18802796387998835,
+  "mean_lead_day_of_detected_busts": 6.382176686642181
+ },
+ {
+  "model": "M3",
+  "description": "B2 + large-scale pattern (PCA)",
+  "auprc": 0.14588932465710286,
+  "roc_auc": 0.622446694014205,
+  "brier": 0.07870451360940933,
+  "ece": 0.006846678976409774,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.21482668220215556,
+  "mean_lead_day_of_detected_busts": 6.363841807909605
+ },
+ {
+  "model": "M4",
+  "description": "B2 + forecast evolution",
+  "auprc": 0.14327327539537354,
+  "roc_auc": 0.6211512509610524,
+  "brier": 0.07874944061040878,
+  "ece": 0.005794040605876234,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.21303039130012622,
+  "mean_lead_day_of_detected_busts": 6.40400972053463
+ },
+ {
+  "model": "M5",
+  "description": "B2 + historical forecast-state memory (analogues)",
+  "auprc": 0.14328081070171672,
+  "roc_auc": 0.6185730281339342,
+  "brier": 0.07879211753606796,
+  "ece": 0.006371235548419359,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.21307893970288377,
+  "mean_lead_day_of_detected_busts": 6.494507772020725
+ },
+ {
+  "model": "M6",
+  "description": "B2 + recent verified forecast-error behaviour",
+  "auprc": 0.14293925078171596,
+  "roc_auc": 0.6217410559260921,
+  "brier": 0.07883233577013016,
+  "ece": 0.005656555963615263,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.20220409748519275,
+  "mean_lead_day_of_detected_busts": 6.330515463917526
+ },
+ {
+  "model": "M7",
+  "description": "B2 + wind / vorticity / divergence / MSLP state (v2 Group B completion)",
+  "auprc": 0.14467486895261483,
+  "roc_auc": 0.6172782210170914,
+  "brier": 0.07882074266672134,
+  "ece": 0.008702734821537111,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.2046315176230702,
+  "mean_lead_day_of_detected_busts": 6.309372156505915
+ },
+ {
+  "model": "ALL",
+  "description": "B2 + every feature group (no validation-based selection)",
+  "auprc": 0.1471042961634122,
+  "roc_auc": 0.6219831638215046,
+  "brier": 0.0787568986415863,
+  "ece": 0.008367673397863217,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.21633168268763958,
+  "mean_lead_day_of_detected_busts": 6.189688544782685
+ },
+ {
+  "model": "FULL",
+  "description": "Sentinel: B2 inputs + feature groups that improved VALIDATION AUPRC over B2",
+  "auprc": 0.14279311905979974,
+  "roc_auc": 0.62049134722628,
+  "brier": 0.07885151356458664,
+  "ece": 0.008167357337113998,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.21196232643946014,
+  "mean_lead_day_of_detected_busts": 6.16376582278481
+ },
+ {
+  "model": "EXP_RESIDUAL_B2",
+  "description": "EXPERIMENTAL (not the Sentinel): stacked model boosting from cross-fitted B2 log-odds, validation-selected groups",
+  "auprc": 0.14313541333174012,
+  "roc_auc": 0.618169451953174,
+  "brier": 0.07884550094604492,
+  "ece": 0.00743277051251972,
+  "hidden_bust_recall": 0.0,
+  "recall_at_far_10": 0.20681619574715993,
+  "mean_lead_day_of_detected_busts": 6.334106728538283
+ }
+]

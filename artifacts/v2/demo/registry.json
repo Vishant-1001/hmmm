@@ -1,0 +1,145 @@
+{
+ "selection_rule": "(fixed before any demo output was viewed): from the existing 2022 replay set,\nthe earliest seed-drawn RANDOM case in each season (JF, MAM, JJAS, OND), plus the earliest\nexisting hidden-bust STRESS case (selected by verification in the v1 replay build; labelled\n\"not representative\").",
+ "cases": [
+  {
+   "case_id": "2022012012",
+   "init_time": "2022-01-20 12:00:00",
+   "season": "JF",
+   "selection": "random",
+   "demo_role": "Representative case (JF, random draw)",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "valid_range": [
+    "2022-01-21 12:00:00",
+    "2022-01-30 12:00:00"
+   ],
+   "n_regions": 64,
+   "lead_days": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "split": "test",
+   "model_input": "artifacts/demo/cases/2022012012/forecast_state.parquet",
+   "verification": "artifacts/demo/cases/2022012012/verification.json"
+  },
+  {
+   "case_id": "2022020212",
+   "init_time": "2022-02-02 12:00:00",
+   "season": "JF",
+   "selection": "stress",
+   "demo_role": "Hidden-bust stress case - selected by verification, NOT representative",
+   "selection_note": "Hidden-bust stress case: 21 hidden-bust region-days at Day 3-7 (selected by verification only; not representative)",
+   "valid_range": [
+    "2022-02-03 12:00:00",
+    "2022-02-12 12:00:00"
+   ],
+   "n_regions": 64,
+   "lead_days": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "split": "test",
+   "model_input": "artifacts/demo/cases/2022020212/forecast_state.parquet",
+   "verification": "artifacts/demo/cases/2022020212/verification.json"
+  },
+  {
+   "case_id": "2022031400",
+   "init_time": "2022-03-14 00:00:00",
+   "season": "MAM",
+   "selection": "random",
+   "demo_role": "Representative case (MAM, random draw)",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "valid_range": [
+    "2022-03-15 00:00:00",
+    "2022-03-24 00:00:00"
+   ],
+   "n_regions": 64,
+   "lead_days": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "split": "test",
+   "model_input": "artifacts/demo/cases/2022031400/forecast_state.parquet",
+   "verification": "artifacts/demo/cases/2022031400/verification.json"
+  },
+  {
+   "case_id": "2022060600",
+   "init_time": "2022-06-06 00:00:00",
+   "season": "JJAS",
+   "selection": "random",
+   "demo_role": "Representative case (JJAS, random draw)",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "valid_range": [
+    "2022-06-07 00:00:00",
+    "2022-06-16 00:00:00"
+   ],
+   "n_regions": 64,
+   "lead_days": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "split": "test",
+   "model_input": "artifacts/demo/cases/2022060600/forecast_state.parquet",
+   "verification": "artifacts/demo/cases/2022060600/verification.json"
+  },
+  {
+   "case_id": "2022120612",
+   "init_time": "2022-12-06 12:00:00",
+   "season": "OND",
+   "selection": "random",
+   "demo_role": "Representative case (OND, random draw)",
+   "selection_note": "Randomly sampled test initialisation (fixed seed)",
+   "valid_range": [
+    "2022-12-07 12:00:00",
+    "2022-12-16 12:00:00"
+   ],
+   "n_regions": 64,
+   "lead_days": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "split": "test",
+   "model_input": "artifacts/demo/cases/2022120612/forecast_state.parquet",
+   "verification": "artifacts/demo/cases/2022120612/verification.json"
+  }
+ ]
+}

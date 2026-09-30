@@ -1,0 +1,1300 @@
+{
+ "normalisation": "normalized_error = regional RMSE / scale(region, season); scale = std of ERA5 Z500 anomaly (vs ERA5 1990-2017 climatology) over TRAIN valid times only",
+ "fitted_on": "train",
+ "split": {
+  "train": [
+   "2018-01-01",
+   "2020-12-31T23:59"
+  ],
+  "validation": [
+   "2021-01-01",
+   "2021-12-31T23:59"
+  ],
+  "test": [
+   "2022-01-01",
+   "2022-12-31T23:59"
+  ]
+ },
+ "scales": [
+  {
+   "region_id": "R0000",
+   "season": "JF",
+   "scale_m": 13.939685821533203
+  },
+  {
+   "region_id": "R0000",
+   "season": "JJAS",
+   "scale_m": 9.259501457214355
+  },
+  {
+   "region_id": "R0000",
+   "season": "MAM",
+   "scale_m": 10.07339859008789
+  },
+  {
+   "region_id": "R0000",
+   "season": "OND",
+   "scale_m": 8.760276794433594
+  },
+  {
+   "region_id": "R0001",
+   "season": "JF",
+   "scale_m": 14.450895309448242
+  },
+  {
+   "region_id": "R0001",
+   "season": "JJAS",
+   "scale_m": 9.59889030456543
+  },
+  {
+   "region_id": "R0001",
+   "season": "MAM",
+   "scale_m": 10.166048049926758
+  },
+  {
+   "region_id": "R0001",
+   "season": "OND",
+   "scale_m": 9.18671989440918
+  },
+  {
+   "region_id": "R0002",
+   "season": "JF",
+   "scale_m": 14.685810089111328
+  },
+  {
+   "region_id": "R0002",
+   "season": "JJAS",
+   "scale_m": 9.811543464660645
+  },
+  {
+   "region_id": "R0002",
+   "season": "MAM",
+   "scale_m": 10.599745750427246
+  },
+  {
+   "region_id": "R0002",
+   "season": "OND",
+   "scale_m": 9.45230770111084
+  },
+  {
+   "region_id": "R0003",
+   "season": "JF",
+   "scale_m": 14.766462326049805
+  },
+  {
+   "region_id": "R0003",
+   "season": "JJAS",
+   "scale_m": 9.702154159545898
+  },
+  {
+   "region_id": "R0003",
+   "season": "MAM",
+   "scale_m": 11.049249649047852
+  },
+  {
+   "region_id": "R0003",
+   "season": "OND",
+   "scale_m": 9.870996475219727
+  },
+  {
+   "region_id": "R0004",
+   "season": "JF",
+   "scale_m": 15.06304931640625
+  },
+  {
+   "region_id": "R0004",
+   "season": "JJAS",
+   "scale_m": 9.492812156677246
+  },
+  {
+   "region_id": "R0004",
+   "season": "MAM",
+   "scale_m": 11.019060134887695
+  },
+  {
+   "region_id": "R0004",
+   "season": "OND",
+   "scale_m": 10.292226791381836
+  },
+  {
+   "region_id": "R0005",
+   "season": "JF",
+   "scale_m": 15.161518096923828
+  },
+  {
+   "region_id": "R0005",
+   "season": "JJAS",
+   "scale_m": 9.172429084777832
+  },
+  {
+   "region_id": "R0005",
+   "season": "MAM",
+   "scale_m": 10.605769157409668
+  },
+  {
+   "region_id": "R0005",
+   "season": "OND",
+   "scale_m": 10.46085262298584
+  },
+  {
+   "region_id": "R0006",
+   "season": "JF",
+   "scale_m": 15.30856990814209
+  },
+  {
+   "region_id": "R0006",
+   "season": "JJAS",
+   "scale_m": 8.941758155822754
+  },
+  {
+   "region_id": "R0006",
+   "season": "MAM",
+   "scale_m": 10.316028594970703
+  },
+  {
+   "region_id": "R0006",
+   "season": "OND",
+   "scale_m": 10.17393970489502
+  },
+  {
+   "region_id": "R0007",
+   "season": "JF",
+   "scale_m": 14.977235794067383
+  },
+  {
+   "region_id": "R0007",
+   "season": "JJAS",
+   "scale_m": 8.336528778076172
+  },
+  {
+   "region_id": "R0007",
+   "season": "MAM",
+   "scale_m": 10.181648254394531
+  },
+  {
+   "region_id": "R0007",
+   "season": "OND",
+   "scale_m": 9.770463943481445
+  },
+  {
+   "region_id": "R0100",
+   "season": "JF",
+   "scale_m": 13.785964965820312
+  },
+  {
+   "region_id": "R0100",
+   "season": "JJAS",
+   "scale_m": 8.964726448059082
+  },
+  {
+   "region_id": "R0100",
+   "season": "MAM",
+   "scale_m": 10.6088228225708
+  },
+  {
+   "region_id": "R0100",
+   "season": "OND",
+   "scale_m": 8.744758605957031
+  },
+  {
+   "region_id": "R0101",
+   "season": "JF",
+   "scale_m": 14.386944770812988
+  },
+  {
+   "region_id": "R0101",
+   "season": "JJAS",
+   "scale_m": 9.250384330749512
+  },
+  {
+   "region_id": "R0101",
+   "season": "MAM",
+   "scale_m": 10.310359001159668
+  },
+  {
+   "region_id": "R0101",
+   "season": "OND",
+   "scale_m": 9.116854667663574
+  },
+  {
+   "region_id": "R0102",
+   "season": "JF",
+   "scale_m": 14.641447067260742
+  },
+  {
+   "region_id": "R0102",
+   "season": "JJAS",
+   "scale_m": 9.335111618041992
+  },
+  {
+   "region_id": "R0102",
+   "season": "MAM",
+   "scale_m": 10.449700355529785
+  },
+  {
+   "region_id": "R0102",
+   "season": "OND",
+   "scale_m": 9.349104881286621
+  },
+  {
+   "region_id": "R0103",
+   "season": "JF",
+   "scale_m": 14.627839088439941
+  },
+  {
+   "region_id": "R0103",
+   "season": "JJAS",
+   "scale_m": 9.341938972473145
+  },
+  {
+   "region_id": "R0103",
+   "season": "MAM",
+   "scale_m": 10.662259101867676
+  },
+  {
+   "region_id": "R0103",
+   "season": "OND",
+   "scale_m": 9.821171760559082
+  },
+  {
+   "region_id": "R0104",
+   "season": "JF",
+   "scale_m": 14.64183521270752
+  },
+  {
+   "region_id": "R0104",
+   "season": "JJAS",
+   "scale_m": 9.545368194580078
+  },
+  {
+   "region_id": "R0104",
+   "season": "MAM",
+   "scale_m": 10.815505027770996
+  },
+  {
+   "region_id": "R0104",
+   "season": "OND",
+   "scale_m": 10.197371482849121
+  },
+  {
+   "region_id": "R0105",
+   "season": "JF",
+   "scale_m": 14.79915714263916
+  },
+  {
+   "region_id": "R0105",
+   "season": "JJAS",
+   "scale_m": 9.199461936950684
+  },
+  {
+   "region_id": "R0105",
+   "season": "MAM",
+   "scale_m": 10.570060729980469
+  },
+  {
+   "region_id": "R0105",
+   "season": "OND",
+   "scale_m": 10.325711250305176
+  },
+  {
+   "region_id": "R0106",
+   "season": "JF",
+   "scale_m": 15.003813743591309
+  },
+  {
+   "region_id": "R0106",
+   "season": "JJAS",
+   "scale_m": 8.577130317687988
+  },
+  {
+   "region_id": "R0106",
+   "season": "MAM",
+   "scale_m": 10.210160255432129
+  },
+  {
+   "region_id": "R0106",
+   "season": "OND",
+   "scale_m": 10.27013111114502
+  },
+  {
+   "region_id": "R0107",
+   "season": "JF",
+   "scale_m": 15.0938720703125
+  },
+  {
+   "region_id": "R0107",
+   "season": "JJAS",
+   "scale_m": 8.119717597961426
+  },
+  {
+   "region_id": "R0107",
+   "season": "MAM",
+   "scale_m": 10.198881149291992
+  },
+  {
+   "region_id": "R0107",
+   "season": "OND",
+   "scale_m": 9.686702728271484
+  },
+  {
+   "region_id": "R0200",
+   "season": "JF",
+   "scale_m": 14.798319816589355
+  },
+  {
+   "region_id": "R0200",
+   "season": "JJAS",
+   "scale_m": 10.206830024719238
+  },
+  {
+   "region_id": "R0200",
+   "season": "MAM",
+   "scale_m": 11.81822681427002
+  },
+  {
+   "region_id": "R0200",
+   "season": "OND",
+   "scale_m": 10.36453628540039
+  },
+  {
+   "region_id": "R0201",
+   "season": "JF",
+   "scale_m": 14.946593284606934
+  },
+  {
+   "region_id": "R0201",
+   "season": "JJAS",
+   "scale_m": 10.057947158813477
+  },
+  {
+   "region_id": "R0201",
+   "season": "MAM",
+   "scale_m": 10.765020370483398
+  },
+  {
+   "region_id": "R0201",
+   "season": "OND",
+   "scale_m": 10.559286117553711
+  },
+  {
+   "region_id": "R0202",
+   "season": "JF",
+   "scale_m": 15.076302528381348
+  },
+  {
+   "region_id": "R0202",
+   "season": "JJAS",
+   "scale_m": 10.039726257324219
+  },
+  {
+   "region_id": "R0202",
+   "season": "MAM",
+   "scale_m": 11.1102876663208
+  },
+  {
+   "region_id": "R0202",
+   "season": "OND",
+   "scale_m": 10.71845817565918
+  },
+  {
+   "region_id": "R0203",
+   "season": "JF",
+   "scale_m": 14.986685752868652
+  },
+  {
+   "region_id": "R0203",
+   "season": "JJAS",
+   "scale_m": 10.281060218811035
+  },
+  {
+   "region_id": "R0203",
+   "season": "MAM",
+   "scale_m": 11.210665702819824
+  },
+  {
+   "region_id": "R0203",
+   "season": "OND",
+   "scale_m": 10.924830436706543
+  },
+  {
+   "region_id": "R0204",
+   "season": "JF",
+   "scale_m": 15.053943634033203
+  },
+  {
+   "region_id": "R0204",
+   "season": "JJAS",
+   "scale_m": 10.598929405212402
+  },
+  {
+   "region_id": "R0204",
+   "season": "MAM",
+   "scale_m": 12.042292594909668
+  },
+  {
+   "region_id": "R0204",
+   "season": "OND",
+   "scale_m": 11.176140785217285
+  },
+  {
+   "region_id": "R0205",
+   "season": "JF",
+   "scale_m": 15.146627426147461
+  },
+  {
+   "region_id": "R0205",
+   "season": "JJAS",
+   "scale_m": 10.21707534790039
+  },
+  {
+   "region_id": "R0205",
+   "season": "MAM",
+   "scale_m": 11.366332054138184
+  },
+  {
+   "region_id": "R0205",
+   "season": "OND",
+   "scale_m": 10.84926986694336
+  },
+  {
+   "region_id": "R0206",
+   "season": "JF",
+   "scale_m": 15.295498847961426
+  },
+  {
+   "region_id": "R0206",
+   "season": "JJAS",
+   "scale_m": 9.655598640441895
+  },
+  {
+   "region_id": "R0206",
+   "season": "MAM",
+   "scale_m": 10.586373329162598
+  },
+  {
+   "region_id": "R0206",
+   "season": "OND",
+   "scale_m": 10.34953784942627
+  },
+  {
+   "region_id": "R0207",
+   "season": "JF",
+   "scale_m": 15.1189603805542
+  },
+  {
+   "region_id": "R0207",
+   "season": "JJAS",
+   "scale_m": 9.54576301574707
+  },
+  {
+   "region_id": "R0207",
+   "season": "MAM",
+   "scale_m": 10.648735046386719
+  },
+  {
+   "region_id": "R0207",
+   "season": "OND",
+   "scale_m": 10.209409713745117
+  },
+  {
+   "region_id": "R0300",
+   "season": "JF",
+   "scale_m": 18.869121551513672
+  },
+  {
+   "region_id": "R0300",
+   "season": "JJAS",
+   "scale_m": 12.368253707885742
+  },
+  {
+   "region_id": "R0300",
+   "season": "MAM",
+   "scale_m": 14.636711120605469
+  },
+  {
+   "region_id": "R0300",
+   "season": "OND",
+   "scale_m": 14.26172924041748
+  },
+  {
+   "region_id": "R0301",
+   "season": "JF",
+   "scale_m": 18.204689025878906
+  },
+  {
+   "region_id": "R0301",
+   "season": "JJAS",
+   "scale_m": 12.31771469116211
+  },
+  {
+   "region_id": "R0301",
+   "season": "MAM",
+   "scale_m": 13.42082691192627
+  },
+  {
+   "region_id": "R0301",
+   "season": "OND",
+   "scale_m": 14.669675827026367
+  },
+  {
+   "region_id": "R0302",
+   "season": "JF",
+   "scale_m": 17.785816192626953
+  },
+  {
+   "region_id": "R0302",
+   "season": "JJAS",
+   "scale_m": 12.338146209716797
+  },
+  {
+   "region_id": "R0302",
+   "season": "MAM",
+   "scale_m": 13.521956443786621
+  },
+  {
+   "region_id": "R0302",
+   "season": "OND",
+   "scale_m": 14.369197845458984
+  },
+  {
+   "region_id": "R0303",
+   "season": "JF",
+   "scale_m": 17.704057693481445
+  },
+  {
+   "region_id": "R0303",
+   "season": "JJAS",
+   "scale_m": 13.93320369720459
+  },
+  {
+   "region_id": "R0303",
+   "season": "MAM",
+   "scale_m": 13.964223861694336
+  },
+  {
+   "region_id": "R0303",
+   "season": "OND",
+   "scale_m": 13.608805656433105
+  },
+  {
+   "region_id": "R0304",
+   "season": "JF",
+   "scale_m": 17.91872787475586
+  },
+  {
+   "region_id": "R0304",
+   "season": "JJAS",
+   "scale_m": 15.471070289611816
+  },
+  {
+   "region_id": "R0304",
+   "season": "MAM",
+   "scale_m": 17.446823120117188
+  },
+  {
+   "region_id": "R0304",
+   "season": "OND",
+   "scale_m": 13.29129409790039
+  },
+  {
+   "region_id": "R0305",
+   "season": "JF",
+   "scale_m": 17.44544792175293
+  },
+  {
+   "region_id": "R0305",
+   "season": "JJAS",
+   "scale_m": 14.727485656738281
+  },
+  {
+   "region_id": "R0305",
+   "season": "MAM",
+   "scale_m": 15.592724800109863
+  },
+  {
+   "region_id": "R0305",
+   "season": "OND",
+   "scale_m": 12.902424812316895
+  },
+  {
+   "region_id": "R0306",
+   "season": "JF",
+   "scale_m": 16.66346549987793
+  },
+  {
+   "region_id": "R0306",
+   "season": "JJAS",
+   "scale_m": 13.28414535522461
+  },
+  {
+   "region_id": "R0306",
+   "season": "MAM",
+   "scale_m": 13.627649307250977
+  },
+  {
+   "region_id": "R0306",
+   "season": "OND",
+   "scale_m": 11.914880752563477
+  },
+  {
+   "region_id": "R0307",
+   "season": "JF",
+   "scale_m": 16.200592041015625
+  },
+  {
+   "region_id": "R0307",
+   "season": "JJAS",
+   "scale_m": 13.293170928955078
+  },
+  {
+   "region_id": "R0307",
+   "season": "MAM",
+   "scale_m": 13.031757354736328
+  },
+  {
+   "region_id": "R0307",
+   "season": "OND",
+   "scale_m": 12.474222183227539
+  },
+  {
+   "region_id": "R0400",
+   "season": "JF",
+   "scale_m": 30.210159301757812
+  },
+  {
+   "region_id": "R0400",
+   "season": "JJAS",
+   "scale_m": 12.602877616882324
+  },
+  {
+   "region_id": "R0400",
+   "season": "MAM",
+   "scale_m": 20.896404266357422
+  },
+  {
+   "region_id": "R0400",
+   "season": "OND",
+   "scale_m": 23.388534545898438
+  },
+  {
+   "region_id": "R0401",
+   "season": "JF",
+   "scale_m": 30.4539794921875
+  },
+  {
+   "region_id": "R0401",
+   "season": "JJAS",
+   "scale_m": 15.004471778869629
+  },
+  {
+   "region_id": "R0401",
+   "season": "MAM",
+   "scale_m": 19.68718147277832
+  },
+  {
+   "region_id": "R0401",
+   "season": "OND",
+   "scale_m": 21.45281982421875
+  },
+  {
+   "region_id": "R0402",
+   "season": "JF",
+   "scale_m": 30.15690803527832
+  },
+  {
+   "region_id": "R0402",
+   "season": "JJAS",
+   "scale_m": 15.711969375610352
+  },
+  {
+   "region_id": "R0402",
+   "season": "MAM",
+   "scale_m": 18.30228614807129
+  },
+  {
+   "region_id": "R0402",
+   "season": "OND",
+   "scale_m": 19.54680824279785
+  },
+  {
+   "region_id": "R0403",
+   "season": "JF",
+   "scale_m": 29.002460479736328
+  },
+  {
+   "region_id": "R0403",
+   "season": "JJAS",
+   "scale_m": 18.302112579345703
+  },
+  {
+   "region_id": "R0403",
+   "season": "MAM",
+   "scale_m": 17.365835189819336
+  },
+  {
+   "region_id": "R0403",
+   "season": "OND",
+   "scale_m": 18.758167266845703
+  },
+  {
+   "region_id": "R0404",
+   "season": "JF",
+   "scale_m": 28.064266204833984
+  },
+  {
+   "region_id": "R0404",
+   "season": "JJAS",
+   "scale_m": 20.902193069458008
+  },
+  {
+   "region_id": "R0404",
+   "season": "MAM",
+   "scale_m": 19.6420955657959
+  },
+  {
+   "region_id": "R0404",
+   "season": "OND",
+   "scale_m": 18.589649200439453
+  },
+  {
+   "region_id": "R0405",
+   "season": "JF",
+   "scale_m": 27.05404281616211
+  },
+  {
+   "region_id": "R0405",
+   "season": "JJAS",
+   "scale_m": 19.13257598876953
+  },
+  {
+   "region_id": "R0405",
+   "season": "MAM",
+   "scale_m": 20.196857452392578
+  },
+  {
+   "region_id": "R0405",
+   "season": "OND",
+   "scale_m": 17.553457260131836
+  },
+  {
+   "region_id": "R0406",
+   "season": "JF",
+   "scale_m": 25.75440216064453
+  },
+  {
+   "region_id": "R0406",
+   "season": "JJAS",
+   "scale_m": 15.254423141479492
+  },
+  {
+   "region_id": "R0406",
+   "season": "MAM",
+   "scale_m": 19.133098602294922
+  },
+  {
+   "region_id": "R0406",
+   "season": "OND",
+   "scale_m": 16.322372436523438
+  },
+  {
+   "region_id": "R0407",
+   "season": "JF",
+   "scale_m": 25.51259422302246
+  },
+  {
+   "region_id": "R0407",
+   "season": "JJAS",
+   "scale_m": 14.816750526428223
+  },
+  {
+   "region_id": "R0407",
+   "season": "MAM",
+   "scale_m": 18.382080078125
+  },
+  {
+   "region_id": "R0407",
+   "season": "OND",
+   "scale_m": 16.350584030151367
+  },
+  {
+   "region_id": "R0500",
+   "season": "JF",
+   "scale_m": 49.84172058105469
+  },
+  {
+   "region_id": "R0500",
+   "season": "JJAS",
+   "scale_m": 16.298927307128906
+  },
+  {
+   "region_id": "R0500",
+   "season": "MAM",
+   "scale_m": 32.67044448852539
+  },
+  {
+   "region_id": "R0500",
+   "season": "OND",
+   "scale_m": 34.47401809692383
+  },
+  {
+   "region_id": "R0501",
+   "season": "JF",
+   "scale_m": 52.25441360473633
+  },
+  {
+   "region_id": "R0501",
+   "season": "JJAS",
+   "scale_m": 16.103260040283203
+  },
+  {
+   "region_id": "R0501",
+   "season": "MAM",
+   "scale_m": 31.355545043945312
+  },
+  {
+   "region_id": "R0501",
+   "season": "OND",
+   "scale_m": 32.84564208984375
+  },
+  {
+   "region_id": "R0502",
+   "season": "JF",
+   "scale_m": 51.227169036865234
+  },
+  {
+   "region_id": "R0502",
+   "season": "JJAS",
+   "scale_m": 16.27117919921875
+  },
+  {
+   "region_id": "R0502",
+   "season": "MAM",
+   "scale_m": 27.205020904541016
+  },
+  {
+   "region_id": "R0502",
+   "season": "OND",
+   "scale_m": 31.227375030517578
+  },
+  {
+   "region_id": "R0503",
+   "season": "JF",
+   "scale_m": 46.61400604248047
+  },
+  {
+   "region_id": "R0503",
+   "season": "JJAS",
+   "scale_m": 16.944746017456055
+  },
+  {
+   "region_id": "R0503",
+   "season": "MAM",
+   "scale_m": 22.0228328704834
+  },
+  {
+   "region_id": "R0503",
+   "season": "OND",
+   "scale_m": 30.831167221069336
+  },
+  {
+   "region_id": "R0504",
+   "season": "JF",
+   "scale_m": 42.564151763916016
+  },
+  {
+   "region_id": "R0504",
+   "season": "JJAS",
+   "scale_m": 17.495582580566406
+  },
+  {
+   "region_id": "R0504",
+   "season": "MAM",
+   "scale_m": 20.683475494384766
+  },
+  {
+   "region_id": "R0504",
+   "season": "OND",
+   "scale_m": 30.901811599731445
+  },
+  {
+   "region_id": "R0505",
+   "season": "JF",
+   "scale_m": 39.71717834472656
+  },
+  {
+   "region_id": "R0505",
+   "season": "JJAS",
+   "scale_m": 16.802053451538086
+  },
+  {
+   "region_id": "R0505",
+   "season": "MAM",
+   "scale_m": 21.081642150878906
+  },
+  {
+   "region_id": "R0505",
+   "season": "OND",
+   "scale_m": 29.50950050354004
+  },
+  {
+   "region_id": "R0506",
+   "season": "JF",
+   "scale_m": 37.221275329589844
+  },
+  {
+   "region_id": "R0506",
+   "season": "JJAS",
+   "scale_m": 15.144672393798828
+  },
+  {
+   "region_id": "R0506",
+   "season": "MAM",
+   "scale_m": 20.771631240844727
+  },
+  {
+   "region_id": "R0506",
+   "season": "OND",
+   "scale_m": 27.042095184326172
+  },
+  {
+   "region_id": "R0507",
+   "season": "JF",
+   "scale_m": 37.1286735534668
+  },
+  {
+   "region_id": "R0507",
+   "season": "JJAS",
+   "scale_m": 14.286069869995117
+  },
+  {
+   "region_id": "R0507",
+   "season": "MAM",
+   "scale_m": 20.4393367767334
+  },
+  {
+   "region_id": "R0507",
+   "season": "OND",
+   "scale_m": 26.56238555908203
+  },
+  {
+   "region_id": "R0600",
+   "season": "JF",
+   "scale_m": 61.30603790283203
+  },
+  {
+   "region_id": "R0600",
+   "season": "JJAS",
+   "scale_m": 24.277568817138672
+  },
+  {
+   "region_id": "R0600",
+   "season": "MAM",
+   "scale_m": 44.36094665527344
+  },
+  {
+   "region_id": "R0600",
+   "season": "OND",
+   "scale_m": 43.88764953613281
+  },
+  {
+   "region_id": "R0601",
+   "season": "JF",
+   "scale_m": 61.287452697753906
+  },
+  {
+   "region_id": "R0601",
+   "season": "JJAS",
+   "scale_m": 23.28548812866211
+  },
+  {
+   "region_id": "R0601",
+   "season": "MAM",
+   "scale_m": 41.69056701660156
+  },
+  {
+   "region_id": "R0601",
+   "season": "OND",
+   "scale_m": 45.232723236083984
+  },
+  {
+   "region_id": "R0602",
+   "season": "JF",
+   "scale_m": 59.255680084228516
+  },
+  {
+   "region_id": "R0602",
+   "season": "JJAS",
+   "scale_m": 20.876062393188477
+  },
+  {
+   "region_id": "R0602",
+   "season": "MAM",
+   "scale_m": 36.345455169677734
+  },
+  {
+   "region_id": "R0602",
+   "season": "OND",
+   "scale_m": 44.11451721191406
+  },
+  {
+   "region_id": "R0603",
+   "season": "JF",
+   "scale_m": 52.31707763671875
+  },
+  {
+   "region_id": "R0603",
+   "season": "JJAS",
+   "scale_m": 21.23933982849121
+  },
+  {
+   "region_id": "R0603",
+   "season": "MAM",
+   "scale_m": 28.514768600463867
+  },
+  {
+   "region_id": "R0603",
+   "season": "OND",
+   "scale_m": 41.561824798583984
+  },
+  {
+   "region_id": "R0604",
+   "season": "JF",
+   "scale_m": 48.52650451660156
+  },
+  {
+   "region_id": "R0604",
+   "season": "JJAS",
+   "scale_m": 22.298023223876953
+  },
+  {
+   "region_id": "R0604",
+   "season": "MAM",
+   "scale_m": 26.27382469177246
+  },
+  {
+   "region_id": "R0604",
+   "season": "OND",
+   "scale_m": 40.91771697998047
+  },
+  {
+   "region_id": "R0605",
+   "season": "JF",
+   "scale_m": 45.15171432495117
+  },
+  {
+   "region_id": "R0605",
+   "season": "JJAS",
+   "scale_m": 23.024028778076172
+  },
+  {
+   "region_id": "R0605",
+   "season": "MAM",
+   "scale_m": 26.443492889404297
+  },
+  {
+   "region_id": "R0605",
+   "season": "OND",
+   "scale_m": 40.37757873535156
+  },
+  {
+   "region_id": "R0606",
+   "season": "JF",
+   "scale_m": 40.18010711669922
+  },
+  {
+   "region_id": "R0606",
+   "season": "JJAS",
+   "scale_m": 20.709497451782227
+  },
+  {
+   "region_id": "R0606",
+   "season": "MAM",
+   "scale_m": 23.704416275024414
+  },
+  {
+   "region_id": "R0606",
+   "season": "OND",
+   "scale_m": 37.052677154541016
+  },
+  {
+   "region_id": "R0607",
+   "season": "JF",
+   "scale_m": 37.56144714355469
+  },
+  {
+   "region_id": "R0607",
+   "season": "JJAS",
+   "scale_m": 19.04751205444336
+  },
+  {
+   "region_id": "R0607",
+   "season": "MAM",
+   "scale_m": 22.322738647460938
+  },
+  {
+   "region_id": "R0607",
+   "season": "OND",
+   "scale_m": 34.687294006347656
+  },
+  {
+   "region_id": "R0700",
+   "season": "JF",
+   "scale_m": 59.08632278442383
+  },
+  {
+   "region_id": "R0700",
+   "season": "JJAS",
+   "scale_m": 30.933897018432617
+  },
+  {
+   "region_id": "R0700",
+   "season": "MAM",
+   "scale_m": 48.61454772949219
+  },
+  {
+   "region_id": "R0700",
+   "season": "OND",
+   "scale_m": 49.887542724609375
+  },
+  {
+   "region_id": "R0701",
+   "season": "JF",
+   "scale_m": 53.32158660888672
+  },
+  {
+   "region_id": "R0701",
+   "season": "JJAS",
+   "scale_m": 30.4451904296875
+  },
+  {
+   "region_id": "R0701",
+   "season": "MAM",
+   "scale_m": 43.43543243408203
+  },
+  {
+   "region_id": "R0701",
+   "season": "OND",
+   "scale_m": 48.68585968017578
+  },
+  {
+   "region_id": "R0702",
+   "season": "JF",
+   "scale_m": 48.67900085449219
+  },
+  {
+   "region_id": "R0702",
+   "season": "JJAS",
+   "scale_m": 27.599483489990234
+  },
+  {
+   "region_id": "R0702",
+   "season": "MAM",
+   "scale_m": 38.21845626831055
+  },
+  {
+   "region_id": "R0702",
+   "season": "OND",
+   "scale_m": 46.339141845703125
+  },
+  {
+   "region_id": "R0703",
+   "season": "JF",
+   "scale_m": 46.435489654541016
+  },
+  {
+   "region_id": "R0703",
+   "season": "JJAS",
+   "scale_m": 27.246707916259766
+  },
+  {
+   "region_id": "R0703",
+   "season": "MAM",
+   "scale_m": 35.11194610595703
+  },
+  {
+   "region_id": "R0703",
+   "season": "OND",
+   "scale_m": 44.01342010498047
+  },
+  {
+   "region_id": "R0704",
+   "season": "JF",
+   "scale_m": 45.224327087402344
+  },
+  {
+   "region_id": "R0704",
+   "season": "JJAS",
+   "scale_m": 27.25907325744629
+  },
+  {
+   "region_id": "R0704",
+   "season": "MAM",
+   "scale_m": 33.083412170410156
+  },
+  {
+   "region_id": "R0704",
+   "season": "OND",
+   "scale_m": 41.82320022583008
+  },
+  {
+   "region_id": "R0705",
+   "season": "JF",
+   "scale_m": 43.02113342285156
+  },
+  {
+   "region_id": "R0705",
+   "season": "JJAS",
+   "scale_m": 26.57400894165039
+  },
+  {
+   "region_id": "R0705",
+   "season": "MAM",
+   "scale_m": 31.7034969329834
+  },
+  {
+   "region_id": "R0705",
+   "season": "OND",
+   "scale_m": 39.684242248535156
+  },
+  {
+   "region_id": "R0706",
+   "season": "JF",
+   "scale_m": 39.90354919433594
+  },
+  {
+   "region_id": "R0706",
+   "season": "JJAS",
+   "scale_m": 24.224946975708008
+  },
+  {
+   "region_id": "R0706",
+   "season": "MAM",
+   "scale_m": 29.73762321472168
+  },
+  {
+   "region_id": "R0706",
+   "season": "OND",
+   "scale_m": 37.911251068115234
+  },
+  {
+   "region_id": "R0707",
+   "season": "JF",
+   "scale_m": 38.23914337158203
+  },
+  {
+   "region_id": "R0707",
+   "season": "JJAS",
+   "scale_m": 21.672611236572266
+  },
+  {
+   "region_id": "R0707",
+   "season": "MAM",
+   "scale_m": 28.890045166015625
+  },
+  {
+   "region_id": "R0707",
+   "season": "OND",
+   "scale_m": 36.81923294067383
+  }
+ ]
+}

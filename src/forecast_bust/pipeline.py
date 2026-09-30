@@ -78,6 +78,14 @@ def write_dataset_manifest(ds, cases: pd.DataFrame) -> None:
                     "labels": "artifacts/thresholds.json", "normalisation": "artifacts/preprocessing.json"},
         "licensing": "ERA5: Copernicus licence (LICENSE file in bucket). IFS ENS: ECMWF data terms - verify the "
                      "WeatherBench 2 licence notes before redistribution. Raw data is NOT committed to git.",
+        **({"forecast_extras": {**common, "source_name": "ECMWF IFS ENS, same store and initialisations",
+                                "source_url": cfg["source"]["forecast_store"],
+                                "variables": "u, v at 500/700/850 hPa; mean sea-level pressure",
+                                "preprocessing": "members reduced to ensemble mean and std (ddof=1) at download; "
+                                                 "anomalies vs ERA5 1990-2017 climatology; vorticity/divergence by "
+                                                 "spherical centred differences on the 5.625 deg grid",
+                                "cache": "data/cache/ens_extra (457/457 blocks, artifacts/extras_validation.json)",
+                                "role": "DYN feature group (features.dynamics)"}} if "DYN" in GROUPS else {}),
         "not_used": "No NCMRWF data is used; NCMRWF NEPS integration is architected (adapter interface) but not claimed.",
     }
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
