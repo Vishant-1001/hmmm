@@ -115,6 +115,14 @@ def spread_percentile(df: pd.DataFrame, train: pd.DataFrame) -> np.ndarray:
     return out
 
 
+def spread_threshold_ratio(df: pd.DataFrame, n_members: int = 50) -> np.ndarray:
+    """Spread-only B2 input: finite-ensemble-corrected spread divided by the bust threshold in metres
+    (TRAIN Q90 of normalized error x TRAIN scale, both fixed constants per region x lead x season).
+    For a reliable Gaussian ensemble, P(bust) = 2 * Phi(-1 / ratio); uses no verification of the row."""
+    thr_m = df["q_primary"].to_numpy(float) * df["scale_m"].to_numpy(float)
+    return (df["spread_m"].to_numpy(float) * np.sqrt(1 + 1 / n_members) / thr_m).astype(np.float32)
+
+
 def build_cases(ds: xr.Dataset) -> pd.DataFrame:
     mcfg = model_config()["labels"]
     df = base_table(ds)
@@ -133,6 +141,7 @@ def build_cases(ds: xr.Dataset) -> pd.DataFrame:
     df["low_spread"] = (df["spread_m"] <= df["spread_low"]).astype(np.int8)
     df["hidden_bust"] = (df["bust"].astype(bool) & df["low_spread"].astype(bool)).astype(np.int8)
     df["spread_pct"] = spread_percentile(df, df[df["split"] == "train"])
+    df["spread_thr_ratio"] = spread_threshold_ratio(df)
     df = df.sort_values(["init_time", "region_id", "lead_day"]).reset_index(drop=True)
     df["case_id"] = (pd.to_datetime(df["init_time"]).dt.strftime("%Y%m%d%H") + "_" + df["region_id"]
                      + "_D" + df["lead_day"].astype(str).str.zfill(2))

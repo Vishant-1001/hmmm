@@ -5,7 +5,8 @@ Inputs are ONLY forecast quantities (ens_mean, ens_std, member statistics m_*) a
 fields era5_z500 / era5_rank are never read here; tests/test_leakage.py enforces this.
 
 Groups
-  SPREAD : B2 inputs            spread magnitude, spread percentile, lead, region, season, init hour
+  SPREAD : B2 inputs            spread magnitude, spread percentile, spread / bust threshold, lead, region,
+                                 season, init hour
   ATM    : atmospheric state    Z500/700/850 anomalies, 500-850 thickness anomaly, gradients, curvature
   ENS    : ensemble behaviour   IQR, P10-P90, skewness, anomaly-sign agreement, neighbourhood spread ...
   PAT    : large-scale pattern  frozen TRAIN-fitted PCA of context-domain Z500 anomaly
@@ -32,7 +33,7 @@ from forecast_bust.labels.build import regions_for
 
 log = logging.getLogger(__name__)
 
-SPREAD = ["spread_m", "spread_pct", "lead_day", "region_code", "season_code", "init_hour"]
+SPREAD = ["spread_m", "spread_pct", "spread_thr_ratio", "lead_day", "region_code", "season_code", "init_hour"]
 ATM = ["anom500", "abs_anom500", "anom700", "anom850", "thick_anom", "grad_x", "grad_y", "grad_mag",
        "lap500", "nbhd_anom500"]
 ENS = ["m_iqr", "m_p10p90", "m_skew", "m_sign_agree", "spread_nbhd", "spread_hetero", "spread700",

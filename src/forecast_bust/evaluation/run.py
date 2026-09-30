@@ -87,9 +87,23 @@ def evaluate() -> dict:
     by_lead = []
     for d, g in te.groupby("lead_day"):
         by_lead.append({"lead_day": int(d), "n": int(len(g)), "bust_rate": float(g["bust"].mean()),
+                        "rmse_m": float(np.sqrt((g["error_m"] ** 2).mean())),
+                        "brier_B2": M.brier(g["bust"].values, g["p_B2"].values),
+                        "brier_FULL": M.brier(g["bust"].values, g["p_FULL"].values),
                         "auprc_B2": M.auprc(g["bust"].values, g["p_B2"].values),
                         "auprc_FULL": M.auprc(g["bust"].values, g["p_FULL"].values),
                         "auprc_B0": M.auprc(g["bust"].values, g["p_B0"].values)})
+    by_region = []
+    for rid, g in te.groupby("region_id"):
+        by_region.append({"region_id": rid, "lat": float(g["lat"].iloc[0]), "lon": float(g["lon"].iloc[0]),
+                          "n": int(len(g)), "bust_rate": float(g["bust"].mean()),
+                          "auprc_B2": M.auprc(g["bust"].values, g["p_B2"].values),
+                          "auprc_FULL": M.auprc(g["bust"].values, g["p_FULL"].values)})
+    boot_models = {"B2": te["p_B2"].values, "FULL": te["p_FULL"].values,
+                   **{e: te[f"p_{e}"].values for e in EXPERIMENTAL if f"p_{e}" in te.columns}}
+    thr_boot = {k: M.threshold_at_far(va["bust"].values, va["p_B2" if k == "B2" else f"p_{k}"].values, far)
+                for k in boot_models}
+    boot_all = M.block_bootstrap_metrics(te, boot_models, thr_boot, n=300, seed=mcfg["seed"])
     by_season = []
     for s, g in te.groupby("season"):
         by_season.append({"season": s, "n": int(len(g)), "bust_rate": float(g["bust"].mean()),
@@ -122,7 +136,8 @@ def evaluate() -> dict:
                        "verdict_rule": "material improvement iff 95% block-bootstrap CI of AUPRC(FULL)-AUPRC(B2) "
                                        "excludes 0 AND relative gain >= 5% (rule fixed before test evaluation)",
                        "material_improvement": bool(material)},
-        "by_lead_day": by_lead, "by_season": by_season,
+        "by_lead_day": by_lead, "by_season": by_season, "by_region": by_region,
+        "bootstrap_ci": boot_all,
         "selected_groups": manifest["selected_groups"],
         "q95_sensitivity": q95, "frozen_memory_sensitivity": frozen, "by_evidence_level": by_evidence,
         "disagreement_full_vs_b2": M.disagreement_behaviour(y, te["p_FULL"].values, te["p_B2"].values),
@@ -137,6 +152,13 @@ def evaluate() -> dict:
                "validation": M.reliability_curve(va["bust"].values, va[f"p_{n}"].values)}
            for n in ("B0", "B2", "FULL")}
     cal["method"] = "isotonic regression fitted on validation predictions only, then frozen"
+    cal["by_lead_day"] = {n: {int(d): {"ece": M.ece(g["bust"].values, g[f"p_{n}"].values),
+                                       "mean_pred": float(g[f"p_{n}"].mean()), "obs_freq": float(g["bust"].mean()),
+                                       "curve": M.reliability_curve(g["bust"].values, g[f"p_{n}"].values)}
+                                  for d, g in te.groupby("lead_day")} for n in ("B2", "FULL")}
+    (ARTIFACT_DIR / "pr_curves.json").write_text(json.dumps(clean_json(
+        {n: M.pr_curve(y, te[_score_col(n)].values) for n in ["B0", "B1", "B2", "FULL"] +
+         [e for e in EXPERIMENTAL if f"p_{e}" in te.columns]}), indent=1))
     (ARTIFACT_DIR / "calibration.json").write_text(json.dumps(clean_json(cal), indent=1))
     (ARTIFACT_DIR / "spread_skill.json").write_text(json.dumps(clean_json(spread_skill(te)), indent=1))
     models = joblib.load(MODEL_DIR / "models.joblib")

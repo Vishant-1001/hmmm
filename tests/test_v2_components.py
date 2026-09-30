@@ -91,3 +91,55 @@ def test_sentinel_is_frozen_standard_learner():
         v2 = yaml.safe_load((CONFIG_DIR / f"{name}.yaml").read_text())["v2"]
         assert v2["learners"] == ["standard"]
         assert "standard" not in v2.get("experimental_learners", [])
+
+
+def test_tendency_fields_are_within_forecast_rates():
+    """|d/dt| along the lead axis only: a field growing 10 m per day has tendency 10 at every lead."""
+    import xarray as xr
+    from forecast_bust.features.dynamics import tendency_fields
+    lat, lon = _grid()
+    leads = np.arange(24, 241, 24)
+    z = np.zeros((2, len(leads), 3, len(lon), len(lat)), np.float32)
+    z[:, :, 0] = 5500 + 10 * np.arange(len(leads))[None, :, None, None]
+    ds = xr.Dataset({"ens_mean": (("init", "lead", "level", "longitude", "latitude"), z)},
+                    coords={"lead": leads, "level": [500, 700, 850], "longitude": lon, "latitude": lat})
+    mslp = np.full((2, len(leads), len(lon), len(lat)), 1010.0)
+    f = tendency_fields(ds, mslp, np.zeros_like(mslp))
+    assert np.allclose(f["z500_tend"], 10.0)
+    assert np.allclose(f["mslp_tend"], 0.0)
+    # changing the first init does not change the second (no cross-cycle information)
+    z2 = z.copy()
+    z2[0] += 100 * np.arange(len(leads))[:, None, None, None]
+    f2 = tendency_fields(ds.assign(ens_mean=(ds["ens_mean"].dims, z2)), mslp, np.zeros_like(mslp))
+    assert np.allclose(f2["z500_tend"][1], f["z500_tend"][1])
+
+
+def test_spread_threshold_ratio_uses_no_verification():
+    from forecast_bust.labels.build import spread_threshold_ratio
+    df = pd.DataFrame({"spread_m": [10.0, 20.0], "q_primary": [1.0, 2.0], "scale_m": [50.0, 50.0],
+                       "error_m": [0.0, 999.0], "norm_error": [0.0, 99.0], "bust": [0, 1]})
+    r = spread_threshold_ratio(df)
+    assert np.allclose(r, np.array([10, 20]) * np.sqrt(1 + 1 / 50) / np.array([50, 100]), rtol=1e-6)
+    df2 = df.assign(error_m=[5.0, 1.0], norm_error=[1.0, 0.0], bust=[1, 0])
+    assert np.array_equal(spread_threshold_ratio(df2), r)
+
+
+def test_block_bootstrap_metrics_identical_models_have_zero_difference():
+    from forecast_bust.evaluation.metrics import block_bootstrap_metrics
+    rng = np.random.default_rng(0)
+    n = 4000
+    df = pd.DataFrame({"init_time": pd.date_range("2021-01-01", periods=n // 10, freq="12h").repeat(10),
+                       "bust": rng.random(n) < 0.1})
+    df["hidden_bust"] = df["bust"] & (rng.random(n) < 0.2)
+    p = np.clip(0.1 + 0.2 * df["bust"] + rng.normal(0, 0.1, n), 0, 1)
+    res = block_bootstrap_metrics(df, {"B2": p, "FULL": p.copy()}, {"B2": 0.2, "FULL": 0.2}, n=30)
+    d = res["difference_vs_reference"]["FULL"]["auprc"]
+    assert d["point"] == 0 and d["ci95"] == [0.0, 0.0]
+    lo, hi = res["models"]["B2"]["auprc"]["ci95"]
+    assert lo <= res["models"]["B2"]["auprc"]["point"] <= hi
+
+
+def test_xgb_params_override_keeps_defaults():
+    from forecast_bust.models.sentinel import xgb_params
+    p = xgb_params({"max_depth": 7})
+    assert p["max_depth"] == 7 and "early_stopping_rounds" in p and "eval_metric" in p

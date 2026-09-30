@@ -45,7 +45,8 @@ logs/
 artifacts/dev/
 models/dev/
 data/interim/
-artifacts/*/dev/
+artifacts/*/dev/*
+!artifacts/v2/dev/optimization/
 models/*/dev/
 artifacts/v2a/
 models/v2a/

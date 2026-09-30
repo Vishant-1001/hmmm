@@ -43,7 +43,7 @@ def full_feature_set(selected_groups: list[str]) -> list[str]:
 DESCRIPTIONS = {
     "B0": "Climatological bust frequency (TRAIN, per region x lead x season)",
     "B1": "Raw ensemble-spread score (spread percentile; ranking score, not a probability)",
-    "B2": "Calibrated spread-only gradient-boosted model (spread, spread percentile, lead, region, season, init hour)",
+    "B2": "Calibrated spread-only gradient-boosted model (spread, spread percentile, spread / bust threshold, lead, region, season, init hour)",
     "M1": "B2 + atmospheric state", "M2": "B2 + ensemble behaviour", "M3": "B2 + large-scale pattern (PCA)",
     "M4": "B2 + forecast evolution", "M5": "B2 + historical forecast-state memory (analogues)",
     "M6": "B2 + recent verified forecast-error behaviour",
@@ -53,6 +53,13 @@ DESCRIPTIONS = {
     "EXP_RESIDUAL_B2": "EXPERIMENTAL (not the Sentinel): stacked model boosting from cross-fitted B2 log-odds, "
                        "validation-selected groups",
 }
+
+
+def xgb_params(override: dict | None = None) -> dict:
+    """XGBoost parameters: config `xgboost` defaults updated with `override` (a validation-selected set)."""
+    cfg = dict(model_config()["xgboost"])
+    cfg.update(override or {})
+    return cfg
 
 
 class B0Climatology:
@@ -85,7 +92,7 @@ class B2Margin:
         self.b2 = b2
         years = pd.to_datetime(train["init_time"]).dt.year.to_numpy()
         cf = np.full(len(train), np.nan)
-        cfg = dict(model_config()["xgboost"])
+        cfg = xgb_params(getattr(b2, "params", None))
         cfg.pop("early_stopping_rounds")
         cfg.pop("eval_metric")
         cfg["n_estimators"] = b2.best_iteration + 1
@@ -111,10 +118,13 @@ class CalibratedGBM:
     (residual learner); early stopping then decides how much beyond-spread structure the
     validation data support (0 extra trees = B2 itself)."""
 
-    def __init__(self, features: list[str], name: str, base: B2Margin | None = None):
+    def __init__(self, features: list[str], name: str, base: B2Margin | None = None, params: dict | None = None,
+                 seed: int | None = None):
         self.features = list(features)
         self.name = name
         self.base = base
+        self.params = xgb_params(params)
+        self.seed = model_config()["seed"] if seed is None else seed
         self.calibrator: IsotonicRegression | None = None
 
     @property
@@ -125,13 +135,13 @@ class CalibratedGBM:
         return self.base.margin(df) if getattr(self, "base", None) is not None else None
 
     def fit(self, train: pd.DataFrame, val: pd.DataFrame, target: str = "bust"):
-        cfg = dict(model_config()["xgboost"])
+        cfg = dict(getattr(self, "params", None) or xgb_params())
         es = cfg.pop("early_stopping_rounds")
         pos = train[target].mean()
         kw = {}
         if self.base is not None:
             kw = {"base_margin": self._margin(train), "base_margin_eval_set": [self._margin(val)]}
-        self.model = xgb.XGBClassifier(**cfg, early_stopping_rounds=es, random_state=model_config()["seed"],
+        self.model = xgb.XGBClassifier(**cfg, early_stopping_rounds=es, random_state=getattr(self, "seed", model_config()["seed"]),
                                        n_jobs=4, base_score=float(pos) if self.base is None else 0.5)
         self.model.fit(train[self.features], train[target], eval_set=[(val[self.features], val[target])],
                        verbose=False, **kw)

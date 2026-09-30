@@ -130,6 +130,63 @@ def block_bootstrap_diff(df: pd.DataFrame, p_a: np.ndarray, p_b: np.ndarray, n: 
             "p_le_0": float((diffs <= 0).mean()), "n_boot": n, "block": "initialisation day"}
 
 
+def block_bootstrap_metrics(df: pd.DataFrame, probs: dict[str, np.ndarray], thresholds: dict[str, float],
+                            n: int = 300, seed: int = 0) -> dict:
+    """95% initialisation-day block-bootstrap CIs for AUPRC, Brier, recall@10% FAR and hidden-bust recall
+    at the validation-chosen threshold, per model and for each model minus the first one (the reference).
+    Region-day rows of one initialisation day are resampled together (they are not independent)."""
+    rng = np.random.default_rng(seed)
+    y = df["bust"].to_numpy()
+    hb = df["hidden_bust"].to_numpy().astype(bool)
+    days = pd.to_datetime(df["init_time"]).dt.floor("D").to_numpy()
+    uniq, inv = np.unique(days, return_inverse=True)
+    rows_by_day = [np.where(inv == i)[0] for i in range(len(uniq))]
+    names = list(probs)
+    ref = names[0]
+
+    def stats(idx):
+        out = {}
+        for k in names:
+            p = probs[k][idx]
+            yy = y[idx]
+            h = hb[idx]
+            out[k] = (auprc(yy, p), brier(yy, p), recall_at_far(yy, p, 0.10),
+                      float((p[h] >= thresholds[k]).mean()) if h.any() else np.nan)
+        return out
+
+    draws = []
+    for _ in range(n):
+        pick = rng.integers(0, len(uniq), len(uniq))
+        draws.append(stats(np.concatenate([rows_by_day[i] for i in pick])))
+    labels = ("auprc", "brier", "recall_at_far_10", "hidden_bust_recall_at_alert")
+    point = stats(np.arange(len(y)))
+
+    def ci(vals):
+        v = np.asarray(vals, dtype=float)
+        v = v[np.isfinite(v)]
+        return [float(np.quantile(v, 0.025)), float(np.quantile(v, 0.975))] if len(v) else [np.nan, np.nan]
+
+    res = {"n_boot": n, "block": "initialisation day", "reference": ref, "models": {}, "difference_vs_reference": {}}
+    for k in names:
+        res["models"][k] = {lab: {"point": point[k][j], "ci95": ci([d[k][j] for d in draws])}
+                            for j, lab in enumerate(labels)}
+        if k != ref:
+            res["difference_vs_reference"][k] = {
+                lab: {"point": point[k][j] - point[ref][j], "ci95": ci([d[k][j] - d[ref][j] for d in draws]),
+                      "p_le_0": float(np.mean([d[k][j] - d[ref][j] <= 0 for d in draws]))}
+                for j, lab in enumerate(labels)}
+    return res
+
+
+def pr_curve(y, p, n_points: int = 60) -> dict:
+    """Precision-recall curve thinned to about n_points points (for plotting)."""
+    from sklearn.metrics import precision_recall_curve
+    prec, rec, _ = precision_recall_curve(y, p)
+    keep = np.unique(np.linspace(0, len(rec) - 1, n_points).astype(int))
+    return {"recall": rec[keep].round(4).tolist(), "precision": prec[keep].round(4).tolist(),
+            "base_rate": float(np.mean(y))}
+
+
 def disagreement_behaviour(y, p_model, p_base, margin_pp: float = 5.0) -> dict:
     """How the model's disagreement with the spread baseline relates to what happened.
 

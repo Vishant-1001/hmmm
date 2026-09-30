@@ -36,6 +36,11 @@ log = logging.getLogger(__name__)
 A_EARTH = 6.371e6
 DYN = ["u500_anom", "v500_anom", "ws500", "ws850", "shear_500_850", "vort500", "vort850", "div500", "div850",
        "mslp_anom", "mslp_grad", "wspread500", "wspread850", "mslp_spread"]
+# Flow tendency inside the SAME forecast (rate of change of the predicted state around the target
+# lead, np.gradient over lead days: centred in Days 2-9, one-sided at Days 1 and 10). Magnitudes only:
+# "rapidly evolving systems" in the SIH statement. Available at initialisation (no other cycle used).
+TEND = ["z500_tend", "mslp_tend", "vort500_tend"]
+DYN = DYN + TEND
 
 
 def extras_path():
@@ -91,6 +96,16 @@ def kinematics(u: np.ndarray, v: np.ndarray, lat: np.ndarray, lon: np.ndarray):
     return vort, div
 
 
+def tendency_fields(ds: xr.Dataset, mslp_hpa: np.ndarray, vort500: np.ndarray) -> dict:
+    """|d/dt| per day of ensemble-mean Z500 (m), MSLP (hPa) and 500 hPa vorticity (1e-5 s^-1), along
+    the lead axis of each forecast (axis 1 of (init, lead, lon, lat)); leads must be 24 h apart."""
+    if not np.all(np.diff(ds.lead.values.astype(int)) == 24):
+        raise ValueError("tendencies need consecutive 24 h leads")
+    z500 = ds["ens_mean"].values[:, :, int(np.where(ds.level.values == 500)[0][0])]
+    return {"z500_tend": np.abs(np.gradient(z500, axis=1)), "mslp_tend": np.abs(np.gradient(mslp_hpa, axis=1)),
+            "vort500_tend": np.abs(np.gradient(vort500, axis=1))}
+
+
 def dyn_features(ex: xr.Dataset, ds: xr.Dataset) -> pd.DataFrame:
     """Per (init, lead, region) DYN features; `ds` is the geopotential state set (same grid/inits)."""
     if not (np.array_equal(ex.init.values, ds.init.values) and np.array_equal(ex.latitude.values, ds.latitude.values)
@@ -118,6 +133,7 @@ def dyn_features(ex: xr.Dataset, ds: xr.Dataset) -> pd.DataFrame:
     gy = np.gradient(mslp, axis=-1) / (np.deg2rad(np.median(np.diff(lat))) * r) * 100
     f["mslp_grad"] = np.hypot(gx, gy)  # hPa per 100 km
     f["mslp_spread"] = ex["mslp_std"].values / 100.0
+    f.update(tendency_fields(ds, mslp, f["vort500"]))
     inits, leads = ds.init.values, ds.lead.values
     n_i, n_l = len(inits), len(leads)
     frames = []

@@ -111,8 +111,13 @@ def train(reassemble: bool = True) -> None:
     val_auprc = {}
     y_va = va["bust"].values
 
+    v2 = model_config().get("v2", {})
+    # hyper-parameters selected on the DEV split validation year (scripts/optimize_v2.py); B2 is tuned
+    # with the same grid and budget as the Sentinel, so it is not weakened
+    b2_params, s_params = v2.get("b2_xgboost"), v2.get("sentinel_xgboost")
+
     def _fit(name, feats, base=None, key=None):
-        m = CalibratedGBM(feats, name, base=base).fit(tr, va)
+        m = CalibratedGBM(feats, name, base=base, params=b2_params if name == "B2" else s_params).fit(tr, va)
         key = key or name
         val_auprc[key] = auprc(y_va, m.predict_raw(va))
         fitted[key] = {"best_iteration": m.best_iteration, "n_features": len(feats), "learner": m.learner,
@@ -124,10 +129,10 @@ def train(reassemble: bool = True) -> None:
     models["B2"] = _fit("B2", FEATURE_SETS["B2"])
     # Sentinel learner(s): v1 = "standard" only; v2 config also tries "residual_b2" (boost from the
     # cross-fitted B2 margin). Everything below is decided on VALIDATION only.
-    learners = model_config().get("v2", {}).get("learners", ["standard"])
-    exp_learners = model_config().get("v2", {}).get("experimental_learners", [])
-    if learners != ["standard"]:
-        raise ValueError("the Sentinel must use the frozen-spec standard learner; others are experimental only")
+    learners = v2.get("learners", ["standard"])
+    exp_learners = v2.get("experimental_learners", [])
+    if len(learners) != 1 or learners[0] not in ("standard", "residual_b2"):
+        raise ValueError("exactly one Sentinel learner (standard | residual_b2), fixed in config before the run")
     per_learner = {}
     for learner in learners + exp_learners:
         base = B2Margin(models["B2"], tr) if learner == "residual_b2" else None
@@ -140,8 +145,8 @@ def train(reassemble: bool = True) -> None:
         fitted["FULL" + suffix]["selected_groups"] = selected
         per_learner[learner] = {"models": cand, "selected": selected, "base": base,
                                 "val_auprc_full": val_auprc["FULL" + suffix]}
-    # The Sentinel is always the frozen-spec standard learner (never chosen by score)
-    chosen = "standard"
+    # The Sentinel learner is fixed in config (selected on the dev split, never on this run's test year)
+    chosen = learners[0]
     selected = per_learner[chosen]["selected"]
     models.update(per_learner[chosen]["models"])
     # Experimental comparison only: FULL of each experimental learner, kept under EXP_* names
@@ -154,9 +159,10 @@ def train(reassemble: bool = True) -> None:
     # Q95 sensitivity (same protocol, different project-defined criterion)
     tr95, va95 = tr.assign(bust=tr["bust_q95"]), va.assign(bust=va["bust_q95"])
     models["B0_q95"] = B0Climatology().fit(tr95)
-    models["B2_q95"] = CalibratedGBM(FEATURE_SETS["B2"], "B2_q95").fit(tr95, va95)
+    models["B2_q95"] = CalibratedGBM(FEATURE_SETS["B2"], "B2_q95", params=b2_params).fit(tr95, va95)
     base95 = B2Margin(models["B2_q95"], tr95) if chosen == "residual_b2" else None
-    models["FULL_q95"] = CalibratedGBM(FEATURE_SETS_RUN["FULL"], "FULL_q95", base=base95).fit(tr95, va95)
+    models["FULL_q95"] = CalibratedGBM(FEATURE_SETS_RUN["FULL"], "FULL_q95", base=base95,
+                                       params=s_params).fit(tr95, va95)
     # Frozen-memory sensitivity: memory restricted to train+validation cases
     dff, _, _ = compute_memory_features(df.drop(columns=GROUPS["MEM"]), mode="frozen")
     models["FULL_frozen_memory"] = models["FULL"]  # same model, different memory feature inputs at test time
@@ -196,8 +202,10 @@ def train(reassemble: bool = True) -> None:
         "sentinel_learner": chosen, "experimental_learners": exp_learners,
         "experimental_models": {k: {"learner": m.learner, "selected_groups": per_learner[m.learner]["selected"],
                                     "n_features": len(m.features)} for k, m in exp_models.items()},
-        "learner_rule": "Sentinel = frozen-spec single shared GBT (standard learner), fixed a priori; "
-                        "experimental learners are reported for comparison only and never promoted",
+        "learner_rule": "Sentinel = one shared GBT; learner (standard, or boosting from the cross-fitted B2 "
+                        "margin) and hyper-parameters fixed in config from the dev-split validation search; "
+                        "experimental learners are reported for comparison only",
+        "hyperparameters": {"B2": b2_params, "sentinel": s_params},
         "fitted": fitted, "support_levels": SUPPORT_LEVELS, "evidence_levels": EVIDENCE_LEVELS,
         "protocol": "fit on train (early stopping on validation) -> isotonic calibration on validation -> "
                     "frozen -> single evaluation on test",
