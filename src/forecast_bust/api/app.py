@@ -89,7 +89,7 @@ def provenance():
 @app.get("/api/metrics")
 def metrics():
     out = {"metrics": _read(ART / "metrics.json"), "ablation": _read(ART / "ablation_results.json")}
-    for name in ("calibration", "spread_skill", "fingerprint_metrics", "feature_importance"):
+    for name in ("calibration", "spread_skill", "fingerprint_metrics", "feature_importance", "pr_curves"):
         p = ART / f"{name}.json"
         out[name] = json.loads(p.read_text()) if p.exists() else None
     return out
