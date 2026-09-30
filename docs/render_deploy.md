@@ -1,16 +1,17 @@
 # Deploying the Forecast Bust Sentinel demo on Render
 
-The demo runs as two Render services from this one repository:
+**Live:** `https://forecast-bust-sentinel-g0py.onrender.com` is one Render **Web Service**: the existing FastAPI
+app (`forecast_bust.api.app:app`) serves the API under `/api/*` and the built React UI at `/`. The UI bundle
+(`frontend/dist`, a same-origin build with no `VITE_API_URL`) is committed, so the Python service needs no
+Node build step. `tests/test_ui_bundle.py` fails if the committed bundle is stale, so after any change under
+`frontend/src`, run `cd frontend && npm run build` and commit `frontend/dist`.
 
-- **API**: the existing FastAPI app (`forecast_bust.api.app:app`), deployed as a native Python 3.12 **Web
-  Service**. It serves the committed runtime artifacts (`artifacts/demo/`, `artifacts/replay/`, the
-  metrics JSONs) and runs the frozen exported boosters on stored forecast states. It doesn't download
-  data, train, or run evaluation.
-- **UI**: the existing Vite/React app in `frontend/`, deployed as a **Static Site**. It calls the API at
-  `VITE_API_URL`.
+The service serves the committed runtime artifacts (`artifacts/demo/`, `artifacts/replay/`, the metrics
+JSONs) and runs the frozen exported boosters on stored forecast states. It doesn't download data, train or
+run evaluation. It is a **historical replay** demonstration on real ECMWF IFS ENS cases, not a live NCMRWF
+feed (every API response carries this `mode` label and the UI shows it).
 
-The site is a **historical replay** demonstration on real ECMWF IFS ENS cases, not a live NCMRWF feed
-(every API response carries this `mode` label and the UI shows it).
+A separate **Static Site** for the UI (section 3) is optional. It is only needed to host the UI apart from the API.
 
 ## 1. Connect the GitHub repository
 
@@ -37,7 +38,7 @@ curl https://<api>.onrender.com/health            # {"status":"ok"}
 curl https://<api>.onrender.com/api/demo/health   # cases=5, memory_rows=1169920
 ```
 
-## 3. UI: Static Site
+## 3. UI: Static Site (optional)
 
 | Setting | Value |
 |---|---|

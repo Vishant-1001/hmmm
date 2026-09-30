@@ -32,7 +32,8 @@ models/*.joblib
 
 # Node / frontend
 node_modules/
-frontend/dist/
+# frontend/dist/ is committed: the Render web service serves the built UI (see docs/render_deploy.md).
+# Rebuild with `cd frontend && npm run build` (no VITE_API_URL); tests/test_ui_bundle.py checks it is current.
 frontend/.vite/
 
 # OS / editors
