@@ -6,7 +6,8 @@ On every case run the engine:
      then their validation-fitted isotonic calibrators,
   3. queries the historical forecast-state memory (analogues verified no later than the init time),
   4. computes support / OOD distance, evidence strength, review priority,
-  5. computes TreeSHAP attributions of the Sentinel booster for explanations.
+  5. computes TreeSHAP attributions of the Sentinel booster for explanations (per region-day, on first
+     request; a row's TreeSHAP values do not depend on the other rows).
 
 Nothing here is a lookup of precomputed probabilities: predictions come from the exported
 boosters (artifacts/demo/model/) evaluated on the stored inputs. Verification (ERA5) is read
@@ -66,7 +67,7 @@ class CaseRun:
     case_id: str
     meta: dict
     rows: pd.DataFrame                   # 640 rows, forecast state + model outputs (no verification)
-    contrib: np.ndarray                  # Sentinel TreeSHAP (n_rows, n_features + 1)
+    contrib: dict                        # row -> Sentinel TreeSHAP (n_features + 1), filled on demand
     neighbours: list                     # per row: (memory indices, distances)
     timings_ms: dict = field(default_factory=dict)
 
@@ -216,10 +217,7 @@ class Engine:
             rows["priority"] = priority_score(rows["p_sentinel"].to_numpy(), rows["p_b2"].to_numpy(),
                                               rows["lead_day"].to_numpy(), rows["evidence_level"].to_numpy())
             t["support_evidence_priority"] = time.perf_counter() - t0
-            t0 = time.perf_counter()
-            contrib = self.sentinel.contributions(rows)
-            t["attribution"] = time.perf_counter() - t0
-            run = CaseRun(case_id, entry, rows, contrib, neigh,
+            run = CaseRun(case_id, entry, rows, {}, neigh,
                           {k: round(1000 * v, 1) for k, v in t.items()} | {"total": round(1000 * sum(t.values()), 1)})
             self._cache[case_id] = run
             return run
@@ -290,6 +288,8 @@ class Engine:
         run = self.run(case_id)
         i, r = self._row(run, region_id, lead_day)
         cell = self._cell(r)
+        if i not in run.contrib:
+            run.contrib[i] = self.sentinel.contributions(run.rows.iloc[[i]])[0]
         ex = explain_row(r, run.contrib[i], self.sentinel.features, self.ref, cell["bust_probability"],
                          cell["b2_probability"], self.base_rate)
         cand, dk = run.neighbours[i]
