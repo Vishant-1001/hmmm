@@ -5,11 +5,11 @@ Persistent execution state for the autonomous final pass. Update at every checkp
 | Field | Value |
 |---|---|
 | CURRENT PHASE | 3: model/data (v1 audit done; waiting for wind/MSLP data) |
-| LAST COMPLETED ACTION | Public UI verified at the Render URL (13/13 value checks, 591-state sweep, 0 problems); v1 evaluation reproduced exactly; failure diagnosis (docs/diagnosis_v1.md) |
+| LAST COMPLETED ACTION | Extras validator (forecast_bust.data.validate_extras, 8 tests) and DYN integration dry run on 288 real inits: full coverage, 0 NaN, geostrophic check r=0.92, MSLP vs Z850 anomaly r=0.95 (scripts/dryrun_dyn.py) |
 | CURRENT ACTION | Wind/MSLP download running under the supervisor |
 | CURRENT GIT COMMIT | (see `git log -1`) |
-| FILES CHANGED | scripts/audit_v1.py, artifacts/diagnosis/v1_audit.json, docs/diagnosis_v1.md, AGENT_STATE.md |
-| TEST STATUS | 69 pytest + 8 vitest passed at 9967478; +2 bundle tests passed |
+| FILES CHANGED | src/forecast_bust/data/validate_extras.py, tests/test_validate_extras.py, scripts/dryrun_dyn.py, AGENT_STATE.md |
+| TEST STATUS | 69 pytest + 8 vitest (9967478), +2 bundle tests, +8 validator tests: all passing |
 | RENDER STATUS | VERIFIED 2026-09-30 06:45 IST: one web service serves the UI at / and the API at /api (auto-deploy from main) |
 | PUBLIC FRONTEND URL | https://forecast-bust-sentinel-g0py.onrender.com/ (verified) |
 | BACKEND URL | https://forecast-bust-sentinel-g0py.onrender.com |
