@@ -49,9 +49,20 @@ v2:
   # 2. Feature Group B completion: wind (500/850 hPa), vorticity, divergence, shear and MSLP,
   #    from the ensemble mean/std of the same IFS ENS store (DYN group). Requires data/cache/ens_extra.
   dyn_features: true
+  # 3. LOCKED 2026-09-30 from the dev-split optimisation (artifacts/v2/dev/optimization/, scripts/optimize_v2.py),
+  #    before any v2 scoring of 2022. Hyper-parameters: best validation-2020 AUPRC over the same 20-config
+  #    grid for B2 and the Sentinel (both chose the same values). Learner: standard (0.1816 vs residual 0.1792).
+  #    Groups: kept iff the 3-seed mean AUPRC gain over B2 is > 0 on BOTH validation 2020 and dev-test 2021
+  #    (transfer.json). DYN (+0.0056 on 2020, -0.0005 on 2021), ENS and PAT failed; ATM, EVO, MEM, REC passed.
+  b2_xgboost: {learning_rate: 0.05, subsample: 0.8, reg_lambda: 10.0, n_estimators: 3000, max_depth: 3,
+               min_child_weight: 50, colsample_bytree: 0.5}
+  sentinel_xgboost: {learning_rate: 0.05, subsample: 0.8, reg_lambda: 10.0, n_estimators: 3000, max_depth: 3,
+                     min_child_weight: 50, colsample_bytree: 0.5}
+  sentinel_groups: [ATM, EVO, MEM, REC]
   # Disclosure carried into metrics.json: the 2022 test year was already scored once by v1.
   test_history: >-
-    2022 was scored once before, by the v1 pipeline (commit be8123b; Sentinel == B2). v2 design
-    changes were fixed in advance by the SIH specification and selected on the dev split and
-    validation only; no v2 decision used 2022 data. 2022 is nevertheless a second look, not an
+    2022 was scored once before, by the v1 pipeline (commit be8123b; Sentinel == B2). All v2 choices
+    (B2 spread/threshold ratio, DYN and tendency features, hyper-parameters, learner, feature groups)
+    were made on the dev split (train 2018-19, validation 2020, dev-test 2021) and locked in this file
+    before v2 scored 2022 once. No v2 decision used 2022 data, but 2022 is a second look, not an
     untouched test set.
