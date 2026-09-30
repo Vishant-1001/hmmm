@@ -4,22 +4,22 @@ Persistent execution state for the autonomous final pass. Update at every checkp
 
 | Field | Value |
 |---|---|
-| CURRENT PHASE | 2: public frontend on Render |
-| LAST COMPLETED ACTION | Wind/MSLP download supervisor started (single instance); committed same-origin UI bundle |
-| CURRENT ACTION | Push, wait for Render auto-deploy, verify public UI at the backend URL |
+| CURRENT PHASE | 3: model/data (v1 audit done; waiting for wind/MSLP data) |
+| LAST COMPLETED ACTION | Public UI verified at the Render URL (13/13 value checks, 591-state sweep, 0 problems); v1 evaluation reproduced exactly; failure diagnosis (docs/diagnosis_v1.md) |
+| CURRENT ACTION | Wind/MSLP download running under the supervisor |
 | CURRENT GIT COMMIT | (see `git log -1`) |
-| FILES CHANGED | .gitignore, frontend/dist/, tests/test_ui_bundle.py, scripts/download_supervisor.sh, docs/render_deploy.md, AGENT_STATE.md |
+| FILES CHANGED | scripts/audit_v1.py, artifacts/diagnosis/v1_audit.json, docs/diagnosis_v1.md, AGENT_STATE.md |
 | TEST STATUS | 69 pytest + 8 vitest passed at 9967478; +2 bundle tests passed |
-| RENDER STATUS | API live and verified (29/29 endpoints, 5 cases). Public UI: pending the auto-deploy of this commit |
-| PUBLIC FRONTEND URL | https://forecast-bust-sentinel-g0py.onrender.com/ (after deploy, not yet verified) |
+| RENDER STATUS | VERIFIED 2026-09-30 06:45 IST: one web service serves the UI at / and the API at /api (auto-deploy from main) |
+| PUBLIC FRONTEND URL | https://forecast-bust-sentinel-g0py.onrender.com/ (verified) |
 | BACKEND URL | https://forecast-bust-sentinel-g0py.onrender.com |
-| WIND/MSLP DOWNLOAD STATUS | Running under scripts/download_supervisor.sh; 61/457 blocks at start (2026-09-30 06:40 IST) |
+| WIND/MSLP DOWNLOAD STATUS | Running under scripts/download_supervisor.sh; 61/457 at start (06:40 IST), 68/457 at 06:53 IST, ~100 s per block, ETA ~17:30 IST |
 | DOWNLOAD CHECKPOINT | `ls data/cache/ens_extra/block_*.nc \| wc -l`; logs/download_supervisor.log, logs/download_extras.log |
 | MODEL STATUS | v1 frozen (Sentinel = B2, no gain). v2 (DYN group) code exists and is unit-tested; not trained (data-blocked) |
-| EVALUATION STATUS | v1 final 2022 evaluation complete (be8123b). v2 not run |
+| EVALUATION STATUS | v1 final 2022 evaluation complete (be8123b) and reproduced exactly (artifacts/diagnosis/v1_audit.json). v2 not run |
 | KNOWN ISSUES | Render free tier: ~60 s cold start, ~6 s per model run. No Render API access from this machine |
 | DATA-BLOCKED ITEMS | v2 DYN features, v2 dev and final evaluation |
-| EXACT NEXT ACTION | Verify the public UI; then run the model-failure diagnosis on train/validation only while the download runs |
+| EXACT NEXT ACTION | When logs/download_supervisor.log says COMPLETE: validate extras (python -m forecast_bust.data.validate_extras), then scripts/run_v2.sh dev, then decide on dev/validation evidence only, then scripts/run_v2.sh final (a single disclosed second look at 2022) |
 
 ## Processes
 
