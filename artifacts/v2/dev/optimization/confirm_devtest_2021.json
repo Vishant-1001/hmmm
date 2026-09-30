@@ -1,0 +1,60 @@
+{
+ "selection": {
+  "created": "2026-09-30, before the dev-test (2021) confirmation and before any v2 final run",
+  "learner": "standard",
+  "learner_rule": "learner with the higher best validation AUPRC on the ALL feature set (standard 0.1816 vs residual_b2 0.1792)",
+  "b2_params": {
+   "learning_rate": 0.05,
+   "subsample": 0.8,
+   "reg_lambda": 10.0,
+   "n_estimators": 3000,
+   "max_depth": 3,
+   "min_child_weight": 50,
+   "colsample_bytree": 0.5
+  },
+  "sentinel_params": {
+   "learning_rate": 0.05,
+   "subsample": 0.8,
+   "reg_lambda": 10.0,
+   "n_estimators": 3000,
+   "max_depth": 3,
+   "min_child_weight": 50,
+   "colsample_bytree": 0.5
+  },
+  "params_rule": "highest validation-2020 AUPRC over the stage-1 grid (12 configs) + stage-2 refinement (8 configs), same grid for B2 and Sentinel; class weighting (scale_pos_weight 3, 9) tested and rejected",
+  "groups": [
+   "ATM",
+   "EVO",
+   "MEM",
+   "REC",
+   "DYN"
+  ],
+  "groups_rule": "keep group iff 3-seed mean validation AUPRC(B2+group) > 3-seed mean AUPRC(B2)",
+  "validation_means": {
+   "B2": 0.17613995263899504,
+   "FULL": 0.18112410376462437
+  }
+ },
+ "devtest": "2021 (read once, after selection)",
+ "B2": {
+  "auprc": 0.1577895558887229,
+  "brier": 0.07767904549837112,
+  "ece": 0.013762883028610928
+ },
+ "SENTINEL": {
+  "auprc": 0.15690181311848486,
+  "brier": 0.0776994600892067,
+  "ece": 0.012839189582361838
+ },
+ "bootstrap_sentinel_minus_b2": {
+  "mean": -0.0009546366425730462,
+  "ci95": [
+   -0.0038479266474931995,
+   0.0018582354534659533
+  ],
+  "p_le_0": 0.7433333333333333,
+  "n_boot": 300,
+  "block": "initialisation day"
+ },
+ "relative_gain": -0.0056261186948526245
+}

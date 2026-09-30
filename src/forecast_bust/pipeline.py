@@ -139,10 +139,14 @@ def train(reassemble: bool = True) -> None:
         suffix = "" if learner == "standard" else f"@{learner}"
         cand = {name: _fit(name, feats, base, key=name + suffix) for name, feats in FEATURE_SETS.items()
                 if name != "B2"}
-        # Group selection: keep a group iff B2+group beats B2 on validation AUPRC
-        selected = [g for m, g in CANDIDATE_GROUPS.items() if val_auprc[m + suffix] > val_auprc["B2"]]
+        # Group selection: keep a group iff B2+group beats B2 on validation AUPRC. When the config locks
+        # the groups (v2: chosen on the dev split with a 3-seed rule, confirmed once on dev-test 2021),
+        # the locked set is used and this run's single-seed comparison is recorded for information only.
+        rule_selected = [g for m, g in CANDIDATE_GROUPS.items() if val_auprc[m + suffix] > val_auprc["B2"]]
+        selected = list(v2["sentinel_groups"]) if "sentinel_groups" in v2 else rule_selected
         cand["FULL"] = _fit("FULL", full_feature_set(selected), base, key="FULL" + suffix)
         fitted["FULL" + suffix]["selected_groups"] = selected
+        fitted["FULL" + suffix]["single_seed_rule_on_this_validation"] = rule_selected
         per_learner[learner] = {"models": cand, "selected": selected, "base": base,
                                 "val_auprc_full": val_auprc["FULL" + suffix]}
     # The Sentinel learner is fixed in config (selected on the dev split, never on this run's test year)

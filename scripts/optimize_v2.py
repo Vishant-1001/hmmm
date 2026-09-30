@@ -357,6 +357,41 @@ def confirm() -> None:
     print(json.dumps(clean_json(out), indent=1, default=float))
 
 
+# ----------------------------------------------------------------------------------------- transfer
+def transfer() -> None:
+    """Run after `confirm` showed the 2020 validation gain did not hold on 2021. Rule fixed BEFORE this
+    stage ran: keep a group iff its 3-seed mean AUPRC gain over B2 is > 0 on BOTH validation 2020 and
+    dev-test 2021 (models fitted on 2018-19, early stopping and calibration on 2020, as in `confirm`).
+    2021 is the final protocol's validation year, never its test year; 2022 is not read."""
+    sel = json.loads((OUT / "selection.json").read_text())
+    df = load(("train", "validation", "test"))
+    tr, va, te = (df[df["split"] == s].reset_index(drop=True) for s in ("train", "validation", "test"))
+    yv, yt = va["bust"].to_numpy(), te["bust"].to_numpy()
+
+    def run(feats, params):
+        v, t = [], []
+        for sd in SEEDS:
+            m = CalibratedGBM(feats, "m", params=params, seed=sd).fit(tr, va)
+            v.append(M.auprc(yv, m.predict_raw(va)))
+            t.append(M.auprc(yt, m.predict_raw(te)))
+        return float(np.mean(v)), float(np.mean(t)), v, t
+
+    b2v, b2t, _, _ = run(FEATURE_SETS["B2"], sel["b2_params"])
+    rows, keep = [], []
+    for m, g in list(CANDIDATE_GROUPS.items()) + [("ALL", "ALL")]:
+        v, t, vs, ts = run(FEATURE_SETS[m], sel["sentinel_params"])
+        ok = m != "ALL" and v > b2v and t > b2t
+        if ok:
+            keep.append(g)
+        rows.append({"model": m, "group": g, "val2020_mean": v, "devtest2021_mean": t, "val2020_seeds": vs,
+                     "devtest2021_seeds": ts, "delta_val2020": v - b2v, "delta_devtest2021": t - b2t, "kept": ok})
+        log.info("%s %s val %+.4f devtest %+.4f %s", m, g, v - b2v, t - b2t, "KEEP" if ok else "")
+        save("transfer", {"b2": {"val2020_mean": b2v, "devtest2021_mean": b2t}, "rows": rows})
+    save("transfer", {"b2": {"val2020_mean": b2v, "devtest2021_mean": b2t}, "rows": rows, "kept_groups": keep,
+                      "rule": "keep iff 3-seed mean AUPRC gain over B2 > 0 on validation 2020 AND dev-test 2021 "
+                              "(fixed before this stage ran)"})
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
-    {"augment": augment, "diagnose": diagnose, "search": search, "refine": refine, "ablate": ablate, "confirm": confirm}[sys.argv[1]]()
+    {"augment": augment, "diagnose": diagnose, "search": search, "refine": refine, "ablate": ablate, "transfer": transfer, "confirm": confirm}[sys.argv[1]]()
