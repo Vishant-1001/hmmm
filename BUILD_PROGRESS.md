@@ -104,3 +104,13 @@ dev split (`FBS_SPLIT=dev`); 2022 is now inspected and can no longer serve as an
 * Tests: pytest includes engine parity, causality, blind API, and a headless-browser E2E that checks
   UI = API values; vitest covers the demo flow on real API responses.
 * Wind/MSLP: pending, not used. NCMRWF: adapter interface only.
+
+## v3: quantile gradient boosting (2026-10-02)
+
+* QRF (quantile-forest) retired after repeated Linux OOM kills on the 8 GB dev machine; dependency removed.
+* V3 core: `HistGradientBoostingRegressor(loss="quantile")`, q10/q25/q50/q75/q90/q95, one shared configuration
+  (`src/forecast_bust/models/qgb.py`, `pipeline_qgb.py`, `evaluation/run_qgb.py`, `config/model_v3.yaml`).
+* Smoke test (full dev rows: 464,256 train / 230,144 validation, 70 features, default params lr 0.05,
+  200 iter, 31 leaves, min leaf 50, l2 1.0): fit 72 s for all six quantiles, peak RSS 2.5 GB.
+  Validation coverage .108/.269/.524/.760/.901/.948; crossing in 0.63% of rows (q90>q95 dominates,
+  median violation 0.011) -> rearrangement at prediction time, rate reported; val AUPRC 0.147 (base rate 0.100).
