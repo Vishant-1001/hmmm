@@ -1,0 +1,29 @@
+# BMA experiment (models/bma.py, pipeline_bma.py, evaluation/run_bma.py).
+# PRE-REGISTERED before any BMA prediction was computed: formulation, window, minimum history and the
+# go/no-go gate below are fixed here and are not changed after results are seen.
+#
+# Target, rows, thresholds and splits are those of the v3 namespace (data/interim/v3, artifacts/v3):
+# norm_error = |ensemble mean - ERA5| / TRAIN scale(region, season); bust = norm_error > TRAIN Q90.
+bma:
+  members: 50                 # IFS ENS perturbed members in data/cache/ens (no control member in the store)
+  formulation: exchangeable   # equal weights 1/K, common bias (a, b) and common sigma per (region, lead):
+                              # the 50 perturbed members are statistically exchangeable by construction
+  variable: z500_anomaly      # members and ERA5 minus the ERA5 1990-2017 climatology at the valid time
+  window_days: 60             # sliding window of VERIFIED cases (valid_time <= refit time). ~1 init/day
+                              # per region and lead in the 50%-sampled archive -> ~60 cases for 3 parameters
+  min_cases: 20               # fewer verified cases in the window -> no BMA prediction (row left missing)
+  refit: daily                # parameters refitted at 00 UTC each day from cases verified by then
+  em: {max_iter: 200, tol: 1.0e-6}
+  quantiles: [0.10, 0.25, 0.50, 0.75, 0.90, 0.95]
+  calibration: isotonic regression on the validation year only, reported separately from the raw
+               BMA mixture exceedance probability
+gate:
+  # GO (switch production to BMA) only if ALL hold; otherwise NO-GO. Comparisons are on identical rows.
+  primary_baseline: B2_dev_reference   # strongest existing bust ranker on the dev split
+  devtest_min_auprc_gain: 0.010        # dev-test 2021: BMA - B2 AUPRC >= 0.010 ...
+  devtest_ci_lower_gt: 0.0             # ... and the 95% init-day block-bootstrap CI lower bound > 0
+  validation_min_auprc_gain: 0.005     # reproducibility: BMA (raw) - B2 >= 0.005 on validation 2020 too
+  max_brier_excess_vs_b2: 0.001        # calibrated BMA Brier <= B2 Brier + 0.001 (dev-test)
+  max_ece: 0.02                        # calibrated BMA ECE (dev-test)
+  min_lead_days_beating_b2: 7          # BMA AUPRC >= B2 AUPRC on at least 7 of 10 lead days (dev-test)
+  max_share_rows_without_prediction: 0.01   # dev-test rows BMA cannot score (insufficient history)
