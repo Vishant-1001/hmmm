@@ -47,6 +47,7 @@ models/dev/
 data/interim/
 artifacts/*/dev/*
 !artifacts/v2/dev/optimization/
+!artifacts/v3/dev/development/
 models/*/dev/
 artifacts/v2a/
 models/v2a/

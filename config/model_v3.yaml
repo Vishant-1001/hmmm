@@ -61,5 +61,7 @@ qgb:
     learning_rate: [0.03, 0.05]
     max_leaf_nodes: [15, 31]
     min_samples_leaf: [50, 100]
-  # Filled in once the dev-split selection is locked; empty until then.
-  locked_params: {}
+  # LOCKED 2026-10-02 from the dev-split selection (artifacts/v3/dev/development/qgb_search.json): all 8
+  # configs were within 0.005 validation AUPRC and 0.0001 mean pinball loss of each other.
+  locked_params: {learning_rate: 0.05, max_iter: 200, max_leaf_nodes: 31, min_samples_leaf: 100,
+                  l2_regularization: 1.0}
