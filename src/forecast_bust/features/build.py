@@ -46,7 +46,8 @@ GROUPS = {"SPREAD": SPREAD, "ATM": ATM, "ENS": ENS, "PAT": PAT, "EVO": EVO, "MEM
 DYN_ENABLED = bool(model_config().get("v2", {}).get("dyn_features", False))
 if DYN_ENABLED:
     GROUPS["DYN"] = DYN
-FORBIDDEN_INPUTS = ("era5_z500", "era5_rank", "error_m", "norm_error", "bust", "sig_", "era5_anom_m", "bias_m")
+FORBIDDEN_INPUTS = ("era5_z500", "era5_rank", "error_m", "norm_error", "bust", "sig_", "era5_anom_m", "bias_m",
+                    "local_acc", "acc_q10", "pattern_", "magnitude_failure", "hidden_")
 
 
 def _grid_fields(ds: xr.Dataset):
