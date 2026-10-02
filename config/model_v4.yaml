@@ -1,0 +1,34 @@
+# V4: pattern-aware forecast bust (labels/pattern.py, pipeline_v4.py, evaluation/run_v4.py).
+# PRE-REGISTERED before any local ACC value or V4 result was computed. Not changed after results.
+# Rows, features, magnitude target, Q90/Q95, normalisation, memory and splits are those of the v3 namespace.
+target:
+  type: pattern_aware_bust          # pattern_bust = (norm_error > TRAIN Q90) AND (local_acc < TRAIN Q10)
+rmse_threshold:
+  quantile: 0.90                    # existing q_primary (TRAIN, region x lead x season), reused unchanged
+acc_threshold:
+  quantile: 0.10                    # TRAIN-only Q10 of local_acc per region x lead x season
+pattern_window:
+  rows: 3                           # 3 x 3 native 5.625 deg boxes centred on the region box
+  cols: 3                           # anomalies vs the existing ERA5 1990-2017 climatology; cos-lat area weights
+model:
+  type: xgboost                     # ONE shared CalibratedGBM (models/sentinel.py), tree_method hist
+  features: ALL                     # SPREAD ATM ENS PAT EVO MEM REC DYN (FEATURE_SETS["ALL"], 70); no ACC
+  params: {learning_rate: 0.05, subsample: 0.8, reg_lambda: 10.0, n_estimators: 3000, max_depth: 3,
+           min_child_weight: 50, colsample_bytree: 0.5}   # v2's locked Sentinel configuration; no search
+calibration:
+  type: isotonic                    # validation split only
+gate:
+  # Development split only (train 2018-19, validation 2020, dev-test 2021). PROMOTE only if ALL hold.
+  min_acc_coverage: 0.99            # valid local ACC on >= 99% of train/validation/dev-test rows
+  min_positive_rows: 1000           # pattern busts in EACH of validation and dev-test
+  min_positive_inits: 100           # distinct initialisations with >= 1 pattern bust, each split
+  min_positive_rows_per_lead: 50    # dev-test, every lead day
+  # Adequacy (A vs B, same features/params/classifier): ROC AUC is prevalence-independent; AUPRC is not
+  # comparable across targets with different prevalence (reported, not gated).
+  min_rocauc_gain_vs_magnitude: 0.02   # dev-test: AUC(V4 on pattern target) - AUC(same model on magnitude target)
+  rocauc_gain_ci_lower_gt: 0.0         #   ... 95% init-day block-bootstrap lower bound > 0
+  validation_rocauc_gain_gt: 0.0       #   ... and positive on validation 2020 too
+  beat_spread_score_ci_lower_gt: 0.0   # dev-test: AUPRC(V4) - AUPRC(B1 spread percentile) CI lower bound > 0
+  min_brier_skill: 0.0                 # dev-test calibrated V4 Brier skill vs validation climatology > 0
+  min_lift_every_lead: 1.2             # dev-test AUPRC / prevalence on every lead day
+  min_share_regions_auc_gt_0_5: 0.9    # dev-test, regions with >= 20 pattern busts
