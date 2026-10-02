@@ -1,0 +1,11 @@
+{
+ "purpose": "Section-25 sanity check run AFTER the dev gate (cannot change it): is V4 learning the intended event or a proxy? Dev-test 2021 rows.",
+ "pattern_failure_rate_by_forecast_window_anomaly_std_quintile_low_to_high": [0.162, 0.099, 0.089, 0.058, 0.026],
+ "magnitude_bust_rate_by_same_quintile": [0.08, 0.083, 0.087, 0.086, 0.1],
+ "rocauc_for_pattern_failure": {"forecast_window_anomaly_std_(negated)": 0.669, "V4": 0.633},
+ "rocauc_for_pattern_bust": {"forecast_window_anomaly_std_(negated)": 0.586, "V4": 0.674},
+ "rocauc_for_magnitude_bust": {"forecast_window_anomaly_std_(negated)": 0.476, "V4": 0.555},
+ "corr_V4_probability_vs_negated_window_anomaly_std": 0.068,
+ "v4_top_importance": {"u500_anom": 0.246, "spread_thr_ratio": 0.057, "rec_err_domain": 0.051, "spread_pct": 0.051},
+ "interpretation": "Low local ACC is partly a statistical artifact of weak (flat) anomaly fields, which are visible at forecast time; part of the pattern target's extra predictability over the magnitude target reflects that. V4's ranking is not explained by that proxy alone (corr 0.07; AUC 0.674 vs 0.586 for pattern busts), and its alerts have higher error and lower ACC than non-alerts."
+}
