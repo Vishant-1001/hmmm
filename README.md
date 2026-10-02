@@ -81,7 +81,19 @@ state), ENS (ensemble behaviour), PAT (frozen PCA pattern), EVO (forecast evolut
 forecast-state memory / analogues), REC (recent verified error behaviour), DYN (v2: wind, shear, vorticity,
 divergence, MSLP, and in-forecast Z500/MSLP/vorticity tendencies).
 
-**v2 (current, served):** hyper-parameters, learner and feature groups were chosen on the development split
+**v3 (current, served): quantile gradient boosting.** Forecast Bust Sentinel models the conditional
+distribution of future normalized regional Z500 forecast error using quantile gradient boosting
+(`HistGradientBoostingRegressor(loss="quantile")`, q10/q25/q50/q75/q90/q95, one shared configuration) applied to
+prediction-time-safe NWP forecast-state features (SPREAD+ATM+ENS+PAT+EVO+MEM+REC+DYN). The upper tail of that
+distribution gives an estimated probability of exceeding the unchanged TRAIN-Q90 bust threshold, followed by
+validation-only isotonic calibration. B2 and the v2 Sentinel are archived benchmarks, not used in v3 inference;
+a QRF attempt was abandoned after repeated out-of-memory kills. Measured (`docs/evaluation_v3.md`): 2022 — V3's
+first evaluation of a period already read by v1/v2 — AUPRC 0.1449 (base rate 0.088), Brier 0.0785
+(climatology 0.0802), ECE 0.0045, quantile coverage near nominal. On the controlled dev split v3 is **below** the
+spread-only B2 (−0.018 AUPRC). Method and references: `docs/scientific_methodology.md` §0; model card
+`docs/model_card_v3.md`; run `scripts/run_v3.sh dev|final`.
+
+**v2 (archived; superseded by v3):** hyper-parameters, learner and feature groups were chosen on the development split
 only (train 2018–19, validation 2020, dev-test 2021) and locked in `config/model_v2.yaml` before 2022 was
 scored ([`docs/optimization_v2.md`](docs/optimization_v2.md)). B2 and the Sentinel were tuned with the same
 20-configuration grid and chose the same values. **Sentinel = B2 inputs + ATM + EVO + MEM + REC**: the groups

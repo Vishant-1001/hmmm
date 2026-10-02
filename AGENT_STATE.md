@@ -4,18 +4,18 @@ Persistent execution state. Update at every checkpoint.
 
 | Field | Value |
 |---|---|
-| CURRENT PHASE | v3 (quantile gradient boosting) step 4: dev-split search + development evaluation |
-| LAST COMPLETED ACTION | QRF retired (OOM); QGB smoke test on full dev rows passed: 6 quantiles fit in 72 s, peak RSS 2.5 GB, val coverage q10..q95 = .108/.269/.524/.760/.901/.948, crossing 0.63% of rows (mostly q90>q95, median 0.011), val AUPRC (calibrated) 0.147 at default params |
-| LOCKED CONFIG | `config/model_v2.yaml` at 8b196ee (B2/Sentinel hyper-parameters, standard learner, groups ATM+EVO+MEM+REC) |
-| MODEL STATUS | v2 served: `models/v2/models.joblib` → `artifacts/v2/demo/model`. v1 kept as record (`artifacts/`, `models/models.joblib`) |
-| EVALUATION STATUS | v2 2022 (second look): B2 0.1434, Sentinel 0.1428, Δ −0.0007 CI [−0.0028, +0.0017]; incremental value NOT established |
-| TEST STATUS | 83 pytest + 8 vitest passing |
-| SERVING | `config.served_run()` → artifacts/v2 (FBS_SERVE_RUN= falls back to v1) |
+| CURRENT PHASE | v3 frozen (quantile gradient boosting); deployment verification |
+| LAST COMPLETED ACTION | v3 final fit (045a9e8) + single 2022 evaluation (45c63b9); API/demo/frontend serve v3; docs; local QA (health v3, run 240 ms, RSS 425 MB) |
+| LOCKED CONFIG | `config/model_v3.yaml` qgb.locked_params (lr 0.05, 200 iter, 31 leaves, min leaf 100, l2 1.0), locked at 045a9e8. v2 config unchanged |
+| MODEL STATUS | v3 served: `models/v3/qgb_q*.joblib` + calibration → `artifacts/v3/demo/model/v3` (V3PredictiveModel). B2/Sentinel archived (v2), QRF retired |
+| EVALUATION STATUS | v3 dev-test 2021 AUPRC 0.1396 (fresh B2 0.1578; Δ −0.018 CI [−0.027,−0.011]). 2022 (V3 first look; 3rd reading of 2022) AUPRC 0.1449, Brier 0.0785 (clim 0.0802), ECE 0.0045. v3 does NOT outperform B2 |
+| TEST STATUS | 96 pytest (incl. headless E2E 16/16 UI = API) + 8 vitest passing |
+| SERVING | `config.served_run()` → artifacts/v3 (FBS_SERVE_RUN=v2 serves the archive). Static /api/forecast,/api/replay → archived v2 replay report |
 | RENDER | VERIFIED 2026-09-30 on the v2 deploy (https://forecast-bust-sentinel-g0py.onrender.com/). No Render dashboard/log access from this machine |
 | DATA | Geopotential 457/457; wind/MSLP 457/457 (validated). Nothing to download |
-| KNOWN ISSUES | Render free tier cold start (~5.6 s first open measured warm). 2022 cannot serve as an untouched test set again |
-| EXACT NEXT ACTION | Wait for `FBS_RUN=v3 FBS_SPLIT=dev python -m forecast_bust.train_qgb --reuse-table` (logs/v3_qgb_dev_train.log), then `FBS_RUN=v3 FBS_SPLIT=dev python -m forecast_bust.evaluate_qgb` = go/no-go gate. Do NOT touch 2022 before the gate passes |
+| KNOWN ISSUES | Render free tier cold start; server RSS 425 MB of 512 MB. 2022 read three times (v1, v2, v3): no future test claim possible |
+| EXACT NEXT ACTION | None required. Any new model idea must use FBS_SPLIT=dev and cannot claim a 2022 test result |
 
 ## Background processes
 
-2026-10-02: v3 QGB dev search under `setsid nohup` (logs/v3_qgb_dev_train.log). QRF leaf-map workaround kept only in `git stash` (retired).
+None. All v3 jobs ran under `setsid nohup` and have exited.

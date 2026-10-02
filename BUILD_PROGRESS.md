@@ -114,3 +114,10 @@ dev split (`FBS_SPLIT=dev`); 2022 is now inspected and can no longer serve as an
   200 iter, 31 leaves, min leaf 50, l2 1.0): fit 72 s for all six quantiles, peak RSS 2.5 GB.
   Validation coverage .108/.269/.524/.760/.901/.948; crossing in 0.63% of rows (q90>q95 dominates,
   median violation 0.011) -> rearrangement at prediction time, rate reported; val AUPRC 0.147 (base rate 0.100).
+* Dev selection (8 configs, all within 0.005 val AUPRC): lr 0.05 / 31 leaves / min leaf 100, locked (045a9e8).
+  Dev-test 2021: AUPRC 0.1396 vs fresh B2 0.1578 (Δ −0.018, CI excludes 0); converged; no defect found. GO on
+  the technical gate, recorded as NOT outperforming B2.
+* Final: train 2018–20, calibration 2021, 2022 evaluated once (45c63b9): AUPRC 0.1449 (B0 0.0908), Brier 0.0785,
+  ECE 0.0045, coverage .113/.280/.540/.784/.915/.957, hidden-bust recall 0.075.
+* Serving: API/demo/frontend on v3 (9d6785b, 8b9c63a); docs `docs/model_card_v3.md`, `docs/evaluation_v3.md`,
+  `FORECAST_BUST_SENTINEL_FINAL_FROZEN_BUILD_SPEC_v3.md`.

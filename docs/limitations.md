@@ -18,8 +18,8 @@
 8. **Historical failure signatures are evidence-derived, not causal proof.**
 9. **Historical relationships change when the NWP system changes** (IFS cycle upgrades during
    2018–2022 are part of the data). A drift monitor is future work.
-10. **Performance must be measured before claiming improvement** — see `docs/evaluation_v2.md` for
-    the measured result, including whether improvement over B2 was established.
+10. **Performance must be measured before claiming improvement** — see `docs/evaluation_v3.md` (current
+    model) and `docs/evaluation_v2.md` (archived) for the measured results, including comparisons with B2.
 11. **Research-dataset performance ≠ operational NCMRWF performance.**
 12. **Regional outputs are 5.625° boxes**, not high-resolution local predictions.
 
@@ -49,6 +49,29 @@
   analysis would have to stand in for the most recent days.
 * **In-sample quota effect.** Training labels are TRAIN quantiles, which slightly distorts label-rate
   features inside the training period (see methodology). Validation-based group selection mitigates it.
+
+## Findings from the v3 run (quantile gradient boosting; 2022 read for the third time)
+
+* **Does not outperform the spread-only baseline.** On the controlled dev split v3 is below a fresh B2
+  (dev-test 2021 AUPRC 0.1396 vs 0.1578; −0.018, CI [−0.027, −0.011]); the single input `spread_thr_ratio`
+  alone ranks busts better than v3's probability. Boosting had converged and the exceedance construction
+  was checked; no implementation defect was found. v3 is the production model by project decision.
+* **Weak discrimination.** 2022 AUPRC 0.1449 (base rate 0.088), ROC AUC 0.636, Brier 0.0785 vs
+  climatology 0.0802. The calibrated probability is reliable (ECE 0.0045) but rarely far from climatology.
+* **2022 is not an untouched test.** It was read by v1 and v2; v3's result is its first look at 2022 with
+  everything frozen beforehand, and still one year only.
+* **Quantiles are near-nominal on average, slightly too high in the body** (2022 coverage of q50 0.540,
+  q75 0.784): the central error is mildly over-predicted for 2021–22. Coverage is not checked per region.
+* **Exceedance probability is an estimate** from six quantiles with assumed exponential tails, not an
+  exact CDF; the threshold lies above q95 for 15–16% of rows, where the tail assumption decides the value.
+* **Crossing.** Independently fitted quantiles cross on 0.36–0.58% of rows (mostly q90 > q95, small);
+  they are rearranged (sorted) at prediction time.
+* **Hidden busts mostly missed** (recall 0.075 at the validation 10%-FAR operating point; realised 2022
+  FAR at that threshold 0.127, above the 0.10 target).
+* **Explanations are model-level.** No per-row attribution is computed for this estimator; the UI shows
+  this row's input values next to model-level permutation importance, which is an association only.
+* **Static report routes are archival.** `/api/forecast/*` and `/api/replay/*` still serve the v2 replay
+  report (B2/Sentinel outputs), labelled as archived; the live demo routes serve v3.
 
 ## Findings from the v2 run (2022 second look, configuration locked at 8b196ee)
 

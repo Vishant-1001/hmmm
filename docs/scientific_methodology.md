@@ -3,6 +3,59 @@
 This document is our implementation. The official SIH26079 wording is in `docs/sih_source.md`
 and is not paraphrased here.
 
+> **v3 (current production model).** Forecast Bust Sentinel models the conditional distribution of future
+> normalized regional Z500 forecast error using quantile gradient boosting applied to prediction-time-safe
+> NWP forecast-state features. The model's upper-tail error distribution is used to estimate the
+> probability of exceeding the project-defined bust threshold, followed by validation-only probability
+> calibration. Section 0 describes this predictive core; sections 1-13 (data, target, labels, features,
+> memory, support, fingerprint, protocol) are unchanged and still apply. The B2/Sentinel classifiers of
+> sections 5-6 and 9 are v1/v2 history: archived benchmarks, not used in v3 inference.
+
+## 0. v3 predictive core: quantile gradient boosting
+
+**What is established and what is ours.** Quantile regression (Koenker & Bassett 1978) and gradient-boosted
+quantile regression fitted one quantile at a time (e.g. the GEFCom2014 winning wind-power method, Landry et
+al. 2016) are established. Probabilistic post-processing of NWP output with tree ensembles (Taillardat et
+al. 2016; Schulz & Lerch 2022) and learning NWP forecast errors from forecast-state predictors (Ben
+Bouallègue et al. 2022, ECMWF TM 896) are established. Neither the method nor the idea is new here. The
+project's contribution is the application: the regional Day 1-10 *normalized Z500 error* of an existing
+IFS ENS forecast, turned into a calibrated probability of exceeding the project's fixed bust threshold, with
+causal historical evidence, support/OOD and blind verification around it. Measured results are in
+`docs/evaluation_v3.md`; nothing here asserts that the method improves on any baseline.
+
+1. **Target**: `norm_error` (section 4), unchanged. **Inputs**: the existing groups SPREAD, ATM, ENS, PAT,
+   EVO, MEM, REC, DYN (70 features, all available at *T*; section 6). No B2 output, no verification quantity.
+2. **Estimator**: `sklearn.ensemble.HistGradientBoostingRegressor(loss="quantile", quantile=τ)` for
+   τ ∈ {0.10, 0.25, 0.50, 0.75, 0.90, 0.95}, fitted one after another on TRAIN with one shared
+   configuration (learning rate 0.05, 200 iterations, 31 leaves, min 100 samples per leaf, L2 1.0, no early
+   stopping). The six estimators are one quantile model family, not competing models. NaN is handled
+   natively (no imputation).
+3. **Quantile crossing**: independently fitted quantiles can cross. Crossing is measured (dev validation:
+   0.58% of rows, almost all q90 > q95, median size 0.011) and removed at prediction time by
+   *rearrangement*: sorting each row's six values (Chernozhukov, Fernández-Val & Galichon 2010), which does
+   not increase quantile estimation error. The raw crossing rate is stored in the model metadata.
+4. **Estimated exceedance probability**: with the training-derived threshold *c* = `q_primary` (Q90 of
+   TRAIN `norm_error` per region × lead × season, unchanged), the CDF at *c* is interpolated linearly
+   between the bracketing predicted quantiles. Beyond q95 the survival function decays exponentially
+   through (q90, 0.10) and (q95, 0.05): S(c) = 0.05 · 2^(−(c−q95)/(q95−q90)), with the mirror form below
+   q10. Then `estimated_exceedance_probability = 1 − F(c)`, clipped only for floating-point noise. This is
+   an **estimate from six predicted quantiles**, not an exact CDF.
+5. **Calibration**: isotonic regression of the estimated exceedance probability against the bust label,
+   fitted on VALIDATION rows only, frozen → `calibrated_bust_probability`. Calibration changes probability
+   reliability, not ranking; AUPRC (discrimination), Brier, ECE and quantile quality are reported separately.
+6. **Products**: per region × lead day: q10..q95; "expected error" = q50, the *central (median) predicted
+   error* (not a conditional mean); *central predicted error range* = q25-q75 (not a confidence interval);
+   *upper-tail error* = q95 (not a maximum); both probabilities; confidence = 1 − calibrated probability.
+7. **Explanations**: no exact per-row attribution exists for this estimator here and none is fabricated.
+   The UI separates MODEL OUTPUT (quantiles, threshold, probabilities), INPUT EVIDENCE (this row's values
+   and training percentiles for the model-level most important inputs, by permutation importance of the q90
+   estimator on validation; evidence items A-D) and INTERPRETATION (sentences generated from those numbers,
+   "associated with", never "caused").
+8. **Why not QRF**: a quantile regression forest was tried first; its fitted leaf-response storage was
+   repeatedly OOM-killed on the 8 GB development machine. Histogram gradient boosting bins the features and
+   stores only trees (all six estimators ≈ 5 MB; full dev fit 72-95 s, 2.5 GB peak RSS). This is an
+   implementation change, not a different scientific method.
+
 ## 1. Quantity predicted
 
 For every initialisation *T*, region *r* and lead day *d* ∈ {1..10}:
@@ -170,3 +223,18 @@ Full log with every experiment: `docs/optimization_v2.md` (generated from `artif
 * Lorenz (1969) *Atmospheric predictability as revealed by naturally occurring analogues*, JAS 26, 636–646.
 * Lundberg et al. (2020) *From local explanations to global understanding with explainable AI for trees*, Nat. Mach. Intell. 2, 56–67.
 * Chen & Guestrin (2016) *XGBoost*, KDD.
+* Koenker & Bassett (1978) *Regression quantiles*, Econometrica 46, 33–50.
+* Taillardat, Mestre, Zamo & Naveau (2016) *Calibrated ensemble forecasts using quantile regression forests
+  and ensemble model output statistics*, MWR 144, 2375–2393, doi:10.1175/MWR-D-15-0260.1.
+* Ben Bouallègue, Cooper, Chantry, Düben, Bechtold & Sandu (2022) *Statistical modelling of 2m temperature
+  and 10m wind speed forecast errors*, ECMWF Technical Memorandum 896,
+  https://www.ecmwf.int/en/elibrary/81297-statistical-modelling-2m-temperature-and-10m-wind-speed-forecast-errors
+  (DOI 10.21957/vdcccja3f as given in the project brief; not independently resolved).
+* Landry, Erlinger, Patschke & Varrichio (2016) *Probabilistic gradient boosting machines for GEFCom2014
+  wind forecasting*, Int. J. Forecasting 32, 1061–1066, doi:10.1016/j.ijforecast.2016.02.002 (one GBM per
+  quantile on NWP predictors - the pattern used here).
+* Schulz & Lerch (2022) *Machine learning methods for postprocessing ensemble forecasts of wind gusts: a
+  systematic comparison*, MWR 150, 235–257 (gradient-boosting EMOS and QRF among the compared methods).
+* Chernozhukov, Fernández-Val & Galichon (2010) *Quantile and probability curves without crossing*,
+  Econometrica 78, 1093–1125.
+* scikit-learn `HistGradientBoostingRegressor` (loss="quantile"), https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.HistGradientBoostingRegressor.html
