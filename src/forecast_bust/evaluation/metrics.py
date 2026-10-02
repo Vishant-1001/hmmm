@@ -18,6 +18,35 @@ def brier(y, p) -> float:
     return float(brier_score_loss(y, p))
 
 
+def mae(y, p) -> float:
+    return float(np.mean(np.abs(np.asarray(y, dtype=float) - np.asarray(p, dtype=float))))
+
+
+def rmse(y, p) -> float:
+    return float(np.sqrt(np.mean((np.asarray(y, dtype=float) - np.asarray(p, dtype=float)) ** 2)))
+
+
+def pinball_loss(y, q_value, level: float) -> float:
+    """Quantile (pinball) loss of a predicted quantile `q_value` at `level` against the
+    realised continuous outcome `y`. 0 for a perfect quantile; smaller is better."""
+    d = np.asarray(y, dtype=float) - np.asarray(q_value, dtype=float)
+    return float(np.mean(np.where(d >= 0, level * d, (level - 1) * d)))
+
+
+def quantile_coverage(y, quantiles: dict[str, np.ndarray], levels: dict[str, float]) -> dict:
+    """Empirical coverage of each predicted quantile: fraction of realised `y` at or below
+    the predicted value, which should be close to its nominal level for a well-behaved
+    conditional quantile model. `quantiles`/`levels` keyed by the same column names
+    (e.g. "q50" -> 0.50)."""
+    y = np.asarray(y, dtype=float)
+    out = {}
+    for name, level in levels.items():
+        qv = np.asarray(quantiles[name], dtype=float)
+        out[name] = {"nominal_level": level, "empirical_coverage": float(np.mean(y <= qv)),
+                     "pinball_loss": pinball_loss(y, qv, level)}
+    return out
+
+
 def reliability_curve(y, p, n_bins: int = 10) -> dict:
     bins = np.linspace(0, 1, n_bins + 1)
     idx = np.clip(np.digitize(p, bins) - 1, 0, n_bins - 1)

@@ -1,0 +1,62 @@
+# v3 model configuration (FBS_RUN=v3). The predictive core changes (QRF replaces the B2/Sentinel
+# XGBoost classifiers in the PRODUCTION path); the data/label/feature/memory/support contract is
+# identical to v2 - every section below except `qrf` is copied unchanged from model_v2.yaml.
+seed: 20260928
+labels:
+  primary_quantile: 0.90          # project-defined bust criterion - UNCHANGED from v1/v2
+  sensitivity_quantile: 0.95
+  hidden_bust_spread_quantile: 0.25  # documented diagnostic, not a universal constant
+  conditioning: [region_id, lead_day, season]
+signature:
+  window: 3            # half-width in grid boxes: 7x7 window (~39 deg, synoptic wavelength scale)
+  dominance: 0.6       # share of MSE needed to call a phase or amplitude signature
+pca:
+  n_components: 8
+analogues:
+  k: 30
+  min_analogues: 5
+  memory_mode: causal_online   # analogue verified (valid_time <= query init) ; alternative: frozen
+support:
+  quantiles: [0.90, 0.975, 0.995]   # training distances -> NORMAL / MODERATE / WEAK / INSUFFICIENT
+xgboost:
+  # Retained only so the ARCHIVAL dev-split B2 reference comparison (models.sentinel.CalibratedGBM)
+  # can still be fitted for context (never the production model in v3). Same defaults as v2.
+  n_estimators: 2000
+  learning_rate: 0.03
+  max_depth: 3
+  min_child_weight: 200
+  subsample: 0.8
+  colsample_bytree: 0.5
+  reg_lambda: 10.0
+  tree_method: hist
+  early_stopping_rounds: 100
+  eval_metric: aucpr
+evaluation:
+  fixed_far: [0.05, 0.10]
+  alert_far: 0.10      # product alert threshold chosen on VALIDATION to give 10% false-alarm rate
+priority:
+  # score = p_bust * urgency(lead) * evidence_weight + disagreement_bonus * max(0, tail_risk)
+  # v3: the "disagreement" term is the normalized (q90-q10) uncertainty width (no B2 involved).
+  urgency_halflife_days: 5
+  evidence_weight: {STRONG: 1.0, MODERATE: 0.85, WEAK: 0.7, "INSUFFICIENT HISTORICAL SUPPORT": 0.5}
+  disagreement_bonus: 0.25
+v2:
+  # wind/MSLP (DYN) feature group - already validated data, reused unchanged (features/build.py
+  # reads this same key regardless of RUN).
+  dyn_features: true
+  # ARCHIVAL ONLY: hyper-parameters for the dev-split B2 reference fit (models.sentinel.CalibratedGBM),
+  # used purely as a non-production comparison point in pipeline_qrf's experiment registry. Same
+  # values v2 locked from its dev-split search (docs/optimization_v2.md).
+  b2_xgboost: {learning_rate: 0.05, subsample: 0.8, reg_lambda: 10.0, n_estimators: 3000, max_depth: 3,
+               min_child_weight: 50, colsample_bytree: 0.5}
+qrf:
+  # Production model (models/qrf.py). Quantiles fixed and small (spec); no duplicates.
+  quantiles: [0.10, 0.25, 0.50, 0.75, 0.90, 0.95]
+  # Small development-split-only grid (pipeline_qrf.py); selected by validation AUPRC of the
+  # calibrated bust probability, with MAE/RMSE/pinball-loss/coverage recorded alongside.
+  grid:
+    n_estimators: [300, 600]
+    max_depth: [4, 6]
+    min_samples_leaf: [50, 200]
+  # Filled in by pipeline_qrf.py once the dev-split search locks a configuration; empty until then.
+  locked_params: {}
