@@ -71,7 +71,7 @@ def health_light():
 @app.get("/api/health")
 def health():
     idx = REPORT / "replay" / "index.json"
-    md = ART / "demo" / "model" / "v3" / "metadata.json"
+    md = ART / "demo" / "model" / "v4" / "metadata.json"
     served = json.loads(md.read_text()) if md.exists() else {}
     return {"status": "ok", "mode": MODE, "served_run": SERVED_RUN, "model_type": served.get("model_type"),
             "experiment_id": served.get("experiment_id"), "artifacts_present": {
@@ -195,7 +195,7 @@ def verification(case_id: str):
 # ---------------------------------------------------------------------------------------------
 from forecast_bust.demo import schemas as S  # noqa: E402
 
-DEMO_MODE = ("Historical replay research prototype - the frozen v3 quantile-gradient-boosting model executes live on stored real "
+DEMO_MODE = ("Historical replay research prototype - the frozen V4 pattern-aware XGBoost model executes live on stored real "
              "ECMWF IFS ENS forecast states; not a live or NCMRWF feed")
 
 

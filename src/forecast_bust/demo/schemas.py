@@ -43,42 +43,31 @@ class ModelSummary(BaseModel):
     training_window: str
     calibration_window: str
     calibration: str
-    quantiles: list[float]
     params: dict[str, float]
     features: list[str]
-    feature_groups: list[str]
-    exceedance_method: str
-    crossing_correction: str
+    experiment_id: str
+    base_rate_pattern_bust: float
     model_level_importance: list[ImportanceItem]
     alert_threshold: float
     alert_threshold_definition: str
     confidence_definition: str
-    expected_error_definition: str
-    uncertainty_definition: str
     target: str
 
 
 class Cell(BaseModel):
-    """Model output for one region x lead day (forecast-time information only)."""
+    """V4 model output for one region x lead day (forecast-time information only)."""
     lead_day: int
     valid_time: str
     model_type: str
-    expected_error: float            # = q50, the central (median) predicted normalized error
-    q10: float
-    q25: float
-    q50: float
-    q75: float
-    q90: float
-    q95: float
-    uncertainty_low: float           # = q25 (central predicted error range, not a confidence interval)
-    uncertainty_high: float          # = q75
-    upper_tail_error: float          # = q95 (not a maximum possible error)
-    bust_threshold: float            # TRAIN-derived Q90 for this region / lead / season
-    estimated_exceedance_probability: float
-    calibrated_bust_probability: float
-    bust_probability: float          # = calibrated_bust_probability
-    reliability_confidence: float    # = 1 - calibrated_bust_probability
-    b0_probability: float            # climatological bust rate (reference only)
+    raw_probability: float                 # XGBoost, before calibration
+    calibrated_bust_probability: float     # validation-only isotonic; P(pattern-aware bust)
+    bust_probability: float                # = calibrated_bust_probability
+    reliability_confidence: float          # = 1 - calibrated_bust_probability
+    confidence: str                        # LOW / MODERATE / HIGH (see model.confidence_definition)
+    magnitude_criterion: str               # evidence from verified analogues: HIGH/ELEVATED/NORMAL/INSUFFICIENT
+    pattern_criterion: str
+    historical_support: str
+    b0_probability: float                  # magnitude-bust climatology (reference only)
     alert: bool
     spread_m: float
     spread_pct: Optional[float]
@@ -112,8 +101,6 @@ class LeadSummary(BaseModel):
     mean_bust_probability: float
     max_bust_probability: float
     n_alerts: int
-    mean_expected_error: float
-    mean_upper_tail_error: float
 
 
 class RunResult(BaseModel):
@@ -144,11 +131,13 @@ class Driver(BaseModel):
     group: str
     value: Optional[float]
     train_percentile: Optional[float]
-    model_importance: float
+    contribution_logodds: float
+    direction: str
 
 
 class Attribution(BaseModel):
     method: str
+    bias_logodds: float
     drivers: list[Driver]
     groups: dict[str, float]
     note: str
@@ -190,6 +179,12 @@ class FailureSignature(BaseModel):
     top_label: Optional[str] = None
 
 
+class Criterion(BaseModel):
+    rate: Optional[float]
+    climatology: float
+    level: str
+
+
 class ContextFeature(BaseModel):
     feature: str
     label: str
@@ -203,6 +198,7 @@ class Explanation(Cell):
     attribution: Attribution
     evidence: list[EvidenceItem]
     interpretation: list[str]
+    criteria: dict[str, Criterion]
     analogue_summary: AnalogueSummary
     failure_signature: FailureSignature
     context_features: list[ContextFeature]
@@ -215,10 +211,17 @@ class Fingerprint(BaseModel):
     phase_share: Optional[float]
     bias_m: Optional[float]
     pattern_corr: Optional[float]
+    magnitude_failure: bool
+    pattern_failure: bool
 
 
 class VerificationOut(BaseModel):
-    actual_bust: bool
+    actual_bust: bool                      # pattern-aware bust (V4 target)
+    actual_magnitude_bust: bool
+    magnitude_failure: bool
+    pattern_failure: bool
+    local_acc: Optional[float]
+    acc_q10: Optional[float]
     normalized_error: float
     threshold_q90: float
     error_m: float
@@ -228,11 +231,11 @@ class VerificationOut(BaseModel):
 
 class RevealForecast(BaseModel):
     bust_probability: float
-    expected_error: float
-    uncertainty_low: float
-    uncertainty_high: float
-    upper_tail_error: float
-    bust_threshold: float
+    raw_probability: float
+    confidence: str
+    magnitude_criterion: str
+    pattern_criterion: str
+    historical_support: str
     alert: bool
     expected_signature: FailureSignature
 
@@ -247,6 +250,8 @@ class Comparison(BaseModel):
 class VerifDay(BaseModel):
     lead_day: int
     actual_bust: bool
+    actual_magnitude_bust: bool
+    local_acc: Optional[float]
     normalized_error: float
     threshold_q90: float
     signature: str
@@ -255,6 +260,7 @@ class VerifDay(BaseModel):
 class CaseSummary(BaseModel):
     region_days: int
     verified_busts: int
+    verified_magnitude_busts: int
     model_alerts: int
     model_hits: int
     hidden_busts: int
@@ -264,6 +270,7 @@ class BustCell(BaseModel):
     region_id: str
     lead_day: int
     bust: int
+    magnitude_bust: int
     signature: str
 
 
@@ -272,6 +279,7 @@ class MemoryEntry(BaseModel):
     lead_day: int
     valid_time: str
     bust: bool
+    magnitude_bust: bool
     normalized_error: float
     signature: str
 

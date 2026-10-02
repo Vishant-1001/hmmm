@@ -1,0 +1,16 @@
+{
+ "model_version": "v4-final (405d2aa)",
+ "experiment_id": "v4-final-405d2aa",
+ "model_artifact": "models/v4/models.joblib (V4 CalibratedGBM)",
+ "exported_from": "models/v4 -> artifacts/v4/demo/model/v4/ (file copy)",
+ "retrained_for_demo": false,
+ "training_window": "2018-01-01 .. 2020-12-29",
+ "calibration_window": "2021-01-01 .. 2021-12-28",
+ "calibration": "isotonic regression of the raw XGBoost probability, fitted on validation (2021) only",
+ "alert_threshold": 0.020450970157980922,
+ "alert_threshold_definition": "calibrated pattern-bust probability giving a 10% false-alarm rate on VALIDATION",
+ "confidence_definition": "reliability confidence = 1 - P(pattern bust); label LOW if P >= alert threshold, MODERATE if P >= the training pattern-bust rate, otherwise HIGH",
+ "target": "geopotential 500 hPa (Z500): pattern-aware bust = normalized regional error > TRAIN Q90 AND local 3x3 anomaly correlation < TRAIN Q10",
+ "base_rate_pattern_bust": 0.013125801575668743,
+ "base_rate_pattern_failure": 0.10131916452913155
+}

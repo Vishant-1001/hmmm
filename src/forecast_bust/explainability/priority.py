@@ -49,3 +49,18 @@ def formula_v3() -> dict:
             "H_days": cfg["urgency_halflife_days"], "B": cfg["disagreement_bonus"],
             "evidence_weight": cfg["evidence_weight"],
             "note": "Product triage rule; weights are design choices, not fitted or validated constants."}
+
+
+def priority_score_v4(p: np.ndarray, lead_day: np.ndarray, evidence_level: np.ndarray) -> np.ndarray:
+    """V4: calibrated pattern-aware bust probability x urgency x evidence weight (no baseline/tail bonus)."""
+    cfg = model_config()["priority"]
+    urg = 0.5 ** ((np.asarray(lead_day) - 1) / cfg["urgency_halflife_days"])
+    w = np.array([cfg["evidence_weight"][n] for n in EVIDENCE_NAMES])[np.asarray(evidence_level, dtype=int)]
+    return np.asarray(p) * urg * w
+
+
+def formula_v4() -> dict:
+    cfg = model_config()["priority"]
+    return {"formula": "score = p_pattern_bust * 0.5**((lead_day-1)/H) * evidence_weight",
+            "H_days": cfg["urgency_halflife_days"], "B": 0.0, "evidence_weight": cfg["evidence_weight"],
+            "note": "Product triage rule; weights are design choices, not fitted or validated constants."}

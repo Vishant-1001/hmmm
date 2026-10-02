@@ -66,6 +66,6 @@ def test_demo_run_probabilities_and_day_indexing():
     assert [t["lead_day"] for t in reg["trajectory"]] == list(range(1, 11))
     for t in reg["trajectory"]:
         assert datetime.fromisoformat(str(t["valid_time"]).replace("Z", "")) == init + timedelta(days=t["lead_day"])
-        for k in ("bust_probability", "estimated_exceedance_probability", "b0_probability", "reliability_confidence"):
+        for k in ("bust_probability", "raw_probability", "b0_probability", "reliability_confidence"):
             v = t[k]
             assert v is not None and math.isfinite(v) and 0.0 <= v <= 1.0, (k, v)

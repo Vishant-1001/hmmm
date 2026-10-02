@@ -209,3 +209,51 @@ def explain_row_v3(row: pd.Series, q: dict, threshold: float, p_raw: float, p_ca
             "attribution_note": "Feature ranking is MODEL-LEVEL permutation importance of the q90 estimator "
                                 "(validation), the same for every row; values and percentiles are this row's "
                                 "inputs. Features are associated with the prediction; they are not causes."}
+
+
+def criterion_level(rate: float | None, clim: float, n: float | None, kmin: int) -> str:
+    """Analogue-based evidence level for one criterion (not a model output): rate among the nearest VERIFIED
+    historical analogues relative to its training climatological rate."""
+    if rate is None or not np.isfinite(rate) or n is None or not np.isfinite(n) or n < kmin:
+        return "INSUFFICIENT"
+    return "HIGH" if rate >= 2 * clim else "ELEVATED" if rate > 1.25 * clim else "NORMAL"
+
+
+def explain_row_v4(row: pd.Series, contrib_row: np.ndarray, features: list[str], ref: dict, p: float,
+                   p_raw: float, base_rate: float, crit: dict, top: int = 6) -> dict:
+    """V4: TreeSHAP attribution of the pattern-aware XGBoost model (log-odds, before calibration), evidence
+    items A-D, and the magnitude / pattern / historical-support evidence from the causal analogue memory.
+    `crit` = {magnitude|pattern|support: {"level", "rate", "climatology"}}. Associations, not causes."""
+    c = contrib_row[:-1]
+    drivers = []
+    for i in np.argsort(-np.abs(c))[:top]:
+        f = features[i]
+        v = row.get(f, np.nan)
+        v = float(v) if v is not None and np.isfinite(v) else None
+        drivers.append({"feature": f, "label": FEATURE_LABELS.get(f, f), "group": feature_group(f), "value": v,
+                        "train_percentile": train_percentile(v, ref.get(f)) if v is not None else None,
+                        "contribution_logodds": float(c[i]), "direction": "raises risk" if c[i] > 0 else "lowers risk"})
+    groups = {g: float(c[[i for i, f in enumerate(features) if f in fs]].sum())
+              for g, fs in GROUPS.items() if any(f in fs for f in features)}
+    ev = _state_evidence(row, ref, base_rate)
+    names = {"magnitude": "large-error (normalized RMSE > training Q90)",
+             "pattern": "pattern-failure (local anomaly correlation < training Q10)",
+             "support": "pattern-aware bust (both criteria)"}
+    for k in ("magnitude", "pattern", "support"):
+        x = crit[k]
+        if x["rate"] is not None:
+            ev.append({"kind": f"E. Historical {k} evidence",
+                       "text": f"Among the most similar verified historical forecast states, {100 * x['rate']:.0f}% had a "
+                               f"{names[k]} outcome (training rate {100 * x['climatology']:.1f}%): {x['level']}."})
+    why = [f"Calibrated pattern-aware bust probability {100 * p:.1f}% (raw model {100 * p_raw:.1f}%).",
+           f"Large-error criterion (historical analogues): {crit['magnitude']['level']}.",
+           f"Pattern-failure criterion (historical analogues): {crit['pattern']['level']}.",
+           f"Historical support for a pattern-aware bust: {crit['support']['level']}."]
+    up = [d for d in drivers if d["contribution_logodds"] > 0][:3]
+    if up:
+        why.append("Model inputs associated with higher risk for this case (TreeSHAP, not causes): "
+                   + ", ".join(d["label"] for d in up) + ".")
+    return {"drivers": drivers, "groups": groups, "evidence": ev, "interpretation": why,
+            "attribution_note": "TreeSHAP contributions of the V4 XGBoost model (log-odds, before isotonic calibration). "
+                                "They describe what the model used; they are associations, not physical causes. "
+                                "The criterion levels come from verified historical analogues, not from the model."}
