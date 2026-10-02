@@ -18,7 +18,6 @@ dependencies = [
   "scipy>=1.11",
   "scikit-learn>=1.4",
   "xgboost>=2.0",
-  "quantile-forest>=1.4",
   "pyarrow>=14",
   "pyyaml>=6",
   "fastapi>=0.110",

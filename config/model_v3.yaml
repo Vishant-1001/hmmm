@@ -1,6 +1,6 @@
-# v3 model configuration (FBS_RUN=v3). The predictive core changes (QRF replaces the B2/Sentinel
-# XGBoost classifiers in the PRODUCTION path); the data/label/feature/memory/support contract is
-# identical to v2 - every section below except `qrf` is copied unchanged from model_v2.yaml.
+# v3 model configuration (FBS_RUN=v3). Only the predictive core changes: quantile gradient boosting
+# (`qgb`) replaces the retired B2/Sentinel XGBoost classifiers in the production path. The data/label/
+# feature/memory/support contract is identical to v2 - every section except `qgb` is copied from model_v2.yaml.
 seed: 20260928
 labels:
   primary_quantile: 0.90          # project-defined bust criterion - UNCHANGED from v1/v2
@@ -49,14 +49,17 @@ v2:
   # values v2 locked from its dev-split search (docs/optimization_v2.md).
   b2_xgboost: {learning_rate: 0.05, subsample: 0.8, reg_lambda: 10.0, n_estimators: 3000, max_depth: 3,
                min_child_weight: 50, colsample_bytree: 0.5}
-qrf:
-  # Production model (models/qrf.py). Quantiles fixed and small (spec); no duplicates.
+qgb:
+  # Production model (models/qgb.py): HistGradientBoostingRegressor(loss="quantile"), one estimator per
+  # quantile, ONE shared configuration. QRF was abandoned (repeated OOM on the 8 GB dev machine).
   quantiles: [0.10, 0.25, 0.50, 0.75, 0.90, 0.95]
-  # Small development-split-only grid (pipeline_qrf.py); selected by validation AUPRC of the
-  # calibrated bust probability, with MAE/RMSE/pinball-loss/coverage recorded alongside.
+  # Small development-split-only grid (pipeline_qgb.py); the other parameters are the fixed defaults
+  # learning_rate 0.05 / max_iter 200 / max_leaf_nodes 31 / min_samples_leaf 50 / l2_regularization 1.0,
+  # early_stopping False. Selection: max validation AUPRC (calibrated) among configs whose mean pinball
+  # loss is within 1% of the best.
   grid:
-    n_estimators: [300, 600]
-    max_depth: [4, 6]
-    min_samples_leaf: [50, 200]
-  # Filled in by pipeline_qrf.py once the dev-split search locks a configuration; empty until then.
+    learning_rate: [0.03, 0.05]
+    max_leaf_nodes: [15, 31]
+    min_samples_leaf: [50, 100]
+  # Filled in once the dev-split selection is locked; empty until then.
   locked_params: {}
