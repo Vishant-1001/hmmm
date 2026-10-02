@@ -50,6 +50,15 @@
 * **In-sample quota effect.** Training labels are TRAIN quantiles, which slightly distorts label-rate
   features inside the training period (see methodology). Validation-based group selection mitigates it.
 
+## Findings from the BMA experiment (dev split only; NO-GO)
+
+* Exchangeable-member BMA on the 50 genuine IFS ENS members is significantly worse than B2 at bust ranking
+  (dev-test 2021 AUPRC 0.121 vs 0.158, CI of the difference [−0.045, −0.027]) and worse than V3 (0.140), on
+  all 10 lead days and in 92% of regions. Raw mixture probabilities are over-dispersed (ECE 0.060).
+* Not evaluated on 2022 and not served. No other model was tried afterwards (pre-agreed stop rule).
+* Across V1/V2/V3/BMA, nothing has beaten a calibrated spread-to-threshold baseline at this 5.625°
+  single-box scale. The limiting factor appears to be the information in the data, not the learner.
+
 ## Findings from the v3 run (quantile gradient boosting; 2022 read for the third time)
 
 * **Does not outperform the spread-only baseline.** On the controlled dev split v3 is below a fresh B2

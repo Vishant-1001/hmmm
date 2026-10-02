@@ -1,0 +1,181 @@
+{
+ "experiment_id": "bma-dev-af424b8",
+ "commit_hash": "af424b8",
+ "created": "2026-10-02T16:12:46.217082+00:00",
+ "dev_split": true,
+ "rows_namespace": "v3 (same table, target, thresholds as v2/v3/B2)",
+ "members": "50 IFS ENS perturbed members, Z500 at the 64 target boxes (data/cache/ens); member mean reproduces the stored ensemble mean exactly",
+ "formulation": "exchangeable BMA: w_k = 1/50, common a, b (pooled least squares) and sigma (EM) per region x lead, Z500 anomaly vs ERA5 1990-2017 climatology",
+ "target_distribution": "Y = |m - Z| / scale with Z ~ BMA mixture: exact mixture CDF, quantiles by bisection",
+ "window_days": 60,
+ "min_cases": 20,
+ "splits": {
+  "test": {
+   "rows": 234240,
+   "first_init": "2021-01-01 00:00:00",
+   "last_init": "2021-12-31 12:00:00"
+  },
+  "train": {
+   "rows": 464256,
+   "first_init": "2018-01-01 00:00:00",
+   "last_init": "2019-12-30 12:00:00"
+  },
+  "validation": {
+   "rows": 230144,
+   "first_init": "2020-01-03 00:00:00",
+   "last_init": "2020-12-29 12:00:00"
+  }
+ },
+ "calibration": {
+  "method": "isotonic regression of the BMA mixture exceedance probability on the validation split only",
+  "n_rows": 230144
+ },
+ "parameter_stability_since_2019": {
+  "a": {
+   "0.01": -10.156526337370627,
+   "0.5": 0.06886477908188615,
+   "0.99": 13.475505517821302
+  },
+  "b": {
+   "0.01": 0.2701321391086985,
+   "0.5": 0.8186668149368765,
+   "0.99": 1.0424608480468285
+  },
+  "sigma": {
+   "0.01": 0.9020815496656693,
+   "0.5": 3.889100330432156,
+   "0.99": 27.188077285143578
+  },
+  "n_cases": {
+   "0.01": 60.0,
+   "0.5": 60.0,
+   "0.99": 60.0
+  }
+ },
+ "free_weight_diagnostic": {
+  "uniform_weight": 0.02,
+  "groups": [
+   {
+    "lead_day": 9,
+    "row": 5,
+    "col": 4,
+    "n": 720,
+    "w_min": 1.0737829858974095e-12,
+    "w_max": 0.16690606927845605,
+    "n_weights_below_0.001": 24,
+    "top3_members": [
+     35,
+     43,
+     5
+    ]
+   },
+   {
+    "lead_day": 3,
+    "row": 2,
+    "col": 0,
+    "n": 720,
+    "w_min": 1.9243737734679126e-11,
+    "w_max": 0.08943980139632171,
+    "n_weights_below_0.001": 21,
+    "top3_members": [
+     6,
+     30,
+     34
+    ]
+   },
+   {
+    "lead_day": 1,
+    "row": 0,
+    "col": 1,
+    "n": 720,
+    "w_min": 3.5714343502826604e-15,
+    "w_max": 0.11323535147569001,
+    "n_weights_below_0.001": 23,
+    "top3_members": [
+     1,
+     7,
+     26
+    ]
+   },
+   {
+    "lead_day": 9,
+    "row": 5,
+    "col": 7,
+    "n": 720,
+    "w_min": 5.065127354495648e-14,
+    "w_max": 0.14817216188512566,
+    "n_weights_below_0.001": 25,
+    "top3_members": [
+     30,
+     6,
+     31
+    ]
+   },
+   {
+    "lead_day": 6,
+    "row": 4,
+    "col": 7,
+    "n": 720,
+    "w_min": 5.5060036484755035e-18,
+    "w_max": 0.11292427099204215,
+    "n_weights_below_0.001": 26,
+    "top3_members": [
+     12,
+     7,
+     8
+    ]
+   },
+   {
+    "lead_day": 8,
+    "row": 5,
+    "col": 4,
+    "n": 720,
+    "w_min": 1.0116131551351761e-11,
+    "w_max": 0.11704191693786034,
+    "n_weights_below_0.001": 23,
+    "top3_members": [
+     4,
+     7,
+     20
+    ]
+   },
+   {
+    "lead_day": 6,
+    "row": 7,
+    "col": 2,
+    "n": 720,
+    "w_min": 7.287435483179172e-14,
+    "w_max": 0.09523613131082023,
+    "n_weights_below_0.001": 19,
+    "top3_members": [
+     25,
+     8,
+     3
+    ]
+   },
+   {
+    "lead_day": 9,
+    "row": 5,
+    "col": 0,
+    "n": 720,
+    "w_min": 2.1973866771154538e-17,
+    "w_max": 0.15557820089850175,
+    "n_weights_below_0.001": 26,
+    "top3_members": [
+     24,
+     6,
+     25
+    ]
+   }
+  ],
+  "note": "free member weights from the original Raftery et al. (2005) EM, TRAIN cases only; members are exchangeable perturbations, so which members get large weights is not reproducible meaning"
+ },
+ "software": {
+  "numpy": "2.5.3",
+  "pandas": "3.0.6",
+  "xarray": "2026.7.0",
+  "scikit-learn": "1.9.1",
+  "xgboost": "3.4.1"
+ },
+ "runtime_s": 4260.8
+}

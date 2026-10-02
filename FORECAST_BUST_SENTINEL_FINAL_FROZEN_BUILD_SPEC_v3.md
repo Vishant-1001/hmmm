@@ -61,6 +61,12 @@ Engineering: works. Scientifically: valid, calibrated, weak signal above climato
 schema, params, splits, threshold and calibration metadata: `artifacts/v3/demo/model/v3/metadata.json`,
 `artifacts/v3/experiment_manifest.json`; environment `requirements-lock.txt`.
 
+## BMA experiment (after the v3 freeze)
+
+Exchangeable-member BMA of the 50 IFS ENS members, gate pre-registered (`483fcea`): **NO-GO** on the dev
+split (AUPRC 0.121 vs B2 0.158, V3 0.140). Not evaluated on 2022, not served; V3 remains the served demo
+model but is an archived experiment, not a validated final predictive core. See `docs/model_card_bma.md`.
+
 ## Rules carried forward
 
 No tuning after 2022. 2022 has now been read three times (v1, v2, v3) and cannot support a test claim for

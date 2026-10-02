@@ -121,3 +121,11 @@ dev split (`FBS_SPLIT=dev`); 2022 is now inspected and can no longer serve as an
   ECE 0.0045, coverage .113/.280/.540/.784/.915/.957, hidden-bust recall 0.075.
 * Serving: API/demo/frontend on v3 (9d6785b, 8b9c63a); docs `docs/model_card_v3.md`, `docs/evaluation_v3.md`,
   `FORECAST_BUST_SENTINEL_FINAL_FROZEN_BUILD_SPEC_v3.md`.
+
+## BMA experiment (2026-10-02) — NO-GO
+
+* Genuine member data confirmed: 50 IFS ENS members in `data/cache/ens` (mean == stored ensemble mean).
+* Gate pre-registered in `config/model_bma.yaml` (483fcea) before results; implementation af424b8.
+* Exchangeable-member BMA, 60-day causal window: dev-test 2021 AUPRC 0.1210 (B0 0.0932, B2 0.1578, V3 0.1396);
+  BMA − B2 −0.037 [−0.045, −0.027]; 0/10 lead days ≥ B2; raw ECE 0.060. Validation 2020: 0.130 vs B2 0.175.
+* NO-GO: 2022 not evaluated, production not switched, no further models. `docs/model_card_bma.md`.

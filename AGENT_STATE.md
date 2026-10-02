@@ -4,8 +4,8 @@ Persistent execution state. Update at every checkpoint.
 
 | Field | Value |
 |---|---|
-| CURRENT PHASE | v3 frozen (quantile gradient boosting); deployment verification |
-| LAST COMPLETED ACTION | v3 final fit (045a9e8) + single 2022 evaluation (45c63b9); API/demo/frontend serve v3; docs; local QA (health v3, run 240 ms, RSS 425 MB) |
+| CURRENT PHASE | BMA experiment complete: NO-GO on the pre-registered dev gate; production unchanged (V3 served, archived experiment, not a validated final core) |
+| LAST COMPLETED ACTION | BMA (exchangeable, 50 real IFS ENS members, 60-day causal window) dev evaluation: AUPRC 0.121 vs B2 0.158 / V3 0.140 (dev-test 2021); gate NO-GO; 2022 not touched; docs/model_card_bma.md |
 | LOCKED CONFIG | `config/model_v3.yaml` qgb.locked_params (lr 0.05, 200 iter, 31 leaves, min leaf 100, l2 1.0), locked at 045a9e8. v2 config unchanged |
 | MODEL STATUS | v3 served: `models/v3/qgb_q*.joblib` + calibration → `artifacts/v3/demo/model/v3` (V3PredictiveModel). B2/Sentinel archived (v2), QRF retired |
 | EVALUATION STATUS | v3 dev-test 2021 AUPRC 0.1396 (fresh B2 0.1578; Δ −0.018 CI [−0.027,−0.011]). 2022 (V3 first look; 3rd reading of 2022) AUPRC 0.1449, Brier 0.0785 (clim 0.0802), ECE 0.0045. v3 does NOT outperform B2 |
@@ -14,7 +14,7 @@ Persistent execution state. Update at every checkpoint.
 | RENDER | VERIFIED 2026-09-30 on the v2 deploy (https://forecast-bust-sentinel-g0py.onrender.com/). No Render dashboard/log access from this machine |
 | DATA | Geopotential 457/457; wind/MSLP 457/457 (validated). Nothing to download |
 | KNOWN ISSUES | Render free tier cold start; server RSS 425 MB of 512 MB. 2022 read three times (v1, v2, v3): no future test claim possible |
-| EXACT NEXT ACTION | None required. Any new model idea must use FBS_SPLIT=dev and cannot claim a 2022 test result |
+| EXACT NEXT ACTION | None. Stop rule reached: no further model candidates. Reassess the problem (data resolution/target), not the learner. Any new idea must use FBS_SPLIT=dev; 2022 cannot support a test claim |
 
 ## Background processes
 

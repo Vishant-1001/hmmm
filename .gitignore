@@ -48,6 +48,7 @@ data/interim/
 artifacts/*/dev/*
 !artifacts/v2/dev/optimization/
 !artifacts/v3/dev/development/
+!artifacts/bma/dev/*.json
 models/*/dev/
 artifacts/v2a/
 models/v2a/

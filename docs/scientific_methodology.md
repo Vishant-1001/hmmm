@@ -56,6 +56,43 @@ causal historical evidence, support/OOD and blind verification around it. Measur
    stores only trees (all six estimators ≈ 5 MB; full dev fit 72-95 s, 2.5 GB peak RSS). This is an
    implementation change, not a different scientific method.
 
+## 0b. BMA experiment (ensemble-member post-processing; see `docs/model_card_bma.md` for the outcome)
+
+**Why BMA.** An ensemble forecast is a set of plausible future atmospheric states. BMA turns the members
+into one predictive distribution, a weighted mixture of member-specific distributions with weights that
+reflect historical predictive contribution. It does not reduce the ensemble to a single spread statistic,
+and it is not a generic supervised classifier (Raftery et al. 2005). Published work applied BMA to 500 hPa
+geopotential height and reported better probabilistic forecasts than the raw ensembles (Ji et al. 2021).
+That justifies *testing* it here, not expecting it to work: this is an adaptation to a different target
+(the regional error of the ensemble mean) on this project's data, and BMA is not new.
+
+```
+50 IFS ENS member Z500 forecasts at the region box (data/cache/ens; member mean == stored ensemble mean)
+  -> member-specific predictive distributions N(a + b f_k, sigma^2) for the verifying ERA5 Z500 anomaly
+  -> equal-weight mixture (exchangeable perturbed members: w_k = 1/50, common a, b, sigma per region x lead)
+  -> regional Z500 error distribution: Y = |ensemble mean - Z| / TRAIN scale, exact mixture CDF
+  -> BMA mixture exceedance probability P(Y > q_primary)  (TRAIN Q90, unchanged)
+  -> optional validation-only isotonic calibration -> bust sentinel
+```
+
+* **Target, rows, thresholds** are exactly those of v2/v3/B2 (v3 namespace table); nothing is redefined.
+* **Fitting**: per region × lead, (a, b) by least squares of the verifying anomaly on the pooled member
+  anomalies and sigma by EM, as in Raftery et al. (2005), with weights fixed at 1/50. Members are
+  exchangeable perturbations, so member-specific weights would carry no reproducible meaning; a free-weight
+  EM fit on TRAIN cases is reported only as a diagnostic.
+* **Sliding training window**: 60 days of cases *verified before* the forecast day (valid time ≤ 00 UTC of
+  the initialisation day), refitted daily, at least 20 cases. One choice, fixed before any result
+  (~1 initialisation per day per region and lead in the 50%-sampled archive → ~60 cases for 3 parameters).
+  Like the existing causal memory features, the window uses earlier verified cases of the evaluated year;
+  no case's own or any later outcome is used.
+* **Outputs**: predictive mean and standard deviation of Y (folded-normal moments), quantiles q10..q95
+  (bisection on the exact mixture CDF), the BMA mixture exceedance probability (the CDF of the fitted model,
+  not an empirical CDF), and a separately labelled validation-calibrated bust probability.
+* **Gate**: pre-registered in `config/model_bma.yaml` (commit `483fcea`) before any BMA result existed.
+* **Outcome: NO-GO.** Dev-test 2021 AUPRC 0.121 vs B2 0.158 and V3 0.140; worse on all 10 lead days. Not
+  evaluated on 2022; not served. Diagnosis: the window-constant kernel σ is as large as the flow-dependent
+  member dispersion, diluting the spread signal B2 uses.
+
 ## 1. Quantity predicted
 
 For every initialisation *T*, region *r* and lead day *d* ∈ {1..10}:
@@ -237,4 +274,8 @@ Full log with every experiment: `docs/optimization_v2.md` (generated from `artif
   systematic comparison*, MWR 150, 235–257 (gradient-boosting EMOS and QRF among the compared methods).
 * Chernozhukov, Fernández-Val & Galichon (2010) *Quantile and probability curves without crossing*,
   Econometrica 78, 1093–1125.
+* Raftery, Gneiting, Balabdaoui & Polakowski (2005) *Using Bayesian Model Averaging to Calibrate Forecast
+  Ensembles*, MWR 133, 1155–1174.
+* Ji, Luo, Ji & Zhi (2021) *Probabilistic Forecasting of the 500 hPa Geopotential Height over the Northern
+  Hemisphere Using TIGGE Multi-model Ensemble Forecasts*, Atmosphere 12(2), 253, doi:10.3390/atmos12020253.
 * scikit-learn `HistGradientBoostingRegressor` (loss="quantile"), https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.HistGradientBoostingRegressor.html
