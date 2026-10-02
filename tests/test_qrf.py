@@ -99,6 +99,19 @@ def test_feature_set_excludes_forbidden_and_b2_inputs():
     assert all("b2" not in f.lower() for f in qrf_features)
 
 
+def test_fits_and_predicts_with_nan_features():
+    """Regression test: RandomForestQuantileRegressor has no native NaN support (unlike the
+    retired XGBoost models) and used to crash with ValueError: Input X contains NaN - several
+    real feature groups (MEM/REC/EVO) are legitimately NaN before enough history exists."""
+    train, val = _toy()
+    rng = np.random.default_rng(1)
+    train.loc[rng.random(len(train)) < 0.1, "x"] = np.nan
+    val.loc[rng.random(len(val)) < 0.1, "spread_m"] = np.nan
+    m = QRFErrorModel(FEATURES, params=PARAMS, seed=0).fit(train, val)
+    p = m.calibrated_bust_probability(val)
+    assert np.isfinite(p).all() and np.all((p >= 0) & (p <= 1))
+
+
 def test_importance_is_model_level_only():
     train, val = _toy()
     m = QRFErrorModel(FEATURES, params=PARAMS, seed=0).fit(train, val)
