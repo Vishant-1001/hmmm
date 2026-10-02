@@ -4,7 +4,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DemoApp from "../demo/DemoApp";
-import { pct, pp } from "../demo/ui";
+import { num, pct } from "../demo/ui";
 import fx from "./demo_fixture.json";
 
 const { case_id: cid, region_id: rid, lead_day: day } = fx;
@@ -49,14 +49,18 @@ describe("demo app (live-inference API)", () => {
     const c = fx.region.trajectory[day - 1];
     expect(screen.getByTestId("rel-p").textContent).toBe(pct(c.bust_probability));
     expect(screen.getByTestId("rel-conf").textContent).toBe(pct(c.reliability_confidence));
-    expect(screen.getByTestId("rel-b2").textContent).toBe(pct(c.b2_probability));
-    expect(screen.getByTestId("rel-dis").textContent).toBe(pp(c.disagreement_pp));
+    expect(screen.getByTestId("rel-central").textContent).toBe(`${num(c.expected_error, 2)}×`);
+    expect(screen.getByTestId("rel-range").textContent).toBe(`${num(c.uncertainty_low, 2)}–${num(c.uncertainty_high, 2)}×`);
+    expect(screen.getByTestId("rel-tail").textContent).toBe(`${num(c.upper_tail_error, 2)}×`);
+    expect(screen.queryByTestId("rel-b2")).toBeNull();
 
     fireEvent.click(screen.getByTestId("go-evidence"));
     await waitFor(() => expect(screen.getByTestId("why-p")).toBeTruthy());
     const x = fx.explain;
     expect(screen.getByTestId("why-p").textContent).toBe(pct(x.bust_probability));
-    expect(screen.getByTestId("why-b2").textContent).toBe(pct(x.b2_probability));
+    expect(screen.getByTestId("why-central").textContent).toBe(`${num(x.expected_error, 2)}×`);
+    expect(screen.getByTestId("why-tail").textContent).toBe(`${num(x.upper_tail_error, 2)}×`);
+    for (const t of x.interpretation) expect(screen.getByTestId("why-list").textContent).toContain(t);
     expect(screen.getByTestId("why-support").textContent).toBe(x.support_level);
     expect(screen.getByTestId("why-evidence").textContent).toBe(x.evidence_quality);
     expect(screen.getByTestId("an-within").textContent).toBe(String(x.analogue_summary.within_radius ?? "—"));

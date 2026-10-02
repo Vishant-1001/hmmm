@@ -104,7 +104,8 @@ def walkthrough(url: str, shots: Path | None = None, video: Path | None = None, 
         c = reg["trajectory"][day - 1]
         check("reliability P(bust)", page.inner_text("[data-testid=rel-p]"), pct(c["bust_probability"]))
         check("reliability confidence", page.inner_text("[data-testid=rel-conf]"), pct(c["reliability_confidence"]))
-        check("reliability B2", page.inner_text("[data-testid=rel-b2]"), pct(c["b2_probability"]))
+        check("reliability central error", page.inner_text("[data-testid=rel-central]"), f"{c['expected_error']:.2f}×")
+        check("reliability upper tail", page.inner_text("[data-testid=rel-tail]"), f"{c['upper_tail_error']:.2f}×")
         wait(5)
         shot(page, "02_reliability.png")
 
@@ -115,7 +116,8 @@ def walkthrough(url: str, shots: Path | None = None, video: Path | None = None, 
         timings["why_flagged_ms"] = round(1000 * (time.perf_counter() - t0))
         ex = _api(url, f"/api/demo/cases/{case['case_id']}/regions/{rid}/explain?lead_day={day}")
         check("why P(bust)", page.inner_text("[data-testid=why-p]"), pct(ex["bust_probability"]))
-        check("why B2", page.inner_text("[data-testid=why-b2]"), pct(ex["b2_probability"]))
+        check("why central error", page.inner_text("[data-testid=why-central]"), f"{ex['expected_error']:.2f}×")
+        check("why upper tail", page.inner_text("[data-testid=why-tail]"), f"{ex['upper_tail_error']:.2f}×")
         check("why support", page.inner_text("[data-testid=why-support]"), ex["support_level"])
         check("why evidence quality", page.inner_text("[data-testid=why-evidence]"), ex["evidence_quality"])
         check("why analogues within radius", page.inner_text("[data-testid=an-within]"),
@@ -157,7 +159,8 @@ def walkthrough(url: str, shots: Path | None = None, video: Path | None = None, 
         wait(4)
         shot(page, "05_priority.png")
         page.click("[data-testid=nav-trust]")
-        page.wait_for_selector("[data-testid=model-table]")
+        page.wait_for_selector("[data-testid=headline-table]")
+        check("served model type", page.inner_text("[data-testid=model-type]").split(" ")[0], "quantile_gradient_boosting")
         wait(5)
         shot(page, "06_model_trust.png")
         page.click("[data-testid=nav-overview]")

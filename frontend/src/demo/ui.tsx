@@ -57,7 +57,7 @@ export function DayControl({ day, onDay, cells }: { day: number; onDay: (d: numb
   );
 }
 
-export type MapMetric = "risk" | "disagreement" | "verified";
+export type MapMetric = "risk" | "tail" | "verified";
 
 export function RegionMap(props: {
   regions: RegionOverview[]; day: number; selected: string | null; onSelect: (id: string) => void;
@@ -68,11 +68,11 @@ export function RegionMap(props: {
   const [hover, setHover] = useState<{ r: RegionOverview; x: number; y: number } | null>(null);
   const metric = props.metric ?? "risk";
   const fill = (c: Cell, rid: string) => {
-    if (metric === "disagreement") {
-      const d = c.disagreement_pp;
-      if (Math.abs(d) < 0.05) return "var(--surface-2)";
-      const a = Math.min(1, Math.abs(d) / 10);
-      return `color-mix(in oklab, var(--surface-2), ${d > 0 ? "var(--series-1)" : "var(--series-2)"} ${a * 100}%)`;
+    if (metric === "tail") {
+      const r = c.upper_tail_error / c.bust_threshold;
+      if (r < 1) return "var(--surface-2)";
+      const a = Math.min(1, 0.25 + (r - 1) / 0.6);
+      return `color-mix(in oklab, var(--surface-2), var(--risk-4) ${a * 100}%)`;
     }
     if (metric === "verified") return props.busts?.get(rid) ? "var(--risk-4)" : "var(--surface-2)";
     return `var(--risk-${riskClass(c.bust_probability)})`;
@@ -116,7 +116,7 @@ export function RegionMap(props: {
         return (
           <div className="tooltip" style={{ left: hover.x, top: hover.y }}>
             <strong>{hover.r.region_id}</strong> · {latlon(hover.r.lat, hover.r.lon)} · Day {props.day}<br />
-            Sentinel {pct(c.bust_probability)} · B2 {pct(c.b2_probability)} · Δ {pp(c.disagreement_pp)}<br />
+            Bust probability {pct(c.bust_probability)} · central error {num(c.expected_error, 2)}× ({num(c.uncertainty_low, 2)}–{num(c.uncertainty_high, 2)}×) · upper tail {num(c.upper_tail_error, 2)}× vs threshold {num(c.bust_threshold, 2)}×<br />
             {c.support_level} · evidence {c.evidence_quality}
           </div>
         );
@@ -127,7 +127,7 @@ export function RegionMap(props: {
             <span key={i}><span className="chip" style={{ background: `var(--risk-${i})` }} />{`${Math.round(lo * 100)}–${Math.min(100, Math.round(RISK_BINS[i + 1] * 100))}%`}</span>
           ))}
           {metric === "risk" && <span>● alert (≥ validation 10%-FAR threshold)</span>}
-          {metric === "disagreement" && <span><span className="chip" style={{ background: "var(--surface-2)" }} />Sentinel = B2 (|Δ| &lt; 0.05 pp) · blue: Sentinel higher · orange: Sentinel lower</span>}
+          {metric === "tail" && <span><span className="chip" style={{ background: "var(--surface-2)" }} />upper-tail error (q95) below the bust threshold · darker red: q95 further above it</span>}
           {metric === "verified" && <span><span className="chip" style={{ background: "var(--risk-4)" }} />verified bust (ERA5)</span>}
           {metric !== "verified" && props.busts && <span>▢ verified bust</span>}
         </div>
@@ -140,14 +140,12 @@ const W = 560, H = 230, M = { l: 44, r: 14, t: 18, b: 30 };
 const xs = (d: number) => M.l + ((d - 1) / 9) * (W - M.l - M.r);
 
 export function Trajectory(props: { days: Cell[]; threshold: number; day: number; onDay: (d: number) => void; busts?: boolean[] }) {
-  const ymax = Math.max(0.3, ...props.days.map((d) => Math.max(d.bust_probability, d.b2_probability, d.b0_probability))) * 1.1;
+  const ymax = Math.max(0.3, ...props.days.map((d) => Math.max(d.bust_probability, d.b0_probability))) * 1.1;
   const ys = (v: number) => H - M.b - (v / ymax) * (H - M.t - M.b);
   const ticks = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1].filter((t) => t <= ymax);
-  const identical = props.days.every((d) => Math.abs(d.bust_probability - d.b2_probability) < 1e-6);
   const series = [
     { key: "b0_probability", label: "B0 climatology", color: "var(--neutral)", dash: "2 3", w: 1.5 },
-    { key: "b2_probability", label: "B2 spread-only baseline", color: "var(--series-2)", dash: undefined, w: 8 },
-    { key: "bust_probability", label: "Sentinel", color: "var(--series-1)", dash: undefined, w: 2.5 },
+    { key: "bust_probability", label: "Calibrated bust probability (v3)", color: "var(--series-1)", dash: undefined, w: 2.5 },
   ] as const;
   return (
     <div>
@@ -171,11 +169,11 @@ export function Trajectory(props: { days: Cell[]; threshold: number; day: number
         {series.map((s) => (
           <g key={s.key}>
             <polyline fill="none" stroke={s.color} strokeWidth={s.w} strokeDasharray={s.dash} strokeLinejoin="round" strokeLinecap="round"
-              opacity={s.key === "b2_probability" ? 0.35 : 1} points={props.days.map((d) => `${xs(d.lead_day)},${ys(d[s.key])}`).join(" ")} />
+              points={props.days.map((d) => `${xs(d.lead_day)},${ys(d[s.key])}`).join(" ")} />
             {s.key === "bust_probability" && props.days.map((d) => (
               <circle key={d.lead_day} cx={xs(d.lead_day)} cy={ys(d[s.key])} r={d.lead_day === props.day ? 5.5 : 3.5} fill={s.color}
                 stroke="var(--surface-1)" strokeWidth={1.5} style={{ cursor: "pointer" }} onClick={() => props.onDay(d.lead_day)}>
-                <title>{`Day ${d.lead_day}: Sentinel ${pct(d.bust_probability)}, B2 ${pct(d.b2_probability)}`}</title>
+                <title>{`Day ${d.lead_day}: bust probability ${pct(d.bust_probability)} (climatology ${pct(d.b0_probability)})`}</title>
               </circle>
             ))}
           </g>
@@ -183,10 +181,52 @@ export function Trajectory(props: { days: Cell[]; threshold: number; day: number
       </svg>
       <div className="legend">
         {series.slice().reverse().map((s) => (
-          <span key={s.key}><svg width="22" height="8"><line x1="0" x2="22" y1="4" y2="4" stroke={s.color} strokeWidth={Math.min(s.w, 6)} strokeDasharray={s.dash} opacity={s.key === "b2_probability" ? 0.45 : 1} /></svg>{s.label}</span>
+          <span key={s.key}><svg width="22" height="8"><line x1="0" x2="22" y1="4" y2="4" stroke={s.color} strokeWidth={Math.min(s.w, 6)} strokeDasharray={s.dash} /></svg>{s.label}</span>
         ))}
         {props.busts && <span>■ verified bust day</span>}
-        {identical && <span data-testid="overlap-note">Sentinel and B2 coincide at every lead day (identical inputs after validation)</span>}
+      </div>
+    </div>
+  );
+}
+
+/** Predicted normalized-error distribution per lead day: q10-q95 whisker, q25-q75 box (central predicted range),
+ * q50 tick (central predicted error), bust threshold as a short dashed mark; verified error after reveal. */
+export function ErrorDistribution(props: { days: Cell[]; day: number; onDay: (d: number) => void; actual?: (number | null)[] }) {
+  const vals = props.days.flatMap((d) => [d.q95, d.bust_threshold]).concat((props.actual ?? []).filter((v): v is number => v != null));
+  const ymax = Math.max(1.5, ...vals) * 1.08;
+  const ys = (v: number) => H - M.b - (v / ymax) * (H - M.t - M.b);
+  const ticks = [0, 0.5, 1, 1.5, 2, 2.5, 3, 4].filter((t) => t <= ymax);
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Predicted error distribution, Day 1-10" data-testid="error-dist">
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={M.l} x2={W - M.r} y1={ys(t)} y2={ys(t)} stroke="var(--grid)" />
+            <text x={M.l - 6} y={ys(t) + 4} textAnchor="end">{t.toFixed(1)}×</text>
+          </g>
+        ))}
+        <rect x={xs(props.day) - 14} y={M.t} width={28} height={H - M.t - M.b} fill="var(--surface-2)" />
+        {props.days.map((d, i) => {
+          const x = xs(d.lead_day);
+          const a = props.actual?.[i];
+          return (
+            <g key={d.lead_day} style={{ cursor: "pointer" }} onClick={() => props.onDay(d.lead_day)}>
+              <title>{`Day ${d.lead_day}: central ${num(d.expected_error, 2)}×, range ${num(d.q25, 2)}–${num(d.q75, 2)}×, upper tail ${num(d.q95, 2)}×, threshold ${num(d.bust_threshold, 2)}×`}</title>
+              <line x1={x} x2={x} y1={ys(d.q10)} y2={ys(d.q95)} stroke="var(--neutral)" strokeWidth={1.5} />
+              <rect x={x - 7} y={ys(d.q75)} width={14} height={Math.max(1, ys(d.q25) - ys(d.q75))} rx={2} fill="var(--series-1)" opacity={0.35} />
+              <line x1={x - 7} x2={x + 7} y1={ys(d.q50)} y2={ys(d.q50)} stroke="var(--series-1)" strokeWidth={2.5} />
+              <line x1={x - 12} x2={x + 12} y1={ys(d.bust_threshold)} y2={ys(d.bust_threshold)} stroke="var(--risk-4)" strokeWidth={1.5} strokeDasharray="3 2" />
+              {a != null && <circle cx={x} cy={ys(a)} r={4} fill="var(--verify)" stroke="var(--surface-1)" strokeWidth={1.5} />}
+              <text x={x} y={H - 10} textAnchor="middle" style={{ fontWeight: d.lead_day === props.day ? 700 : 400 }}>D{d.lead_day}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="legend">
+        <span><svg width="22" height="10"><rect x="4" y="1" width="14" height="8" fill="var(--series-1)" opacity={0.35} /><line x1="4" x2="18" y1="5" y2="5" stroke="var(--series-1)" strokeWidth={2.5} /></svg>central error q50 in central range q25–q75</span>
+        <span><svg width="22" height="10"><line x1="11" x2="11" y1="0" y2="10" stroke="var(--neutral)" strokeWidth={1.5} /></svg>q10–q95 (q95 = upper-tail error)</span>
+        <span><svg width="22" height="8"><line x1="0" x2="22" y1="4" y2="4" stroke="var(--risk-4)" strokeWidth={1.5} strokeDasharray="3 2" /></svg>bust threshold (training Q90)</span>
+        {props.actual && <span>● verified error (after reveal)</span>}
       </div>
     </div>
   );

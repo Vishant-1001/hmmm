@@ -5,7 +5,7 @@ import { demoApi } from "./api";
 import type { Route, Selection } from "./DemoApp";
 import type { Explanation, Fields, ModelSummary, RegionOverview, Reveal, RunResult } from "./types";
 import {
-  Badge, Bar, Card, DayControl, DivergingBar, evidenceKind, latlon, num, pct, pp, RegionMap, SIG_LABEL, Stat,
+  Badge, Bar, Card, DayControl, ErrorDistribution, evidenceKind, latlon, num, pct, RegionMap, SIG_LABEL, Stat,
   supportKind, Trajectory,
 } from "./ui";
 
@@ -21,18 +21,18 @@ function useLoad<T>(fn: () => Promise<T>, deps: unknown[]) {
   return { data, err };
 }
 
-function SentinelB2Note({ run }: { run: RunResult }) {
-  const same = run.model.selected_groups.length === 0;
+function ModelNote({ run }: { run: RunResult }) {
   return (
-    <div className="note" data-testid="sentinel-b2-note">
-      {same
-        ? <><strong>Validated Sentinel = B2 inputs.</strong> No candidate feature group beat the spread-only baseline on 2021 validation, so the
-          Sentinel booster uses B2's six inputs and its probabilities equal B2's. Disagreement is therefore 0 — shown as measured, not adjusted.
-          The added value demonstrated here is the reliability workflow: support/OOD, historical evidence, priority and verification memory.</>
-        : <>Sentinel uses validated groups: {run.model.selected_groups.join(", ")}.</>}
+    <div className="note" data-testid="model-note">
+      <strong>v3 model: quantile gradient boosting.</strong> Six quantile estimators (q10–q95) give a predicted distribution of the
+      normalized Z500 forecast error. Bust probability = P(error &gt; the training Q90 bust threshold), estimated from that
+      distribution and calibrated on validation data. "Central error" is the predicted median (q50), not a guaranteed value;
+      the central range (q25–q75) is not a confidence interval; the upper tail (q95) is not a maximum. {run.model.model_version}.
     </div>
   );
 }
+
+const ratio = (v: number) => `${num(v, 2)}×`;
 
 /* ------------------------------------------------------------------ OVERVIEW */
 export function OverviewScreen({ run, sel, setDay, focus }: { run: RunResult; sel: Selection; setDay: (d: number) => void; focus: (r: string, d: number, route?: Route) => void }) {
@@ -55,9 +55,9 @@ export function OverviewScreen({ run, sel, setDay, focus }: { run: RunResult; se
           <Card title={`Reliability summary · Day ${day}`} testid="overview-summary">
             <div className="stats">
               <Stat label="Regions on alert" value={<span data-testid="n-alerts">{ls.n_alerts}</span>} sub={`of ${run.regions.length}`} emphasis />
-              <Stat label="Mean P(bust)" value={pct(ls.mean_bust_probability)} sub="Sentinel" />
+              <Stat label="Mean P(bust)" value={pct(ls.mean_bust_probability)} sub="calibrated" />
               <Stat label="Max P(bust)" value={pct(ls.max_bust_probability)} />
-              <Stat label="Mean Sentinel − B2" value={pp(ls.mean_disagreement_pp)} />
+              <Stat label="Mean central error" value={ratio(ls.mean_expected_error)} sub={`mean upper tail ${ratio(ls.mean_upper_tail_error)}`} />
             </div>
             <div className="support-row">
               {Object.entries(supportCounts).map(([k, v]) => <Badge key={k} kind={supportKind(k)}>{k}: {v}</Badge>)}
@@ -65,7 +65,7 @@ export function OverviewScreen({ run, sel, setDay, focus }: { run: RunResult; se
           </Card>
           <Card title={`Priority regions · Day ${day}`} right={<span className="muted">transparent priority score</span>}>
             <table className="tbl">
-              <thead><tr><th>Region</th><th>P(bust)</th><th>B2</th><th>Evidence</th><th>Score</th></tr></thead>
+              <thead><tr><th>Region</th><th>P(bust)</th><th>Upper tail</th><th>Evidence</th><th>Score</th></tr></thead>
               <tbody>
                 {top.map((r) => {
                   const c = r.days[day - 1];
@@ -73,7 +73,7 @@ export function OverviewScreen({ run, sel, setDay, focus }: { run: RunResult; se
                     <tr key={r.region_id} className={`clickable ${sel.regionId === r.region_id ? "sel" : ""}`} data-testid={`prio-${r.region_id}`} onClick={() => focus(r.region_id, day, "reliability")}>
                       <td><strong>{r.region_id}</strong> <span className="muted">{latlon(r.lat, r.lon)}</span></td>
                       <td>{pct(c.bust_probability)}{c.alert && <span className="dot" title="alert" />}</td>
-                      <td>{pct(c.b2_probability)}</td>
+                      <td>{ratio(c.upper_tail_error)} <span className="muted">/ {ratio(c.bust_threshold)}</span></td>
                       <td><Badge kind={evidenceKind(c.evidence_quality)}>{c.evidence_quality === "INSUFFICIENT HISTORICAL SUPPORT" ? "INSUFFICIENT" : c.evidence_quality}</Badge></td>
                       <td>{num(c.priority_score, 3)}</td>
                     </tr>
@@ -93,7 +93,7 @@ export function OverviewScreen({ run, sel, setDay, focus }: { run: RunResult; se
           </Card>
         </div>
       </div>
-      <SentinelB2Note run={run} />
+      <ModelNote run={run} />
     </div>
   );
 }
@@ -121,15 +121,20 @@ export function ReliabilityScreen({ run, sel, region, setDay, setRegion, go }: {
           <div className="stats wide" data-testid="reliability-stats">
             <Stat label={`Bust probability · Day ${sel.day}`} value={<span data-testid="rel-p">{pct(c.bust_probability)}</span>} sub={c.alert ? "ALERT (≥ threshold)" : "below alert threshold"} emphasis />
             <Stat label="Reliability confidence" value={<span data-testid="rel-conf">{pct(c.reliability_confidence)}</span>} sub="1 − P(bust)" />
-            <Stat label="Sentinel" value={<span data-testid="rel-sentinel">{pct(c.bust_probability)}</span>} />
-            <Stat label="B2 spread-only" value={<span data-testid="rel-b2">{pct(c.b2_probability)}</span>} />
-            <Stat label="Disagreement" value={<span data-testid="rel-dis">{pp(c.disagreement_pp)}</span>} sub="Sentinel − B2" />
+            <Stat label="Central predicted error" value={<span data-testid="rel-central">{ratio(c.expected_error)}</span>} sub="q50 × normal" />
+            <Stat label="Central predicted range" value={<span data-testid="rel-range">{num(c.uncertainty_low, 2)}–{ratio(c.uncertainty_high)}</span>} sub="q25–q75" />
+            <Stat label="Upper-tail error" value={<span data-testid="rel-tail">{ratio(c.upper_tail_error)}</span>} sub={`q95 · bust threshold ${ratio(c.bust_threshold)}`} />
             <Stat label="Support / OOD" value={<Badge kind={supportKind(c.support_level)}>{c.support_level}</Badge>} sub={`Mahalanobis ${num(c.support_distance)}`} />
           </div>
           <div className="grid-main">
-            <Card title="Day 1–10 reliability trajectory">
-              <Trajectory days={data.trajectory} threshold={data.alert_threshold} day={sel.day} onDay={setDay} />
-            </Card>
+            <div className="stack">
+              <Card title="Day 1–10 bust probability">
+                <Trajectory days={data.trajectory} threshold={data.alert_threshold} day={sel.day} onDay={setDay} />
+              </Card>
+              <Card title="Day 1–10 predicted error distribution">
+                <ErrorDistribution days={data.trajectory} day={sel.day} onDay={setDay} />
+              </Card>
+            </div>
             <Card title="Locate region">
               <RegionMap regions={run.regions} day={sel.day} selected={region.region_id} onSelect={setRegion} compact />
               <button className="btn primary block" data-testid="go-evidence" onClick={() => go("evidence")}>Why flagged? Open evidence for Day {sel.day} →</button>
@@ -138,13 +143,13 @@ export function ReliabilityScreen({ run, sel, region, setDay, setRegion, go }: {
           <Card title="Lead-day table">
             <div className="table-wrap">
               <table className="tbl" data-testid="traj-table">
-                <thead><tr><th>Day</th><th>Valid (UTC)</th><th>Sentinel</th><th>Confidence</th><th>B2</th><th>B0</th><th>Δ</th><th>Spread</th><th>Spread pct</th><th>Support</th><th>Evidence</th><th>Analogues</th></tr></thead>
+                <thead><tr><th>Day</th><th>Valid (UTC)</th><th>P(bust)</th><th>Confidence</th><th>Central error</th><th>Range q25–q75</th><th>Upper tail</th><th>Threshold</th><th>Spread</th><th>Spread pct</th><th>Support</th><th>Evidence</th><th>Analogues</th></tr></thead>
                 <tbody>
                   {data.trajectory.map((d) => (
                     <tr key={d.lead_day} className={`clickable ${d.lead_day === sel.day ? "sel" : ""}`} onClick={() => setDay(d.lead_day)}>
                       <td>D{d.lead_day}{d.alert && <span className="dot" />}</td><td>{d.valid_time.slice(0, 13)}</td>
-                      <td><strong>{pct(d.bust_probability)}</strong></td><td>{pct(d.reliability_confidence)}</td><td>{pct(d.b2_probability)}</td><td>{pct(d.b0_probability)}</td>
-                      <td>{pp(d.disagreement_pp)}</td><td>{num(d.spread_m, 1)} m</td><td>{pct(d.spread_pct, 0)}</td>
+                      <td><strong>{pct(d.bust_probability)}</strong></td><td>{pct(d.reliability_confidence)}</td><td>{ratio(d.expected_error)}</td>
+                      <td>{num(d.uncertainty_low, 2)}–{ratio(d.uncertainty_high)}</td><td>{ratio(d.upper_tail_error)}</td><td>{ratio(d.bust_threshold)}</td><td>{num(d.spread_m, 1)} m</td><td>{pct(d.spread_pct, 0)}</td>
                       <td><Badge kind={supportKind(d.support_level)}>{d.support_level.replace(" SUPPORT", "").replace(" HISTORICAL", "")}</Badge></td>
                       <td><Badge kind={evidenceKind(d.evidence_quality)}>{d.evidence_quality.replace(" HISTORICAL SUPPORT", "")}</Badge></td>
                       <td>{d.analogues_within_radius ?? "—"}</td>
@@ -154,7 +159,7 @@ export function ReliabilityScreen({ run, sel, region, setDay, setRegion, go }: {
               </table>
             </div>
           </Card>
-          <SentinelB2Note run={run} />
+          <ModelNote run={run} />
         </>
       )}
     </div>
@@ -178,23 +183,24 @@ export function EvidenceScreen({ run, sel, region, setDay, go }: { run: RunResul
         <>
           <div className="stats wide" data-testid="why-stats">
             <Stat label="Bust probability" value={<span data-testid="why-p">{pct(x.bust_probability)}</span>} sub={x.alert ? "ALERT" : "below alert threshold"} emphasis />
-            <Stat label="Sentinel risk" value={<span data-testid="why-sentinel">{pct(x.bust_probability)}</span>} />
-            <Stat label="B2 risk" value={<span data-testid="why-b2">{pct(x.b2_probability)}</span>} />
-            <Stat label="Disagreement" value={<span data-testid="why-dis">{pp(x.disagreement_pp)}</span>} />
+            <Stat label="Central predicted error" value={<span data-testid="why-central">{ratio(x.expected_error)}</span>} sub={`range ${num(x.uncertainty_low, 2)}–${ratio(x.uncertainty_high)}`} />
+            <Stat label="Upper-tail error" value={<span data-testid="why-tail">{ratio(x.upper_tail_error)}</span>} sub={`bust threshold ${ratio(x.bust_threshold)}`} />
+            <Stat label="Exceedance (raw → calibrated)" value={<span data-testid="why-exceed">{pct(x.estimated_exceedance_probability, 0)} → {pct(x.calibrated_bust_probability, 0)}</span>} />
             <Stat label="Support / OOD" value={<Badge kind={supportKind(x.support_level)} testid="why-support">{x.support_level}</Badge>} sub={`distance ${num(x.support_distance)}`} />
             <Stat label="Evidence quality" value={<Badge kind={evidenceKind(x.evidence_quality)} testid="why-evidence">{x.evidence_quality}</Badge>} />
           </div>
           <div className="grid-3">
-            <Card title="Model attribution (TreeSHAP)" testid="attribution">
-              <p className="muted small">Starting log-odds (training base) {num(x.attribution.bias_logodds, 2)}; contributions push the Sentinel log-odds up (red) or down (blue).</p>
-              <div className="drivers">
+            <Card title="Why risk is elevated / not elevated" testid="interpretation">
+              <h3>Interpretation <span className="muted">(derived from the numbers on this page)</span></h3>
+              <ul className="evlist" data-testid="why-list">{x.interpretation.map((t) => <li key={t}>{t}</li>)}</ul>
+              <h3>Input evidence <span className="muted">(this row's values for the model's most important inputs)</span></h3>
+              <div className="drivers" data-testid="attribution">
                 {x.attribution.drivers.map((d) => {
-                  const mx = Math.max(...x.attribution.drivers.map((q) => Math.abs(q.contribution_logodds)));
+                  const mx = Math.max(...x.attribution.drivers.map((q) => q.model_importance));
                   return (
                     <div key={d.feature} className="driver" data-testid={`driver-${d.feature}`}>
                       <div className="driver-l"><strong>{d.label}</strong><span className="muted"> = {fmtVal(d.feature, d.value)}{d.train_percentile != null ? ` · ${d.train_percentile.toFixed(0)}th train pct` : ""}</span></div>
-                      <DivergingBar value={d.contribution_logodds} max={mx} />
-                      <div className="driver-v">{d.contribution_logodds > 0 ? "+" : ""}{d.contribution_logodds.toFixed(3)}</div>
+                      <Bar value={d.model_importance} max={mx} color="var(--neutral)" />
                     </div>
                   );
                 })}
@@ -234,7 +240,7 @@ export function EvidenceScreen({ run, sel, region, setDay, go }: { run: RunResul
               <ul className="evlist">
                 {x.evidence.map((e) => <li key={e.kind}><span className="evk">{e.kind}</span>{e.text}</li>)}
               </ul>
-              <h3>Forecast-state context <span className="muted">(computed features the validated model does not use)</span></h3>
+              <h3>Forecast-state context</h3>
               <table className="tbl compact">
                 <tbody>{x.context_features.map((f) => (
                   <tr key={f.feature}><td>{f.label}</td><td>{fmtVal(f.feature, f.value)}</td><td className="muted">{f.train_percentile != null ? `${f.train_percentile.toFixed(0)}th train pct` : "—"}</td></tr>
@@ -246,7 +252,7 @@ export function EvidenceScreen({ run, sel, region, setDay, go }: { run: RunResul
               <button className="btn primary block" data-testid="go-verification" onClick={() => go("verification")}>Go to verification →</button>
             </Card>
           </div>
-          <SentinelB2Note run={run} />
+          <ModelNote run={run} />
         </>
       )}
     </div>
@@ -266,13 +272,13 @@ export function PriorityScreen({ run, focus }: { run: RunResult; focus: (r: stri
       <Card title="Review queue">
         <div className="table-wrap">
           <table className="tbl" data-testid="priority-table">
-            <thead><tr><th>#</th><th>Region</th><th>Day</th><th>Risk</th><th>B2</th><th>Δ</th><th>Support</th><th>Evidence</th><th>Analogues</th><th>Score</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Region</th><th>Day</th><th>Risk</th><th>Central error</th><th>Upper tail</th><th>Support</th><th>Evidence</th><th>Analogues</th><th>Score</th><th></th></tr></thead>
             <tbody>{run.priority_queue.map((q, i) => {
               const r = run.regions.find((x) => x.region_id === q.region_id)!;
               return (
                 <tr key={`${q.region_id}-${q.lead_day}`} className="clickable" onClick={() => focus(q.region_id, q.lead_day, "evidence")}>
                   <td>{i + 1}</td><td><strong>{q.region_id}</strong> <span className="muted">{latlon(r.lat, r.lon)}</span></td><td>D{q.lead_day}</td>
-                  <td><strong>{pct(q.bust_probability)}</strong></td><td>{pct(q.b2_probability)}</td><td>{pp(q.disagreement_pp)}</td>
+                  <td><strong>{pct(q.bust_probability)}</strong></td><td>{ratio(q.expected_error)}</td><td>{ratio(q.upper_tail_error)} <span className="muted">/ {ratio(q.bust_threshold)}</span></td>
                   <td><Badge kind={supportKind(q.support_level)}>{q.support_level.replace(" SUPPORT", "")}</Badge></td>
                   <td><Badge kind={evidenceKind(q.evidence_quality)}>{q.evidence_quality.replace(" HISTORICAL SUPPORT", "")}</Badge></td>
                   <td>{q.analogues_within_radius ?? "—"}</td><td>{num(q.priority_score, 3)}</td><td className="muted">why →</td>
@@ -309,7 +315,7 @@ export function VerificationScreen({ run, sel, region, setDay, revealed, onRevea
         <Card title="Forecast (issued at initialisation)" testid="blind-forecast">
           <div className="stats">
             <Stat label="Predicted bust risk" value={<span data-testid="ver-p">{pct(c.bust_probability)}</span>} sub={c.alert ? "ALERT" : "no alert"} emphasis />
-            <Stat label="B2 risk" value={pct(c.b2_probability)} />
+            <Stat label="Predicted error" value={<span data-testid="ver-central">{ratio(c.expected_error)}</span>} sub={`range ${num(c.uncertainty_low, 2)}–${ratio(c.uncertainty_high)} · tail ${ratio(c.upper_tail_error)}`} />
             <Stat label="Evidence" value={<Badge kind={evidenceKind(c.evidence_quality)}>{c.evidence_quality}</Badge>} />
             <Stat label="Support" value={<Badge kind={supportKind(c.support_level)}>{c.support_level}</Badge>} />
           </div>
@@ -343,6 +349,7 @@ export function VerificationScreen({ run, sel, region, setDay, revealed, onRevea
                 <h3>Expected vs actual</h3>
                 <table className="tbl compact" data-testid="exp-vs-act"><tbody>
                   <tr><td>Predicted risk</td><td>{pct(v.forecast.bust_probability)} ({v.forecast.alert ? "alert" : "no alert"})</td><td>Outcome</td><td>{v.verification.actual_bust ? "bust" : "no bust"}</td></tr>
+                  <tr><td>Predicted error</td><td data-testid="pred-vs-actual">central {ratio(v.forecast.expected_error)}, range {num(v.forecast.uncertainty_low, 2)}–{ratio(v.forecast.uncertainty_high)}, upper tail {ratio(v.forecast.upper_tail_error)}</td><td>Actual error</td><td>{ratio(v.verification.normalized_error)} ({v.verification.normalized_error < v.forecast.uncertainty_low ? "below the central range" : v.verification.normalized_error <= v.forecast.uncertainty_high ? "inside the central range" : v.verification.normalized_error <= v.forecast.upper_tail_error ? "above the central range, within q95" : "above the predicted upper tail"})</td></tr>
                   <tr><td>Expected signature</td><td>{v.comparison.expected_top ? SIG_LABEL[v.comparison.expected_top] : "—"}</td><td>Actual fingerprint</td><td>{v.verification.failure_fingerprint.label}</td></tr>
                   <tr><td colSpan={4} className="muted">{v.comparison.match == null ? v.comparison.note : v.comparison.match ? "Signature expectation MATCHED the verified bust." : `Signature expectation did NOT match (it gave the actual signature ${pct(v.comparison.p_expected_for_actual, 0)}).`}</td></tr>
                 </tbody></table>
@@ -358,11 +365,16 @@ export function VerificationScreen({ run, sel, region, setDay, revealed, onRevea
           <div className="grid-main">
             <Card title={`Verified busts across the domain · Day ${sel.day}`}>
               <RegionMap regions={run.regions} day={sel.day} selected={region.region_id} onSelect={() => undefined} busts={busts} />
-              <p className="muted small" data-testid="case-summary">This case: {v.case_summary.verified_busts} verified bust region-days of {v.case_summary.region_days}; Sentinel issued {v.case_summary.sentinel_alerts} alerts, {v.case_summary.sentinel_hits} of them verified busts; {v.case_summary.hidden_busts} hidden busts.</p>
+              <p className="muted small" data-testid="case-summary">This case: {v.case_summary.verified_busts} verified bust region-days of {v.case_summary.region_days}; the model issued {v.case_summary.model_alerts} alerts, {v.case_summary.model_hits} of them verified busts; {v.case_summary.hidden_busts} hidden busts.</p>
             </Card>
-            <Card title="Forecast vs verification, Day 1–10">
-              <Trajectory days={region.days} threshold={run.alert_threshold} day={sel.day} onDay={setDay} busts={v.trajectory.map((t) => t.actual_bust)} />
-            </Card>
+            <div className="stack">
+              <Card title="Forecast vs verification, Day 1–10">
+                <Trajectory days={region.days} threshold={run.alert_threshold} day={sel.day} onDay={setDay} busts={v.trajectory.map((t) => t.actual_bust)} />
+              </Card>
+              <Card title="Predicted error distribution vs verified error">
+                <ErrorDistribution days={region.days} day={sel.day} onDay={setDay} actual={v.trajectory.map((t) => t.normalized_error)} />
+              </Card>
+            </div>
           </div>
           <Card title="Memory update" testid="memory-update">
             <div className="loopbar">
@@ -383,21 +395,25 @@ export function VerificationScreen({ run, sel, region, setDay, revealed, onRevea
 export function TrustScreen({ model }: { model: ModelSummary | null }) {
   return (
     <div className="screen">
-      <div className="screen-h"><div><h2>Model trust</h2><p className="muted">Genuine evaluation artifacts of the frozen models on the 2022 test year (scored once by v1 and once by v2 after every v2 choice was locked: a disclosed second look). Nothing here is recomputed for the demo.</p></div></div>
+      <div className="screen-h"><div><h2>Model trust</h2><p className="muted">The model running in this demo and its genuine evaluation artifacts. Nothing here is recomputed for the demo.</p></div></div>
       {model && (
         <Card title="Model running in this demo" testid="model-card">
           <table className="tbl compact"><tbody>
-            <tr><td>Model</td><td>{model.model_version} — {model.learner}</td></tr>
+            <tr><td>Model</td><td>{model.model_version} — {model.model_type}</td></tr>
             <tr><td>Artifact</td><td>{model.model_artifact}; {model.exported_from}</td></tr>
             <tr><td>Retrained for demo</td><td>{model.retrained_for_demo ? "yes" : "no"}</td></tr>
             <tr><td>Training</td><td>{model.training_window}</td></tr>
             <tr><td>Calibration</td><td>{model.calibration_window} — {model.calibration}</td></tr>
-            <tr><td>Sentinel inputs</td><td>{model.sentinel_features.join(", ")}</td></tr>
-            <tr><td>B2 inputs</td><td>{model.b2_features.join(", ")}</td></tr>
-            <tr><td>Validated extra groups</td><td>{model.selected_groups.length ? model.selected_groups.join(", ") : "none"} — {model.selection_note}</td></tr>
+            <tr><td>Estimator</td><td data-testid="model-type">{model.model_type} — {model.estimator}; quantiles {model.quantiles.join(", ")}</td></tr>
+            <tr><td>Hyper-parameters</td><td>{Object.entries(model.params).map(([k, v]) => `${k} ${v}`).join(" · ")} (shared by all quantiles)</td></tr>
+            <tr><td>Inputs</td><td>{model.feature_groups.join(" + ")} ({model.features.length} features)</td></tr>
+            <tr><td>Bust probability</td><td>{model.exceedance_method}; then {model.calibration}</td></tr>
+            <tr><td>Quantile crossing</td><td>{model.crossing_correction}</td></tr>
+            <tr><td>Terminology</td><td>{model.expected_error_definition}; {model.uncertainty_definition}</td></tr>
+            <tr><td>Most important inputs (model-level)</td><td>{model.model_level_importance.slice(0, 6).map((m) => m.label).join(", ")}</td></tr>
+            <tr><td>Not used in v3 inference</td><td>B2 spread-only classifier and the v2 Sentinel classifier (archived benchmarks only)</td></tr>
             <tr><td>Alert threshold</td><td>{pct(model.alert_threshold)} — {model.alert_threshold_definition}</td></tr>
             <tr><td>Target</td><td>{model.target}; ERA5 verification</td></tr>
-            <tr><td>Evaluated, not in Sentinel</td><td>{model.not_in_sentinel.length ? model.not_in_sentinel.join(", ") + " — did not pass the validation stability rule" : "none"}</td></tr>
             <tr><td>NCMRWF</td><td>Adapter interface only; no NCMRWF data ingested; no operational integration.</td></tr>
           </tbody></table>
         </Card>

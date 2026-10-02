@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { BarRow, ReliabilityDiagram } from "./Charts";
 
+// Renders artifacts/<served run>/metrics.json as written by forecast_bust.evaluation.run_qgb (v3).
 const f = (v: number | null | undefined, n = 3) => (v == null || Number.isNaN(v) ? "—" : v.toFixed(n));
-const ORDER = ["B0", "B1", "B2", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "ALL", "FULL", "EXP_RESIDUAL_B2"];
-const BIN_LABEL: Record<string, string> = { model_higher: "Sentinel higher than B2 by > 5 pp", agree: "Within ±5 pp", model_lower: "Sentinel lower than B2 by > 5 pp" };
+const QS = ["q10", "q25", "q50", "q75", "q90", "q95"];
 
 export function Analytics() {
   const [m, setM] = useState<any>(null);
@@ -13,148 +13,77 @@ export function Analytics() {
   if (err) return <div className="card err" data-testid="metrics-error">Metrics NOT YET COMPUTED / DATA UNAVAILABLE — {err}</div>;
   if (!m) return <div className="card muted">Loading metrics…</div>;
   const mt = m.metrics;
-  const models = mt.models;
-  const fv = mt.full_vs_b2;
-  const ds = mt.dataset;
+  if (!mt.qgb) return <div className="card muted" data-testid="metrics-error">Served metrics are not in the v3 format.</div>;
+  const q = mt.qgb;
+  const p = q.calibrated_bust_probability;
+  const raw = q.estimated_exceedance_probability_uncalibrated;
+  const d = q.distribution;
+  const refs = mt.references;
+  const maxLead = Math.max(...mt.by_lead_day.map((x: any) => Math.max(x.auprc, x.auprc_B0)), 0.01);
   return (
     <>
       <div className="card" style={{ marginBottom: 12 }}>
-        <h2>Does Sentinel add predictive value beyond ensemble spread? (TEST split, evaluated once)</h2>
-        <p data-testid="verdict" style={{ fontSize: 15 }}>
-          {fv.material_improvement
-            ? <>Material improvement established under the pre-registered rule: AUPRC {f(models.FULL.auprc)} vs {f(models.B2.auprc)} for the calibrated spread-only baseline (B2).</>
-            : <><strong>Incremental predictive value NOT established</strong> under the pre-registered rule: AUPRC {f(models.FULL.auprc)} (Sentinel) vs {f(models.B2.auprc)} (B2).</>}
-          {" "}Difference {f(fv.auprc_gain)} ({(100 * fv.relative_gain).toFixed(1)}% relative), 95% block-bootstrap CI [{f(fv.bootstrap.ci95[0])}, {f(fv.bootstrap.ci95[1])}].
-        </p>
-        <p className="muted">{fv.verdict_rule}. Test base rate {f(mt.test_base_rate)} over {mt.n_test_rows.toLocaleString()} region×day cases.
-          Data: {ds.source}; reference: {ds.reference}.
-          {mt.run && <> Run: <strong>{mt.run}</strong>; Sentinel learner: {mt.sentinel_learner ?? "standard"}; validated feature groups: {(mt.selected_groups ?? []).join(", ") || "none"}.</>}</p>
-        {mt.test_history && <p className="muted" data-testid="test-history"><strong>Test-set history:</strong> {mt.test_history}</p>}
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Split</th><th>Initialisations</th><th>First</th><th>Last</th><th>Bust rate</th></tr></thead>
-            <tbody>{Object.entries(ds.splits).map(([k, v]: any) => (
-              <tr key={k}><td>{k}</td><td>{v.inits}</td><td>{String(v.first_init).slice(0, 13)}</td><td>{String(v.last_init).slice(0, 13)}</td><td>{f(v.bust_rate)}</td></tr>
-            ))}</tbody>
-          </table>
-        </div>
+        <h2>Evaluation — {mt.label}</h2>
+        <p className="muted" data-testid="eval-provenance">{mt.model_type} · experiment {mt.experiment_id} · rows train {mt.rows.train.toLocaleString()} /
+          validation {mt.rows.validation.toLocaleString()} / evaluated {mt.rows.test.toLocaleString()} · bust base rate {f(mt.test_base_rate)}.
+          Discrimination (AUPRC), probabilistic accuracy (Brier), calibration and quantile quality are reported separately: calibration changes
+          probability reliability, not ranking.</p>
+        <table data-testid="headline-table">
+          <thead><tr><th></th><th>AUPRC</th><th>ROC AUC</th><th>Brier</th><th>ECE</th><th>Recall @10% FAR</th><th>Hidden-bust recall</th></tr></thead>
+          <tbody>
+            <tr style={{ fontWeight: 600 }}><td>v3 calibrated bust probability</td><td>{f(p.auprc)}</td><td>{f(p.roc_auc)}</td><td>{f(p.brier)}</td><td>{f(p.ece)}</td>
+              <td>{f(p.recall_at_far_10)}</td><td>{f(p.hidden_bust.hidden_bust_recall)} <span className="muted">(n = {p.hidden_bust.n_hidden_busts})</span></td></tr>
+            <tr><td>v3 estimated exceedance (before calibration)</td><td>{f(raw.auprc)}</td><td>{f(raw.roc_auc)}</td><td>{f(raw.brier)}</td><td>{f(raw.ece)}</td><td>—</td><td>—</td></tr>
+            <tr><td>B0 climatology (reference)</td><td>{f(refs.B0_climatology.auprc)}</td><td>—</td><td>{f(refs.B0_climatology.brier)}</td><td>—</td><td>—</td><td>—</td></tr>
+            {refs.B2_dev_reference && <tr className="muted"><td>B2 spread-only (archival dev reference)</td><td>{f(refs.B2_dev_reference.auprc)}</td><td>—</td>
+              <td>{f(refs.B2_dev_reference.brier)}</td><td>—</td><td>—</td><td>{f(refs.B2_dev_reference.hidden_bust_recall)}</td></tr>}
+            {refs.v2_historical && <tr className="muted"><td>v2 B2 on 2022 (historical, different generation)</td><td>{f(refs.v2_historical.B2.auprc)}</td><td>—</td>
+              <td>{f(refs.v2_historical.B2.brier)}</td><td>—</td><td>—</td><td>{f(refs.v2_historical.B2.hidden_bust_recall)}</td></tr>}
+          </tbody>
+        </table>
+        {refs.QGB_minus_B2_block_bootstrap && <p className="muted small" data-testid="b2-diff">v3 − B2 (dev reference) AUPRC difference: mean {f(refs.QGB_minus_B2_block_bootstrap.mean, 4)}, 95% CI [{f(refs.QGB_minus_B2_block_bootstrap.ci95[0], 4)}, {f(refs.QGB_minus_B2_block_bootstrap.ci95[1], 4)}] (block bootstrap by initialisation day).</p>}
       </div>
-
-      <div className="card" style={{ marginBottom: 12 }}>
-        <h2>Model comparison and ablation (TEST)</h2>
-        <div className="table-wrap">
-          <table data-testid="model-table">
-            <thead><tr><th>Model</th><th>Description</th><th>AUPRC</th><th>ROC AUC</th><th>Brier</th><th>ECE</th>
-              <th>Recall @ FAR 10%</th><th>Hidden-bust recall</th><th>Hidden-bust recall @ FAR 5% / 10%</th><th>Mean lead day of detected busts</th></tr></thead>
-            <tbody>{ORDER.filter((k) => models[k]).map((k) => {
-              const r = models[k];
-              return (
-                <tr key={k} style={k === "FULL" || k === "B2" ? { fontWeight: 600 } : k.startsWith("EXP_") ? { fontStyle: "italic" } : undefined}>
-                  <td>{k}{k.startsWith("EXP_") && <span className="muted"> (experimental, not the Sentinel)</span>}</td><td className="muted">{r.description}</td><td>{f(r.auprc)}</td><td>{f(r.roc_auc)}</td>
-                  <td>{f(r.brier, 4)}</td><td>{f(r.ece, 4)}</td><td>{f(r.recall_at_far_10)}</td>
-                  <td>{f(r.hidden_bust.hidden_bust_recall)}</td>
-                  <td>{r.hidden_bust_at_far ? `${f(r.hidden_bust_at_far.far_5)} / ${f(r.hidden_bust_at_far.far_10)}` : "—"}</td>
-                  <td>{f(r.warning_lead.mean_lead_day_of_detected_busts, 2)}</td>
-                </tr>
-              );
-            })}</tbody>
-          </table>
-        </div>
-        <p className="muted">B1 is a ranking score (spread percentile), so Brier/ECE do not apply. Hidden-bust recall and operating-point
-          metrics use each model's alert threshold chosen on VALIDATION for a 10% false-alarm rate.</p>
-      </div>
-
       <div className="grid2">
         <div className="card">
-          <h2>Calibration (TEST reliability diagram)</h2>
-          {m.calibration ? (
-            <ReliabilityDiagram curves={[
-              { name: "Sentinel (FULL)", color: "var(--series-1)", bins: m.calibration.FULL.test.bins },
-              { name: "Spread baseline (B2)", color: "var(--series-2)", bins: m.calibration.B2.test.bins },
-            ]} />
-          ) : <p className="muted">NOT YET COMPUTED</p>}
-          <p className="muted">{m.calibration?.method}</p>
+          <h2>Predicted error distribution quality</h2>
+          <p>Central (q50) error: MAE {f(d.mae_q50)}, RMSE {f(d.rmse_q50)} · mean pinball loss {f(d.pinball_mean, 4)} · q25–q75 coverage {f(d.central_range_q25_q75_coverage)} (nominal 0.50)</p>
+          <table data-testid="quantile-table"><thead><tr><th>Quantile</th><th>Nominal</th><th>Empirical coverage</th><th>Pinball loss</th></tr></thead>
+            <tbody>{QS.map((k, i) => (
+              <tr key={k}><td>{k}</td><td>{f(mt.quantiles[i], 2)}</td><td>{f(d.coverage[k])}</td><td>{f(d.pinball[k], 4)}</td></tr>
+            ))}</tbody></table>
+          {d.validation_quantile_crossing && <p className="muted small">Quantile crossing before rearrangement (validation): {f(100 * d.validation_quantile_crossing.share_rows_crossing, 2)}% of rows; median size {f(d.validation_quantile_crossing.median_violation_when_crossing)}.</p>}
         </div>
         <div className="card">
-          <h2>AUPRC by lead day (TEST)</h2>
+          <h2>Reliability of the bust probability</h2>
+          <ReliabilityDiagram curves={[
+            { name: "calibrated", color: "var(--series-1)", bins: p.reliability.bins },
+            { name: "before calibration", color: "var(--series-2)", bins: raw.reliability.bins },
+          ]} />
+        </div>
+        <div className="card">
+          <h2>AUPRC by lead day</h2>
           {mt.by_lead_day.map((r: any) => (
-            <div key={r.lead_day}>
-              <div className="muted">Day {r.lead_day} (bust rate {f(r.bust_rate, 2)})</div>
-              <BarRow label="Sentinel" value={r.auprc_FULL} max={Math.max(...mt.by_lead_day.map((x: any) => x.auprc_FULL), 0.01)} />
-              <BarRow label="B2 spread baseline" value={r.auprc_B2} max={Math.max(...mt.by_lead_day.map((x: any) => x.auprc_FULL), 0.01)} color="var(--series-2)" />
+            <div key={r.lead_day} style={{ marginBottom: 6 }}>
+              <div className="muted">Day {r.lead_day} · bust rate {f(r.bust_rate, 2)} · MAE(q50) {f(r.mae_q50)}</div>
+              <BarRow label="v3" value={r.auprc} max={maxLead} />
+              <BarRow label="B0 climatology" value={r.auprc_B0} max={maxLead} color="var(--neutral)" />
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="grid2" style={{ marginTop: 12 }}>
         <div className="card">
-          <h2>Diagnostics</h2>
+          <h2>Operational and regional checks</h2>
           <table><tbody>
-            <tr><td>Peak-risk day error (Sentinel, mean |Δday|)</td><td>{f(models.FULL.peak_risk_day.mean_abs_peak_day_error, 2)} (within ±1 day: {f(models.FULL.peak_risk_day.within_1_day, 2)})</td></tr>
-            <tr><td>Peak-risk day error (B2)</td><td>{f(models.B2.peak_risk_day.mean_abs_peak_day_error, 2)}</td></tr>
-            <tr><td>Spatial overlap, mean Jaccard (Sentinel / B2)</td><td>{f(models.FULL.spatial_overlap.mean_jaccard)} / {f(models.B2.spatial_overlap.mean_jaccard)}</td></tr>
-            <tr><td>Low-spread AUPRC (Sentinel / B2)</td><td>{f(models.FULL.hidden_bust.low_spread_auprc)} / {f(models.B2.hidden_bust.low_spread_auprc)}</td></tr>
-            <tr><td>Q95 sensitivity AUPRC (FULL / B2 / B0)</td><td>{f(mt.q95_sensitivity.FULL.auprc)} / {f(mt.q95_sensitivity.B2.auprc)} / {f(mt.q95_sensitivity.B0.auprc)}</td></tr>
-            <tr><td>Frozen-memory FULL AUPRC</td><td>{f(mt.frozen_memory_sensitivity.auprc)}</td></tr>
-            {m.fingerprint_metrics && <>
-              <tr><td>Failure-signature top-1 agreement (analogues / climatological reference)</td><td>{f(m.fingerprint_metrics.top1_agreement)} / {f(m.fingerprint_metrics.reference_top1_agreement)}</td></tr>
-              <tr><td>Mean probability assigned to actual signature (analogues / reference)</td><td>{f(m.fingerprint_metrics.mean_prob_assigned_to_actual)} / {f(m.fingerprint_metrics.reference_mean_prob_assigned)}</td></tr>
-            </>}
+            <tr><td>Operating point (chosen on validation, 10% FAR)</td><td>threshold {f(p.operating_point.threshold)} · precision {f(p.operating_point.precision)} · recall {f(p.operating_point.recall)}</td></tr>
+            <tr><td>Mean lead day of detected busts</td><td>{f(p.warning_lead.mean_lead_day_of_detected_busts, 2)}</td></tr>
+            <tr><td>Low-spread AUPRC</td><td>{f(p.hidden_bust.low_spread_auprc)}</td></tr>
+            <tr><td>Q95 bust label AUPRC (sensitivity)</td><td>{f(q.q95_sensitivity.auprc)}</td></tr>
+            <tr><td>Peak-risk day error (mean |Δday|)</td><td>{f(q.peak_risk_day.mean_abs_peak_day_error, 2)}</td></tr>
+            <tr><td>Spatial overlap (mean Jaccard)</td><td>{f(q.spatial_overlap.mean_jaccard)}</td></tr>
+            <tr><td>Regional AUPRC (median, 10th–90th pct over {mt.regional_stability.n_regions} regions)</td>
+              <td>{f(mt.regional_stability.auprc_median)} ({f(mt.regional_stability.auprc_p10)}–{f(mt.regional_stability.auprc_p90)})</td></tr>
           </tbody></table>
-          {mt.disagreement_full_vs_b2 && <>
-            <h3>Sentinel vs B2 disagreement (TEST)</h3>
-            <p className="muted">Mean |Δ| {f(mt.disagreement_full_vs_b2.mean_abs_pp, 2)} pp; |Δ| &gt; 5 pp on {(100 * mt.disagreement_full_vs_b2.share_abs_gt_5pp).toFixed(1)}% of cases.
-              In each bin, the lower Brier score marks the probability that matched outcomes better.</p>
-            <table data-testid="disagreement-table"><thead><tr><th>Bin</th><th>n</th><th>Observed bust rate</th><th>Mean p Sentinel / B2</th><th>Brier Sentinel / B2</th></tr></thead>
-              <tbody>{mt.disagreement_full_vs_b2.bins.map((b: any) => (
-                <tr key={b.bin}><td>{BIN_LABEL[b.bin] ?? b.bin}</td><td>{b.n}</td><td>{f(b.observed_bust_rate)}</td>
-                  <td>{f(b.mean_p_model)} / {f(b.mean_p_base)}</td><td>{f(b.brier_model, 4)} / {f(b.brier_base, 4)}</td></tr>
-              ))}</tbody></table>
-          </>}
-          <h3>Evidence strength vs outcome (TEST)</h3>
-          <table><thead><tr><th>Evidence</th><th>n</th><th>Mean Sentinel p</th><th>Observed bust rate</th></tr></thead>
-            <tbody>{mt.by_evidence_level.map((r: any) => (
-              <tr key={r.evidence}><td>{r.evidence}</td><td>{r.n}</td><td>{f(r.mean_p_FULL)}</td><td>{f(r.bust_rate)}</td></tr>
-            ))}</tbody></table>
-        </div>
-        <div className="card">
-          <h2>Spread–skill (IFS ENS, TEST, target regions)</h2>
-          {m.spread_skill ? (
-            <table><thead><tr><th>Day</th><th>RMSE (m)</th><th>Spread (m)</th><th>Spread/skill</th><th>corr(spread, error)</th></tr></thead>
-              <tbody>{m.spread_skill.per_lead.map((r: any) => (
-                <tr key={r.lead_day}><td>{r.lead_day}</td><td>{f(r.rmse_m, 1)}</td><td>{f(r.spread_m, 1)}</td><td>{f(r.spread_skill_ratio, 2)}</td><td>{f(r.corr_spread_error, 2)}</td></tr>
-              ))}</tbody></table>
-          ) : <p className="muted">NOT YET COMPUTED</p>}
-          {m.spread_skill && <RankHist counts={Object.values(m.spread_skill.rank_histogram_by_lead_day as Record<string, number[]>)
-            .reduce((a: number[], c: number[]) => a.map((x, i) => x + c[i]))} />}
-          <p className="muted">{m.spread_skill?.note}</p>
         </div>
       </div>
     </>
-  );
-}
-
-function RankHist({ counts }: { counts: number[] }) {
-  const tot = counts.reduce((a, b) => a + b, 0);
-  const mx = Math.max(...counts);
-  const W = 500, H = 120;
-  const bw = W / counts.length;
-  return (
-    <div>
-      <h3>Rank histogram of ERA5 among 50 members (all lead days)</h3>
-      <svg viewBox={`0 0 ${W} ${H + 16}`} width="100%" role="img" aria-label="Rank histogram">
-        <line x1={0} x2={W} y1={H - (H * (tot / counts.length)) / mx} y2={H - (H * (tot / counts.length)) / mx}
-          stroke="var(--text-muted)" strokeDasharray="4 3" />
-        {counts.map((c, i) => (
-          <rect key={i} x={i * bw + 1} y={H - (H * c) / mx} width={bw - 2} height={(H * c) / mx} rx={1} fill="var(--series-1)">
-            <title>{`rank ${i}: ${c} (${((100 * c) / tot).toFixed(1)}%)`}</title>
-          </rect>
-        ))}
-        <text x={0} y={H + 13}>rank 0</text>
-        <text x={W} y={H + 13} textAnchor="end">rank 50</text>
-      </svg>
-      <div className="muted">Dashed line = flat (perfectly dispersed) expectation. U-shape indicates under-dispersion.</div>
-    </div>
   );
 }
