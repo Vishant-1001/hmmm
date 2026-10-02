@@ -1,0 +1,16 @@
+{
+ "fitted_on": "train initialisations only, all Day 1-10 leads pooled",
+ "field": "ensemble-mean Z500 anomaly vs ERA5 1990-2017 climatology, sqrt(cos lat) weighted, context domain",
+ "n_components": 8,
+ "explained_variance_ratio": [
+  0.19097,
+  0.13559,
+  0.08863,
+  0.07854,
+  0.05003,
+  0.04375,
+  0.03824,
+  0.03096
+ ],
+ "n_train_fields": 10960
+}

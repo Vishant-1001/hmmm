@@ -1,0 +1,77 @@
+{
+ "forecast": {
+  "provider": "ECMWF, redistributed by Google Research WeatherBench 2 (public bucket gs://weatherbench2)",
+  "documentation": "https://weatherbench2.readthedocs.io/en/latest/data-guide.html",
+  "access": "anonymous read via gcsfs/xarray (storage_options token=anon)",
+  "source_name": "ECMWF IFS ENS (operational ensemble), WB2 64x32 conservative regrid",
+  "source_url": "gs://weatherbench2/datasets/ifs_ens/2018-2022-64x32_equiangular_conservative.zarr",
+  "dataset_version": "2018-2022 archive as listed in bucket",
+  "download_date": "see block files",
+  "temporal_coverage": "2018-01-01T00 .. 2022-12-31T12 (1828 initialisations, 00/12 UTC)",
+  "sampling": "every 2nd store chunk of 4 initialisations (457 chunks cached) - bandwidth constraint (~1 MB/s)",
+  "spatial_coverage": "context lat -30.937499999999996..64.68750000000001, lon 22.5..146.25",
+  "grid": "64x32 equiangular conservative (5.625 deg)",
+  "variables": "geopotential at 500, 700, 850 hPa",
+  "ensemble_structure": "50 perturbed members (control not included in WB2 store)",
+  "lead_times": "24..240 h every 24 h (Day 1..10)",
+  "preprocessing": "domain subset; Z/9.80665 -> metres; ensemble mean and std (ddof=1); member percentiles/skewness at target boxes",
+  "role": {
+   "embargo": {
+    "first_init": "2020-12-24 00:00:00",
+    "last_init": "2021-12-31 12:00:00",
+    "n_inits": 18
+   },
+   "test": {
+    "first_init": "2022-01-01 00:00:00",
+    "last_init": "2022-12-31 12:00:00",
+    "n_inits": 366
+   },
+   "train": {
+    "first_init": "2018-01-01 00:00:00",
+    "last_init": "2020-12-29 12:00:00",
+    "n_inits": 1096
+   },
+   "validation": {
+    "first_init": "2021-01-01 00:00:00",
+    "last_init": "2021-12-28 12:00:00",
+    "n_inits": 364
+   }
+  }
+ },
+ "reference": {
+  "provider": "ECMWF, redistributed by Google Research WeatherBench 2 (public bucket gs://weatherbench2)",
+  "documentation": "https://weatherbench2.readthedocs.io/en/latest/data-guide.html",
+  "access": "anonymous read via gcsfs/xarray (storage_options token=anon)",
+  "source_name": "ERA5 reanalysis (WB2 64x32 conservative regrid)",
+  "source_url": "gs://weatherbench2/datasets/era5/1959-2023_01_10-6h-64x32_equiangular_conservative.zarr",
+  "role": "verification reference only (labels)",
+  "note": "ERA5 is a reanalysis/reference product and is not perfect truth.",
+  "preprocessing": "geopotential/9.80665 at valid time = init + lead"
+ },
+ "climatology": {
+  "provider": "ECMWF, redistributed by Google Research WeatherBench 2 (public bucket gs://weatherbench2)",
+  "documentation": "https://weatherbench2.readthedocs.io/en/latest/data-guide.html",
+  "access": "anonymous read via gcsfs/xarray (storage_options token=anon)",
+  "source_name": "ERA5 1990-2017 hour-of-day x day-of-year climatology (WB2)",
+  "source_url": "gs://weatherbench2/datasets/era5-hourly-climatology/1990-2017_6h_64x32_equiangular_conservative.zarr",
+  "role": "anomaly reference for features; pre-dates all experiment years (no leakage)"
+ },
+ "derived": {
+  "regions": "native 5.625 deg boxes with centres inside 5S-40N, 60E-105E (64 regions)",
+  "labels": "artifacts/thresholds.json",
+  "normalisation": "artifacts/preprocessing.json"
+ },
+ "licensing": "ERA5: Copernicus licence (LICENSE file in bucket). IFS ENS: ECMWF data terms - verify the WeatherBench 2 licence notes before redistribution. Raw data is NOT committed to git.",
+ "forecast_extras": {
+  "provider": "ECMWF, redistributed by Google Research WeatherBench 2 (public bucket gs://weatherbench2)",
+  "documentation": "https://weatherbench2.readthedocs.io/en/latest/data-guide.html",
+  "access": "anonymous read via gcsfs/xarray (storage_options token=anon)",
+  "source_name": "ECMWF IFS ENS, same store and initialisations",
+  "source_url": "gs://weatherbench2/datasets/ifs_ens/2018-2022-64x32_equiangular_conservative.zarr",
+  "variables": "u, v at 500/700/850 hPa; mean sea-level pressure",
+  "preprocessing": "members reduced to ensemble mean and std (ddof=1) at download; anomalies vs ERA5 1990-2017 climatology; vorticity/divergence by spherical centred differences on the 5.625 deg grid",
+  "cache": "data/cache/ens_extra (457/457 blocks, artifacts/extras_validation.json)",
+  "role": "DYN feature group (features.dynamics)"
+ },
+ "not_used": "No NCMRWF data is used; NCMRWF NEPS integration is architected (adapter interface) but not claimed."
+}
