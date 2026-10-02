@@ -1,0 +1,122 @@
+{
+ "acc_coverage": {
+  "test": 1.0,
+  "train": 1.0,
+  "validation": 1.0
+ },
+ "invalid_acc_rows": {
+  "test": 0,
+  "train": 0,
+  "validation": 0
+ },
+ "splits": {
+  "test": {
+   "rows": 234240,
+   "pattern_bust_prevalence": 0.010275785519125682,
+   "magnitude_bust_prevalence": 0.08718835382513661,
+   "pattern_failure_prevalence": 0.08653517759562841,
+   "share_of_magnitude_busts_that_are_pattern_busts": 0.11785731773001028,
+   "share_of_pattern_failures_that_are_magnitude_busts": 0.118746916625555,
+   "joint_vs_independence_ratio": 1.361958465963375,
+   "positive_rows": 2407,
+   "positive_inits": 343,
+   "n_inits": 366,
+   "hidden_pattern_busts": 353,
+   "positives_by_lead": {
+    "1": 285,
+    "2": 213,
+    "3": 206,
+    "4": 218,
+    "5": 255,
+    "6": 255,
+    "7": 208,
+    "8": 252,
+    "9": 241,
+    "10": 274
+   },
+   "positives_by_region": {
+    "min": 13,
+    "median": 36.5,
+    "max": 92
+   },
+   "local_acc_quantiles": {
+    "0.01": -0.43773339033126835,
+    "0.1": 0.36150453388690956,
+    "0.5": 0.8999577760696411,
+    "0.9": 0.9903997480869293
+   }
+  },
+  "train": {
+   "rows": 464256,
+   "pattern_bust_prevalence": 0.013733802040253653,
+   "magnitude_bust_prevalence": 0.10214407568238214,
+   "pattern_failure_prevalence": 0.10215053763440861,
+   "share_of_magnitude_busts_that_are_pattern_busts": 0.13445519917336202,
+   "share_of_pattern_failures_that_are_magnitude_busts": 0.13444669365721998,
+   "joint_vs_independence_ratio": 1.3162456340129123,
+   "positive_rows": 6376,
+   "positive_inits": 710,
+   "n_inits": 730,
+   "hidden_pattern_busts": 1083,
+   "positives_by_lead": {
+    "1": 603,
+    "2": 596,
+    "3": 585,
+    "4": 640,
+    "5": 615,
+    "6": 596,
+    "7": 625,
+    "8": 666,
+    "9": 719,
+    "10": 731
+   },
+   "positives_by_region": {
+    "min": 56,
+    "median": 99.0,
+    "max": 150
+   },
+   "local_acc_quantiles": {
+    "0.01": -0.520782607793808,
+    "0.1": 0.2829185426235199,
+    "0.5": 0.8823624849319458,
+    "0.9": 0.9889008104801178
+   }
+  },
+  "validation": {
+   "rows": 230144,
+   "pattern_bust_prevalence": 0.011996836763070078,
+   "magnitude_bust_prevalence": 0.10027200361512792,
+   "pattern_failure_prevalence": 0.09934215100111235,
+   "share_of_magnitude_busts_that_are_pattern_busts": 0.11964293452355158,
+   "share_of_pattern_failures_that_are_magnitude_busts": 0.12076280453133885,
+   "joint_vs_independence_ratio": 1.2043521638887396,
+   "positive_rows": 2761,
+   "positive_inits": 328,
+   "n_inits": 364,
+   "hidden_pattern_busts": 356,
+   "positives_by_lead": {
+    "1": 277,
+    "2": 263,
+    "3": 265,
+    "4": 256,
+    "5": 251,
+    "6": 274,
+    "7": 302,
+    "8": 248,
+    "9": 275,
+    "10": 350
+   },
+   "positives_by_region": {
+    "min": 19,
+    "median": 42.5,
+    "max": 83
+   },
+   "local_acc_quantiles": {
+    "0.01": -0.5249494475126266,
+    "0.1": 0.29428193867206576,
+    "0.5": 0.8894530534744263,
+    "0.9": 0.989659708738327
+   }
+  }
+ }
+}
