@@ -2,15 +2,16 @@
 
 On every case run the engine:
   1. loads the stored forecast-state inputs of one real initialisation (64 regions x Day 1-10),
-  2. runs the frozen B0 climatology, the B2 spread-only booster and the Sentinel (FULL) booster,
-     then their validation-fitted isotonic calibrators,
+  2. runs the frozen v3 quantile-gradient-boosting family (six HistGradientBoostingRegressor quantile
+     estimators -> estimated exceedance probability at the TRAIN-only Q90 threshold -> validation-fitted
+     isotonic calibrator) and the B0 climatology reference (B2 / the old Sentinel are not used),
   3. queries the historical forecast-state memory (analogues verified no later than the init time),
   4. computes support / OOD distance, evidence strength, review priority,
-  5. computes TreeSHAP attributions of the Sentinel booster for explanations (per region-day, on first
-     request; a row's TreeSHAP values do not depend on the other rows).
+  5. builds explanations from the model output, this row's input values and model-level importance
+     (no per-row attribution is fabricated).
 
 Nothing here is a lookup of precomputed probabilities: predictions come from the exported
-boosters (artifacts/demo/model/) evaluated on the stored inputs. Verification (ERA5) is read
+quantile estimators (artifacts/demo/model/v3/) evaluated on the stored inputs. Verification (ERA5) is read
 from a separate file, and only by `reveal()`.
 """
 from __future__ import annotations
@@ -24,13 +25,13 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import xgboost as xgb
 
 from forecast_bust.config import model_config
 from forecast_bust.demo.build import SERVED_DEMO_DIR
-from forecast_bust.explainability.explain import FEATURE_LABELS, explain_row
-from forecast_bust.explainability.priority import EVIDENCE_NAMES, formula, priority_score
+from forecast_bust.explainability.explain import FEATURE_LABELS, explain_row_v3
+from forecast_bust.explainability.priority import EVIDENCE_NAMES, formula_v3, priority_score_v3
 from forecast_bust.labels.signature import CLASSES, LABELS
+from forecast_bust.models.qgb import QCOLS, V3PredictiveModel
 from forecast_bust.support.ood import SUPPORT_LEVELS, evidence_strength, support_distance
 
 
@@ -38,36 +39,11 @@ class CaseNotFound(KeyError):
     pass
 
 
-class Calibrated:
-    """Exported XGBoost booster + isotonic calibrator (identical to CalibratedGBM.predict)."""
-
-    def __init__(self, spec: dict, root: Path):
-        self.features = spec["features"]
-        self.best_iteration = spec["best_iteration"]
-        self.booster = xgb.Booster()
-        self.booster.load_model(root / spec["booster"])
-        self.iso_x = np.asarray(spec["isotonic"]["x"])
-        self.iso_y = np.asarray(spec["isotonic"]["y"])
-
-    def _dm(self, df: pd.DataFrame) -> xgb.DMatrix:
-        return xgb.DMatrix(df[self.features])
-
-    def predict_raw(self, df: pd.DataFrame) -> np.ndarray:
-        return self.booster.predict(self._dm(df), iteration_range=(0, self.best_iteration + 1))
-
-    def calibrate(self, raw: np.ndarray) -> np.ndarray:
-        return np.interp(raw, self.iso_x, self.iso_y)
-
-    def contributions(self, df: pd.DataFrame) -> np.ndarray:
-        return self.booster.predict(self._dm(df), pred_contribs=True, iteration_range=(0, self.best_iteration + 1))
-
-
 @dataclass
 class CaseRun:
     case_id: str
     meta: dict
     rows: pd.DataFrame                   # 640 rows, forecast state + model outputs (no verification)
-    contrib: dict                        # row -> Sentinel TreeSHAP (n_features + 1), filled on demand
     neighbours: list                     # per row: (memory indices, distances)
     timings_ms: dict = field(default_factory=dict)
 
@@ -80,8 +56,8 @@ class Engine:
         self.registry = json.loads((demo_dir / "registry.json").read_text())
         self.meta = json.loads((demo_dir / "model_meta.json").read_text())
         spec = json.loads((demo_dir / "model" / "models.json").read_text())
-        self.sentinel = Calibrated(spec["FULL"], demo_dir)
-        self.b2 = Calibrated(spec["B2"], demo_dir)
+        self.model = V3PredictiveModel(demo_dir / "model" / "v3")
+        self.importance = self.model.metadata["model_level_importance"]["values"]
         b0 = spec["B0"]
         self.b0_table = pd.DataFrame(b0["table"])
         self.b0_group = b0["group"]
@@ -202,34 +178,40 @@ class Engine:
             rows = pd.read_parquet(self.dir / "cases" / case_id / "forecast_state.parquet")
             rows = rows.sort_values(["region_id", "lead_day"]).reset_index(drop=True)
             t["load_inputs"] = time.perf_counter() - t0
-            # memory first: the Sentinel may use MEM features (v2), which exist only after the causal lookup
+            # memory first: the model uses MEM features, which exist only after the causal lookup
             t0 = time.perf_counter()
             rows, neigh = self.memory_lookup(rows)
             t["memory_lookup"] = time.perf_counter() - t0
             t0 = time.perf_counter()
-            rows["p_sentinel"] = self.sentinel.calibrate(self.sentinel.predict_raw(rows))
-            rows["p_b2"] = self.b2.calibrate(self.b2.predict_raw(rows))
+            out = self.model.predict(rows)
+            for c in out.columns:
+                rows[c] = out[c].to_numpy()
             rows["p_b0"] = self.b0_predict(rows)
             t["model_inference"] = time.perf_counter() - t0
             t0 = time.perf_counter()
             dist, lvl = support_distance(rows, self.support)
             rows["support_distance"], rows["support_level"] = dist, lvl
             rows["evidence_level"] = evidence_strength(lvl, rows["an_n_within"].to_numpy(), rows["an_bust_rate"].to_numpy(),
-                                                       rows["p_sentinel"].to_numpy(), self.kmin)
-            rows["priority"] = priority_score(rows["p_sentinel"].to_numpy(), rows["p_b2"].to_numpy(),
-                                              rows["lead_day"].to_numpy(), rows["evidence_level"].to_numpy())
+                                                       rows["calibrated_bust_probability"].to_numpy(), self.kmin)
+            rows["priority"] = priority_score_v3(rows["calibrated_bust_probability"].to_numpy(), rows["q95"].to_numpy(),
+                                                 rows["q_primary"].to_numpy(), rows["lead_day"].to_numpy(),
+                                                 rows["evidence_level"].to_numpy())
             t["support_evidence_priority"] = time.perf_counter() - t0
-            run = CaseRun(case_id, entry, rows, {}, neigh,
+            run = CaseRun(case_id, entry, rows, neigh,
                           {k: round(1000 * v, 1) for k, v in t.items()} | {"total": round(1000 * sum(t.values()), 1)})
             self._cache[case_id] = run
             return run
 
     # ---------------- views ----------------
     def _cell(self, r: pd.Series) -> dict:
-        p, b2 = float(r["p_sentinel"]), float(r["p_b2"])
-        return {"lead_day": int(r["lead_day"]), "valid_time": str(r["valid_time"]), "bust_probability": p,
-                "reliability_confidence": 1 - p, "b2_probability": b2, "b0_probability": float(r["p_b0"]),
-                "disagreement_pp": 100 * (p - b2), "alert": bool(p >= self.threshold),
+        p = float(r["calibrated_bust_probability"])
+        q = {c: float(r[c]) for c in QCOLS}
+        return {"lead_day": int(r["lead_day"]), "valid_time": str(r["valid_time"]), "model_type": self.model.model_type,
+                "expected_error": q["q50"], **q, "uncertainty_low": q["q25"], "uncertainty_high": q["q75"],
+                "upper_tail_error": q["q95"], "bust_threshold": float(r["q_primary"]),
+                "estimated_exceedance_probability": float(r["estimated_exceedance_probability"]),
+                "calibrated_bust_probability": p, "bust_probability": p, "reliability_confidence": 1 - p,
+                "b0_probability": float(r["p_b0"]), "alert": bool(p >= self.threshold),
                 "spread_m": float(r["spread_m"]), "spread_pct": _f(r["spread_pct"]),
                 "support_level": SUPPORT_LEVELS[int(r["support_level"])], "support_distance": _f(r["support_distance"]),
                 "evidence_quality": EVIDENCE_NAMES[int(r["evidence_level"])],
@@ -250,13 +232,14 @@ class Engine:
                             "alert_days": [c["lead_day"] for c in cells if c["alert"]], "days": cells})
         queue = run.rows.sort_values("priority", ascending=False).head(20)
         return {"case": run.meta, "model": self.model_summary(), "timings_ms": run.timings_ms,
-                "alert_threshold": self.threshold, "priority_formula": formula(),
+                "alert_threshold": self.threshold, "priority_formula": formula_v3(),
                 "regions": regions,
                 "priority_queue": [{"region_id": r["region_id"], **self._cell(r)} for _, r in queue.iterrows()],
-                "lead_summary": [{"lead_day": d, "mean_bust_probability": float(g["p_sentinel"].mean()),
-                                  "max_bust_probability": float(g["p_sentinel"].max()),
-                                  "n_alerts": int((g["p_sentinel"] >= self.threshold).sum()),
-                                  "mean_disagreement_pp": float(100 * (g["p_sentinel"] - g["p_b2"]).mean())}
+                "lead_summary": [{"lead_day": d, "mean_bust_probability": float(g["calibrated_bust_probability"].mean()),
+                                  "max_bust_probability": float(g["calibrated_bust_probability"].max()),
+                                  "n_alerts": int((g["calibrated_bust_probability"] >= self.threshold).sum()),
+                                  "mean_expected_error": float(g["q50"].mean()),
+                                  "mean_upper_tail_error": float(g["q95"].mean())}
                                  for d, g in run.rows.groupby("lead_day")],
                 "blind": True}
 
@@ -290,10 +273,9 @@ class Engine:
         run = self.run(case_id)
         i, r = self._row(run, region_id, lead_day)
         cell = self._cell(r)
-        if i not in run.contrib:
-            run.contrib[i] = self.sentinel.contributions(run.rows.iloc[[i]])[0]
-        ex = explain_row(r, run.contrib[i], self.sentinel.features, self.ref, cell["bust_probability"],
-                         cell["b2_probability"], self.base_rate)
+        ex = explain_row_v3(r, {c: cell[c] for c in QCOLS}, cell["bust_threshold"],
+                            cell["estimated_exceedance_probability"], cell["calibrated_bust_probability"],
+                            self.importance, self.model.features, self.ref, self.base_rate)
         cand, dk = run.neighbours[i]
         analogues = []
         for j, d in list(zip(cand, dk))[:8]:
@@ -302,7 +284,7 @@ class Engine:
                               "bust": int(a["bust"]), "normalized_error": float(a["norm_error"]),
                               "signature": a["sig_class"] if int(a["bust"]) else None,
                               "split": a["split"]})
-        context = []  # forecast-state values of features the validated model does NOT use (context only)
+        context = []  # display context: forecast-state values with training percentiles
         for f in ["anom500", "grad_mag", "m_sign_agree", "m_p10p90", "spread_nbhd", "spread_growth", "pc_norm",
                   "rev_nbhd", "rec_err"]:
             v = _f(r.get(f))
@@ -311,13 +293,11 @@ class Engine:
             if v is not None and ref is not None:
                 pct = float(np.searchsorted(ref, abs(v) if f == "anom500" else v, side="right") / len(ref) * 100)
             context.append({"feature": f, "label": FEATURE_LABELS.get(f, f), "value": v, "train_percentile": pct})
-        bias = float(run.contrib[i][-1])
         return {"case_id": case_id, "region_id": region_id, "lead_day": lead_day, **cell,
-                "attribution": {"method": "TreeSHAP on the Sentinel booster (log-odds, before isotonic calibration)",
-                                "bias_logodds": bias, "drivers": ex["drivers"],
-                                "groups": {g: v["contribution_logodds"] for g, v in ex["groups"].items()},
-                                "note": ex["attribution_note"]},
-                "evidence": ex["evidence"],
+                "attribution": {"method": "model-level permutation importance (q90 estimator, validation); "
+                                          "not a per-row attribution",
+                                "drivers": ex["drivers"], "groups": ex["groups"], "note": ex["attribution_note"]},
+                "evidence": ex["evidence"], "interpretation": ex["interpretation"],
                 "analogue_summary": {"k": self.k, "radius": self.radius, "rule": "same region and lead day; "
                                      "verified (valid_time) no later than this initialisation",
                                      "verified_cases_available": cell["verified_cases_available"],
@@ -329,7 +309,7 @@ class Engine:
                                      "nearest": analogues},
                 "failure_signature": self.expected_signature(cand),
                 "context_features": context,
-                "model_inputs": {f: _f(r[f]) for f in self.sentinel.features}}
+                "model_inputs": {f: _f(r[f]) for f in self.model.features}}
 
     # ---------------- verification (only on explicit reveal) ----------------
     @lru_cache(maxsize=16)
@@ -349,13 +329,15 @@ class Engine:
         # initialisation whose init_time >= its valid_time.
         lo, hi = self.mem_groups[(region_id, lead_day)]
         n_before = int(cell["verified_cases_available"] or 0)
-        alerts = run.rows["p_sentinel"].to_numpy() >= self.threshold
+        alerts = run.rows["calibrated_bust_probability"].to_numpy() >= self.threshold
         order = run.rows[["region_id", "lead_day"]].apply(tuple, axis=1).tolist()
         vmap = {(x["region_id"], d["lead_day"]): d["bust"] for x in v["regions"] for d in x["days"]}
         busts = np.array([vmap[k] for k in order])
         return {"case_id": case_id, "region_id": region_id, "lead_day": lead_day,
                 "reference": v["reference"],
-                "forecast": {"bust_probability": cell["bust_probability"], "b2_probability": cell["b2_probability"],
+                "forecast": {"bust_probability": cell["bust_probability"], "expected_error": cell["expected_error"],
+                             "uncertainty_low": cell["uncertainty_low"], "uncertainty_high": cell["uncertainty_high"],
+                             "upper_tail_error": cell["upper_tail_error"], "bust_threshold": cell["bust_threshold"],
                              "alert": cell["alert"], "expected_signature": exp},
                 "verification": {"actual_bust": bool(day["bust"]), "normalized_error": day["normalized_error"],
                                  "threshold_q90": day["threshold_q90"], "error_m": day["error_m"],
@@ -373,7 +355,7 @@ class Engine:
                                 "normalized_error": d["normalized_error"], "threshold_q90": d["threshold_q90"],
                                 "signature": d["signature"]} for d in sorted(reg["days"], key=lambda d: d["lead_day"])],
                 "case_summary": {"region_days": int(len(busts)), "verified_busts": int(busts.sum()),
-                                 "sentinel_alerts": int(alerts.sum()), "sentinel_hits": int((alerts & (busts == 1)).sum()),
+                                 "model_alerts": int(alerts.sum()), "model_hits": int((alerts & (busts == 1)).sum()),
                                  "hidden_busts": v["summary"]["n_hidden_bust_region_days"]},
                 "bust_map": [{"region_id": x["region_id"], "lead_day": d["lead_day"], "bust": d["bust"],
                               "signature": d["signature"]} for x in v["regions"] for d in x["days"]],
@@ -396,13 +378,19 @@ class Engine:
         return json.loads((self.dir / "cases" / case_id / "fields.json").read_text())
 
     def model_summary(self) -> dict:
-        m = {"not_in_sentinel": [], **self.meta}  # v1 bundles predate this field
-        return {k: m.get(k) for k in ("model_version", "model_artifact", "exported_from", "retrained_for_demo",
-                                      "training_window", "calibration_window", "calibration", "learner",
-                                      "sentinel_features", "b2_features", "selected_groups", "selection_note",
-                                      "not_in_sentinel", "alert_threshold", "alert_threshold_definition",
-                                      "confidence_definition", "target")}
-
+        md = self.model.metadata
+        top = list(self.importance.items())[:10]
+        return {"model_type": self.model.model_type, "estimator": md["estimator"],
+                **{k: self.meta.get(k) for k in ("model_version", "model_artifact", "exported_from", "retrained_for_demo",
+                                                 "training_window", "calibration_window", "calibration",
+                                                 "alert_threshold", "alert_threshold_definition",
+                                                 "confidence_definition", "target", "expected_error_definition",
+                                                 "uncertainty_definition")},
+                "quantiles": md["quantiles"], "params": md["params"], "features": md["features"],
+                "feature_groups": md["feature_groups"], "exceedance_method": md["exceedance_method"],
+                "crossing_correction": md["crossing_correction"],
+                "model_level_importance": [{"feature": f, "label": FEATURE_LABELS.get(f, f), "importance": v}
+                                           for f, v in top]}
 
 def _f(x):
     try:

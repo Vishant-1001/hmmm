@@ -77,32 +77,8 @@ def train_percentile(value: float, ref_sorted: np.ndarray) -> float | None:
     return float(np.searchsorted(ref_sorted, value, side="right") / len(ref_sorted) * 100)
 
 
-def explain_row(row: pd.Series, contrib_row: np.ndarray, features: list[str], ref: dict,
-                p_full: float, p_b2: float, base_rate: float, top: int = 6,
-                baseline_logodds: float | None = None) -> dict:
-    """Structured explanation for one (init, region, lead) case.
-
-    `baseline_logodds`: for the residual learner, the B2 spread-baseline margin the trees start
-    from; the feature contributions then describe only the adjustment beyond B2."""
-    c = contrib_row[:-1]
-    order = np.argsort(-np.abs(c))[:top]
-    drivers = []
-    for i in order:
-        f = features[i]
-        v = row.get(f, np.nan)
-        v = float(v) if v is not None and np.isfinite(v) else None
-        drivers.append({"feature": f, "label": FEATURE_LABELS.get(f, f), "group": feature_group(f),
-                        "value": v, "train_percentile": train_percentile(v, ref.get(f)) if v is not None else None,
-                        "contribution_logodds": float(c[i]),
-                        "direction": "raises risk" if c[i] > 0 else "lowers risk"})
-    groups = {}
-    for g, fs in GROUPS.items():
-        idx = [i for i, f in enumerate(features) if f in fs]
-        if idx:
-            groups[g] = {"name": GROUP_NAMES[g], "contribution_logodds": float(c[idx].sum())}
-    if baseline_logodds is not None:
-        groups = {"BASE": {"name": "Spread baseline B2 (starting log-odds)",
-                           "contribution_logodds": float(baseline_logodds)}, **groups}
+def _state_evidence(row: pd.Series, ref: dict, base_rate: float) -> list[dict]:
+    """Evidence items A-D: forecast-state values and causal historical memory (shared by v2/v3)."""
     ev = []
     sp = row.get("spread_pct")
     if sp is not None and np.isfinite(sp):
@@ -141,6 +117,36 @@ def explain_row(row: pd.Series, contrib_row: np.ndarray, features: list[str], re
                            f"normalized error {row['rec_err']:.2f} (mean error {row['rec_bias']:+.1f} m; "
                            f"{100 * row['rec_bust_rate']:.0f}% busts, n = {int(row['rec_n'])}); neighbouring regions "
                            f"{row['rec_err_nbhd']:.2f}, whole domain {row['rec_err_domain']:.2f}."})
+    return ev
+
+
+def explain_row(row: pd.Series, contrib_row: np.ndarray, features: list[str], ref: dict,
+                p_full: float, p_b2: float, base_rate: float, top: int = 6,
+                baseline_logodds: float | None = None) -> dict:
+    """Structured explanation for one (init, region, lead) case.
+
+    `baseline_logodds`: for the residual learner, the B2 spread-baseline margin the trees start
+    from; the feature contributions then describe only the adjustment beyond B2."""
+    c = contrib_row[:-1]
+    order = np.argsort(-np.abs(c))[:top]
+    drivers = []
+    for i in order:
+        f = features[i]
+        v = row.get(f, np.nan)
+        v = float(v) if v is not None and np.isfinite(v) else None
+        drivers.append({"feature": f, "label": FEATURE_LABELS.get(f, f), "group": feature_group(f),
+                        "value": v, "train_percentile": train_percentile(v, ref.get(f)) if v is not None else None,
+                        "contribution_logodds": float(c[i]),
+                        "direction": "raises risk" if c[i] > 0 else "lowers risk"})
+    groups = {}
+    for g, fs in GROUPS.items():
+        idx = [i for i, f in enumerate(features) if f in fs]
+        if idx:
+            groups[g] = {"name": GROUP_NAMES[g], "contribution_logodds": float(c[idx].sum())}
+    if baseline_logodds is not None:
+        groups = {"BASE": {"name": "Spread baseline B2 (starting log-odds)",
+                           "contribution_logodds": float(baseline_logodds)}, **groups}
+    ev = _state_evidence(row, ref, base_rate)
     ev.append({"kind": "E. Baseline disagreement",
                "text": f"Sentinel {100 * p_full:.0f}% vs calibrated spread-only baseline {100 * p_b2:.0f}% "
                        f"({100 * (p_full - p_b2):+.0f} percentage points)."})
@@ -151,3 +157,55 @@ def explain_row(row: pd.Series, contrib_row: np.ndarray, features: list[str], re
                 "the listed TreeSHAP contributions (log-odds, before isotonic calibration) are that adjustment only. "
                 "They describe what the model used; they are associations, not physical causes.")
     return {"drivers": drivers, "groups": groups, "evidence": ev, "attribution_note": note}
+
+
+def explain_row_v3(row: pd.Series, q: dict, threshold: float, p_raw: float, p_cal: float, importance: dict,
+                   features: list[str], ref: dict, base_rate: float, top: int = 8) -> dict:
+    """v3 explanation without per-row attribution (HistGradientBoosting has no exact per-row
+    attribution here and none is fabricated). Three separated parts:
+      MODEL OUTPUT  - this row's predicted error quantiles, threshold, exceedance and calibrated probability;
+      INPUT EVIDENCE - this row's forecast-state values for the model's most important features (model-level
+                       permutation importance) with training percentiles, plus evidence items A-D;
+      INTERPRETATION - plain-language statements derived only from the numbers above."""
+    drivers = []
+    for f in [f for f in importance if f in features][:top]:
+        v = row.get(f, np.nan)
+        v = float(v) if v is not None and np.isfinite(v) else None
+        drivers.append({"feature": f, "label": FEATURE_LABELS.get(f, f), "group": feature_group(f), "value": v,
+                        "train_percentile": train_percentile(v, ref.get(f)) if v is not None else None,
+                        "model_importance": float(importance[f])})
+    groups = {}
+    for g, fs in GROUPS.items():
+        vals = [importance[f] for f in features if f in fs and f in importance]
+        if vals:
+            groups[g] = float(sum(vals))
+    ev = _state_evidence(row, ref, base_rate)
+    ev.append({"kind": "E. Predicted error distribution",
+               "text": f"Central predicted error (q50) {q['q50']:.2f}x normal; central predicted range (q25-q75) "
+                       f"{q['q25']:.2f}-{q['q75']:.2f}x; upper-tail error (q95) {q['q95']:.2f}x; project bust "
+                       f"threshold {threshold:.2f}x. Estimated exceedance probability {100 * p_raw:.0f}% -> "
+                       f"calibrated bust probability {100 * p_cal:.0f}%."})
+    why = []
+    if q["q95"] > threshold:
+        why.append(f"The predicted upper-tail error ({q['q95']:.2f}x) is above the project bust threshold "
+                   f"({threshold:.2f}x).")
+    else:
+        why.append(f"The predicted upper-tail error ({q['q95']:.2f}x) stays below the project bust threshold "
+                   f"({threshold:.2f}x).")
+    if q["q50"] > threshold:
+        why.append("Even the central predicted error exceeds the threshold.")
+    rate = row.get("an_bust_rate", np.nan)
+    if rate is not None and np.isfinite(rate):
+        rel = "above" if rate > base_rate else "at or below"
+        why.append(f"Similar verified historical forecast states busted {100 * rate:.0f}% of the time, {rel} the "
+                   f"climatological {100 * base_rate:.0f}%.")
+    hi = [d for d in drivers if d["train_percentile"] is not None and (d["train_percentile"] >= 90
+                                                                       or d["train_percentile"] <= 10)]
+    if hi:
+        why.append("Unusual values among the model's most important inputs (associated with the prediction, not "
+                   "shown to cause it): " + ", ".join(f"{d['label']} ({d['train_percentile']:.0f}th pct)"
+                                                     for d in hi[:3]) + ".")
+    return {"drivers": drivers, "groups": groups, "evidence": ev, "interpretation": why,
+            "attribution_note": "Feature ranking is MODEL-LEVEL permutation importance of the q90 estimator "
+                                "(validation), the same for every row; values and percentiles are this row's "
+                                "inputs. Features are associated with the prediction; they are not causes."}

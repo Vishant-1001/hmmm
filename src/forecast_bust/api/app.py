@@ -21,7 +21,11 @@ from fastapi.staticfiles import StaticFiles
 
 from forecast_bust.config import REPO_ROOT, served_run
 
-ART = served_run()[0]
+ART, SERVED_RUN = served_run()
+# Static report routes (/api/forecast, /api/replay) serve the precomputed replay bundle. v3 builds none (that
+# bundle embeds v2 model outputs), so they fall back to the archived v2 report - labelled as such.
+REPORT = ART if (ART / "replay" / "index.json").exists() else REPO_ROOT / "artifacts" / "v2"
+REPORT_NOTE = None if REPORT == ART else "ARCHIVED v2 replay report (B2/Sentinel outputs) - not the v3 production model"
 MODE = "Historical research replay - precomputed real ECMWF IFS ENS cases; not a live or NCMRWF feed"
 
 app = FastAPI(title="Forecast Bust Sentinel API", version="0.1.0",
@@ -37,7 +41,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 def _read(path: Path):
     if not path.exists():
-        raise HTTPException(503, detail=f"NOT YET COMPUTED: artifact {path.relative_to(ART)} is unavailable")
+        raise HTTPException(503, detail=f"NOT YET COMPUTED: artifact {path.name} is unavailable")
     return json.loads(path.read_text())
 
 
@@ -45,7 +49,7 @@ def _read(path: Path):
 def _case(case_id: str) -> dict:
     if not case_id.isdigit() or len(case_id) != 10:
         raise HTTPException(400, detail="case_id must be YYYYMMDDHH")
-    p = ART / "replay" / case_id / "forecast.json"
+    p = REPORT / "replay" / case_id / "forecast.json"
     if not p.exists():
         raise HTTPException(404, detail=f"unknown forecast case {case_id}")
     return json.loads(p.read_text())
@@ -66,8 +70,11 @@ def health_light():
 
 @app.get("/api/health")
 def health():
-    idx = ART / "replay" / "index.json"
-    return {"status": "ok", "mode": MODE, "artifacts_present": {
+    idx = REPORT / "replay" / "index.json"
+    md = ART / "demo" / "model" / "v3" / "metadata.json"
+    served = json.loads(md.read_text()) if md.exists() else {}
+    return {"status": "ok", "mode": MODE, "served_run": SERVED_RUN, "model_type": served.get("model_type"),
+            "experiment_id": served.get("experiment_id"), "artifacts_present": {
         "metrics": (ART / "metrics.json").exists(), "replay_index": idx.exists(),
         "dataset_manifest": (ART / "dataset_manifest.json").exists()}}
 
@@ -88,8 +95,8 @@ def provenance():
 
 @app.get("/api/metrics")
 def metrics():
-    out = {"metrics": _read(ART / "metrics.json"), "ablation": _read(ART / "ablation_results.json")}
-    for name in ("calibration", "spread_skill", "fingerprint_metrics", "feature_importance", "pr_curves"):
+    out = {"served_run": SERVED_RUN, "metrics": _read(ART / "metrics.json")}
+    for name in ("ablation_results", "calibration", "spread_skill", "fingerprint_metrics", "feature_importance", "pr_curves"):
         p = ART / f"{name}.json"
         out[name] = json.loads(p.read_text()) if p.exists() else None
     return out
@@ -97,7 +104,7 @@ def metrics():
 
 @app.get("/api/forecast/cases")
 def cases():
-    return {"mode": MODE, **_read(ART / "replay" / "index.json")}
+    return {"mode": MODE, "report_note": REPORT_NOTE, **_read(REPORT / "replay" / "index.json")}
 
 
 @app.get("/api/forecast/{case_id}/overview")
@@ -174,21 +181,21 @@ def replay(case_id: str):
 @app.get("/api/replay/{case_id}/full")
 def replay_full(case_id: str):
     """Complete blind case (all regions, trajectories, evidence). Contains no verification data."""
-    return {"mode": MODE, **_case(case_id)}
+    return {"mode": MODE, "report_note": REPORT_NOTE, **_case(case_id)}
 
 
 @app.get("/api/replay/{case_id}/verification")
 def verification(case_id: str):
     _case(case_id)
-    return _read(ART / "replay" / case_id / "verification.json")
+    return _read(REPORT / "replay" / case_id / "verification.json")
 
 
 # ---------------------------------------------------------------------------------------------
-# Live inference demo (v1 frozen models executed at request time on stored forecast states)
+# Live inference demo (the served run's frozen model executed at request time on stored forecast states)
 # ---------------------------------------------------------------------------------------------
 from forecast_bust.demo import schemas as S  # noqa: E402
 
-DEMO_MODE = ("Historical replay research prototype - the frozen Sentinel/B2 models execute live on stored real "
+DEMO_MODE = ("Historical replay research prototype - the frozen v3 quantile-gradient-boosting model executes live on stored real "
              "ECMWF IFS ENS forecast states; not a live or NCMRWF feed")
 
 

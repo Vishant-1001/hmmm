@@ -1,0 +1,19 @@
+{
+ "model_artifact": "models/v3/ (qgb_q10..q95.joblib, calibration.joblib)",
+ "model_version": "v3-final (045a9e8)",
+ "experiment_id": "v3-final-045a9e8",
+ "experiment_created": "2026-10-02T14:16:18.993082+00:00",
+ "retrained_for_demo": false,
+ "training_window": "2018-01-01 .. 2020-12-29",
+ "calibration_window": "2021-01-01 .. 2021-12-28",
+ "calibration": "isotonic regression of the estimated exceedance probability, fitted on validation only, frozen",
+ "alert_threshold": 0.13433858807402332,
+ "alert_threshold_definition": "calibrated bust probability giving a 10% false-alarm rate on VALIDATION",
+ "confidence_definition": "reliability confidence = 1 - calibrated bust probability",
+ "expected_error_definition": "'Expected error' = q50, the central (median) predicted normalized Z500 error, not a conditional mean",
+ "uncertainty_definition": "central predicted error range = q25-q75; upper-tail error = q95 (not a maximum)",
+ "exported_from": "models/v3 -> artifacts/v3/demo/model/v3/ (file copies)",
+ "replay_source": "artifacts/v2/replay",
+ "bundle_git_rev": "45c63b9",
+ "target": "geopotential 500 hPa (Z500) normalized regional error"
+}

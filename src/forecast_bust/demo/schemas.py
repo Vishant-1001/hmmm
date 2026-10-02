@@ -27,7 +27,15 @@ class CaseList(BaseModel):
     cases: list[CaseInfo]
 
 
+class ImportanceItem(BaseModel):
+    feature: str
+    label: str
+    importance: float
+
+
 class ModelSummary(BaseModel):
+    model_type: str
+    estimator: str
     model_version: str
     model_artifact: str
     exported_from: str
@@ -35,15 +43,18 @@ class ModelSummary(BaseModel):
     training_window: str
     calibration_window: str
     calibration: str
-    learner: str
-    sentinel_features: list[str]
-    b2_features: list[str]
-    selected_groups: list[str]
-    selection_note: str
-    not_in_sentinel: list[str]
+    quantiles: list[float]
+    params: dict[str, float]
+    features: list[str]
+    feature_groups: list[str]
+    exceedance_method: str
+    crossing_correction: str
+    model_level_importance: list[ImportanceItem]
     alert_threshold: float
     alert_threshold_definition: str
     confidence_definition: str
+    expected_error_definition: str
+    uncertainty_definition: str
     target: str
 
 
@@ -51,11 +62,23 @@ class Cell(BaseModel):
     """Model output for one region x lead day (forecast-time information only)."""
     lead_day: int
     valid_time: str
-    bust_probability: float
-    reliability_confidence: float
-    b2_probability: float
-    b0_probability: float
-    disagreement_pp: float
+    model_type: str
+    expected_error: float            # = q50, the central (median) predicted normalized error
+    q10: float
+    q25: float
+    q50: float
+    q75: float
+    q90: float
+    q95: float
+    uncertainty_low: float           # = q25 (central predicted error range, not a confidence interval)
+    uncertainty_high: float          # = q75
+    upper_tail_error: float          # = q95 (not a maximum possible error)
+    bust_threshold: float            # TRAIN-derived Q90 for this region / lead / season
+    estimated_exceedance_probability: float
+    calibrated_bust_probability: float
+    bust_probability: float          # = calibrated_bust_probability
+    reliability_confidence: float    # = 1 - calibrated_bust_probability
+    b0_probability: float            # climatological bust rate (reference only)
     alert: bool
     spread_m: float
     spread_pct: Optional[float]
@@ -89,7 +112,8 @@ class LeadSummary(BaseModel):
     mean_bust_probability: float
     max_bust_probability: float
     n_alerts: int
-    mean_disagreement_pp: float
+    mean_expected_error: float
+    mean_upper_tail_error: float
 
 
 class RunResult(BaseModel):
@@ -120,13 +144,11 @@ class Driver(BaseModel):
     group: str
     value: Optional[float]
     train_percentile: Optional[float]
-    contribution_logodds: float
-    direction: str
+    model_importance: float
 
 
 class Attribution(BaseModel):
     method: str
-    bias_logodds: float
     drivers: list[Driver]
     groups: dict[str, float]
     note: str
@@ -180,6 +202,7 @@ class Explanation(Cell):
     region_id: str
     attribution: Attribution
     evidence: list[EvidenceItem]
+    interpretation: list[str]
     analogue_summary: AnalogueSummary
     failure_signature: FailureSignature
     context_features: list[ContextFeature]
@@ -205,7 +228,11 @@ class VerificationOut(BaseModel):
 
 class RevealForecast(BaseModel):
     bust_probability: float
-    b2_probability: float
+    expected_error: float
+    uncertainty_low: float
+    uncertainty_high: float
+    upper_tail_error: float
+    bust_threshold: float
     alert: bool
     expected_signature: FailureSignature
 
@@ -228,8 +255,8 @@ class VerifDay(BaseModel):
 class CaseSummary(BaseModel):
     region_days: int
     verified_busts: int
-    sentinel_alerts: int
-    sentinel_hits: int
+    model_alerts: int
+    model_hits: int
     hidden_busts: int
 
 

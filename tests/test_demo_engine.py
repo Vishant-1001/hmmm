@@ -12,7 +12,7 @@ from forecast_bust.demo.build import SERVED_DEMO_DIR as DEMO_DIR
 from forecast_bust.features.build import FORBIDDEN_INPUTS
 
 MEMORY_PATH = DEMO_DIR / "memory.parquet"
-# research outputs of the SAME run the engine serves (v2 -> models/v2, data/interim/v2)
+# research outputs of the SAME run the engine serves (v3 -> models/v3, data/interim/v3)
 MODEL_DIR = REPO_ROOT / "models" / SERVED_RUN
 INTERIM_DIR = REPO_ROOT / "data" / "interim" / SERVED_RUN
 
@@ -57,32 +57,44 @@ def test_live_inference_reproduces_frozen_pipeline(eng):
         ids = run.rows["case_id"]
         p = preds.loc[ids]
         ref = table.set_index("case_id").loc[ids]
-        np.testing.assert_allclose(run.rows["p_sentinel"], p["p_FULL"], atol=1e-6)
-        np.testing.assert_allclose(run.rows["p_b2"], p["p_B2"], atol=1e-6)
+        for col in ("q10", "q25", "q50", "q75", "q90", "q95", "estimated_exceedance_probability",
+                    "calibrated_bust_probability"):
+            np.testing.assert_allclose(run.rows[col], p[col], atol=1e-5)
         np.testing.assert_allclose(run.rows["p_b0"], p["p_B0"], atol=1e-12)
         for f in ["an_n_within", "an_dist1", "an_bust_rate", "an_err_med", "an_n_eligible", "support_distance"]:
             np.testing.assert_allclose(run.rows[f].astype(float), ref[f].astype(float), rtol=1e-5, atol=1e-5)
         assert (run.rows["support_level"].to_numpy() == ref["support_level"].to_numpy()).all()
-        assert (run.rows["evidence_level"].to_numpy() == p["evidence_level"].to_numpy()).all()
 
 
-@pytest.mark.skipif(not (MODEL_DIR / "models.joblib").exists(), reason="models.joblib not present")
-def test_exported_models_equal_joblib(eng):
-    import joblib
-    m = joblib.load(MODEL_DIR / "models.joblib")
+@pytest.mark.skipif(not (MODEL_DIR / "metadata.json").exists(), reason="v3 model files not present")
+def test_exported_model_equals_trained_files(eng):
+    from forecast_bust.models.qgb import V3PredictiveModel
     st = _state_with_memory(eng, eng.registry["cases"][0]["case_id"])
-    np.testing.assert_allclose(eng.sentinel.calibrate(eng.sentinel.predict_raw(st)), m["FULL"].predict(st), atol=1e-6)
-    np.testing.assert_allclose(eng.b2.calibrate(eng.b2.predict_raw(st)), m["B2"].predict(st), atol=1e-6)
-    np.testing.assert_allclose(eng.sentinel.contributions(st), m["FULL"].contributions(st), atol=1e-5)
+    pd.testing.assert_frame_equal(eng.model.predict(st), V3PredictiveModel(MODEL_DIR).predict(st))
+
+
+def test_production_model_is_v3_and_needs_no_b2_or_sentinel(eng):
+    assert eng.model.model_type == "quantile_gradient_boosting"
+    assert not hasattr(eng, "b2") and not hasattr(eng, "sentinel")
+    assert not list((DEMO_DIR / "model").glob("*booster*")), "B2/Sentinel boosters must not be in the v3 bundle"
+    assert all("b2" not in f.lower() for f in eng.model.features)
 
 
 def test_inference_depends_on_inputs(eng):
-    """The probabilities are computed from the inputs, not looked up: perturbing spread changes them."""
+    """The probabilities are computed from the inputs, not looked up: perturbing the state changes them."""
     st = _state_with_memory(eng, eng.registry["cases"][0]["case_id"])
-    p0 = eng.sentinel.calibrate(eng.sentinel.predict_raw(st))
-    st2 = st.assign(spread_pct=1.0)
-    p1 = eng.sentinel.calibrate(eng.sentinel.predict_raw(st2))
+    p0 = eng.model.predict(st)["calibrated_bust_probability"].to_numpy()
+    p1 = eng.model.predict(st.assign(spread_pct=1.0, spread_m=st["spread_m"] * 3))["calibrated_bust_probability"].to_numpy()
     assert np.abs(p1 - p0).max() > 0.01
+
+
+def test_real_inference_quantiles_ordered_and_probabilities_valid(eng):
+    for c in eng.registry["cases"]:
+        rows = eng.run(c["case_id"]).rows
+        q = rows[["q10", "q25", "q50", "q75", "q90", "q95"]].to_numpy()
+        assert (np.diff(q, axis=1) >= 0).all()
+        for col in ("estimated_exceedance_probability", "calibrated_bust_probability"):
+            assert rows[col].between(0, 1).all()
 
 
 def test_memory_is_causal(eng):
@@ -104,7 +116,12 @@ def test_api_run_is_blind_and_complete(client, eng):
         assert k not in txt
     cell = j["regions"][0]["days"][0]
     assert abs(cell["reliability_confidence"] - (1 - cell["bust_probability"])) < 1e-12
-    assert abs(cell["disagreement_pp"] - 100 * (cell["bust_probability"] - cell["b2_probability"])) < 1e-9
+    assert cell["model_type"] == "quantile_gradient_boosting"
+    assert cell["expected_error"] == cell["q50"] and cell["upper_tail_error"] == cell["q95"]
+    assert (cell["uncertainty_low"], cell["uncertainty_high"]) == (cell["q25"], cell["q75"])
+    assert cell["bust_probability"] == cell["calibrated_bust_probability"]
+    for k in ("b2_probability", "disagreement_pp", "p_sentinel"):
+        assert k not in txt
 
 
 def test_api_explain_and_reveal(client, eng):
@@ -112,7 +129,8 @@ def test_api_explain_and_reveal(client, eng):
     client.post(f"/api/demo/cases/{cid}/run")
     rid = eng.run(cid).rows["region_id"].iloc[0]
     ex = client.get(f"/api/demo/cases/{cid}/regions/{rid}/explain?lead_day=4").json()
-    assert ex["attribution"]["drivers"] and ex["analogue_summary"]["nearest"]
+    assert ex["attribution"]["drivers"] and ex["analogue_summary"]["nearest"] and ex["interpretation"]
+    assert all("cause" not in t.lower() or "not shown to cause" in t.lower() for t in ex["interpretation"])
     assert "actual_bust" not in json.dumps(ex)
     rv = client.post(f"/api/demo/cases/{cid}/regions/{rid}/reveal?lead_day=4").json()
     v = json.loads((DEMO_DIR / "cases" / cid / "verification.json").read_text())
@@ -120,6 +138,7 @@ def test_api_explain_and_reveal(client, eng):
     assert rv["verification"]["actual_bust"] == bool(day["bust"])
     assert rv["verification"]["normalized_error"] == day["normalized_error"]
     assert rv["verification"]["failure_fingerprint"]["signature"] == day["signature"]
+    assert rv["forecast"]["upper_tail_error"] >= rv["forecast"]["expected_error"]
     assert rv["memory_update"]["verified_cases_after"] == rv["memory_update"]["verified_cases_before"] + 1
 
 

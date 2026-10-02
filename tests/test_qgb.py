@@ -128,3 +128,21 @@ def test_production_feature_set_has_no_b2_forbidden_or_future_inputs():
     assert all("b2" not in f.lower() and not f.startswith("p_") for f in feats)
     for leak in ("norm_error", "error_m", "bust", "hidden_bust", "q_primary", "sig_class", "split"):
         assert leak not in feats
+
+
+def test_no_2022_in_development_or_selection():
+    """Hyper-parameters were chosen on the dev split; neither its rows nor the final model's
+    train/validation rows may come from 2022 (the evaluation period)."""
+    import json
+    from forecast_bust.config import REPO_ROOT
+    dev = REPO_ROOT / "artifacts" / "v3" / "dev" / "development" / "experiment_manifest.json"
+    final = REPO_ROOT / "artifacts" / "v3" / "experiment_manifest.json"
+    if not dev.exists():
+        pytest.skip("v3 development records not present")
+    for s in json.loads(dev.read_text())["splits"].values():
+        assert s["last_init"] < "2022"
+    if final.exists():
+        f = json.loads(final.read_text())
+        assert f["params_source"].startswith("locked_params")
+        for name in ("train", "validation"):
+            assert f["splits"][name]["last_init"] < "2022"

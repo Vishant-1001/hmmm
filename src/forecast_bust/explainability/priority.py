@@ -29,3 +29,23 @@ def formula() -> dict:
             "H_days": cfg["urgency_halflife_days"], "B": cfg["disagreement_bonus"],
             "evidence_weight": cfg["evidence_weight"],
             "note": "Product triage rule; weights are design choices, not fitted or validated constants."}
+
+
+def priority_score_v3(p: np.ndarray, upper_tail: np.ndarray, threshold: np.ndarray, lead_day: np.ndarray,
+                      evidence_level: np.ndarray) -> np.ndarray:
+    """v3 (no B2 term): the bonus is the predicted upper tail (q95) above the bust threshold,
+    as a fraction of the threshold and capped at 1."""
+    cfg = model_config()["priority"]
+    urg = 0.5 ** ((np.asarray(lead_day) - 1) / cfg["urgency_halflife_days"])
+    w = np.array([cfg["evidence_weight"][n] for n in EVIDENCE_NAMES])[np.asarray(evidence_level, dtype=int)]
+    tail = np.clip(np.asarray(upper_tail) / np.asarray(threshold) - 1, 0, 1)
+    return np.asarray(p) * urg * w + cfg["disagreement_bonus"] * tail
+
+
+def formula_v3() -> dict:
+    cfg = model_config()["priority"]
+    return {"formula": "score = p_bust * 0.5**((lead_day-1)/H) * evidence_weight "
+                       "+ B * clip(upper_tail_error / bust_threshold - 1, 0, 1)",
+            "H_days": cfg["urgency_halflife_days"], "B": cfg["disagreement_bonus"],
+            "evidence_weight": cfg["evidence_weight"],
+            "note": "Product triage rule; weights are design choices, not fitted or validated constants."}
