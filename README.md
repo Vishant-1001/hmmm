@@ -81,11 +81,18 @@ state), ENS (ensemble behaviour), PAT (frozen PCA pattern), EVO (forecast evolut
 forecast-state memory / analogues), REC (recent verified error behaviour), DYN (v2: wind, shear, vorticity,
 divergence, MSLP, and in-forecast Z500/MSLP/vorticity tendencies).
 
+**V4 (current, served): pattern-aware forecast bust.** The event is now large Z500 error (normalized error > TRAIN Q90)
+AND poor local spatial pattern agreement (3×3 anomaly correlation < TRAIN Q10); ONE shared XGBoost classifier on the
+existing prediction-time-safe features, validation-only isotonic calibration. Pre-registered gate passed on the dev
+split; 2022 (not a pristine test): AUPRC 0.0255 at 1.04% prevalence (lift 2.45), ROC AUC 0.714, precision 0.028 at
+the alert threshold. Caveats (weak large-error skill; partly artifactual pattern signal) in
+[`docs/limitations_v4.md`](docs/limitations_v4.md); model card [`docs/model_card_v4.md`](docs/model_card_v4.md).
+
 **BMA experiment (NO-GO, not served):** Bayesian Model Averaging of the 50 genuine IFS ENS members failed its
 pre-registered gate on the dev split (dev-test AUPRC 0.121 vs B2 0.158 and V3 0.140) and was not evaluated on 2022.
 It is kept as a negative result ([`docs/model_card_bma.md`](docs/model_card_bma.md)).
 
-**v3 (served; archived experiment, not a validated final core): quantile gradient boosting.** Forecast Bust Sentinel models the conditional
+**v3 (archived experiment, superseded by V4): quantile gradient boosting.** Forecast Bust Sentinel models the conditional
 distribution of future normalized regional Z500 forecast error using quantile gradient boosting
 (`HistGradientBoostingRegressor(loss="quantile")`, q10/q25/q50/q75/q90/q95, one shared configuration) applied to
 prediction-time-safe NWP forecast-state features (SPREAD+ATM+ENS+PAT+EVO+MEM+REC+DYN). The upper tail of that

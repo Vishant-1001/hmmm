@@ -4,17 +4,17 @@ Persistent execution state. Update at every checkpoint.
 
 | Field | Value |
 |---|---|
-| CURRENT PHASE | BMA experiment complete: NO-GO on the pre-registered dev gate; production unchanged (V3 served, archived experiment, not a validated final core) |
-| LAST COMPLETED ACTION | BMA (exchangeable, 50 real IFS ENS members, 60-day causal window) dev evaluation: AUPRC 0.121 vs B2 0.158 / V3 0.140 (dev-test 2021); gate NO-GO; 2022 not touched; docs/model_card_bma.md |
+| CURRENT PHASE | V4 pattern-aware bust: frozen and integrated (final predictive-core change; hard stop) |
+| LAST COMPLETED ACTION | V4 pre-registered (47ce766), dev gate PROMOTE 11/11 (405d2aa), 2022 once (b34b3a5): AUPRC 0.0255 @1.04% prevalence, ROC AUC 0.714; API/frontend serve pattern_aware_xgboost |
 | LOCKED CONFIG | `config/model_v3.yaml` qgb.locked_params (lr 0.05, 200 iter, 31 leaves, min leaf 100, l2 1.0), locked at 045a9e8. v2 config unchanged |
-| MODEL STATUS | v3 served: `models/v3/qgb_q*.joblib` + calibration → `artifacts/v3/demo/model/v3` (V3PredictiveModel). B2/Sentinel archived (v2), QRF retired |
-| EVALUATION STATUS | v3 dev-test 2021 AUPRC 0.1396 (fresh B2 0.1578; Δ −0.018 CI [−0.027,−0.011]). 2022 (V3 first look; 3rd reading of 2022) AUPRC 0.1449, Brier 0.0785 (clim 0.0802), ECE 0.0045. v3 does NOT outperform B2 |
+| MODEL STATUS | V4 served: models/v4/models.joblib -> artifacts/v4/demo/model/v4 (V4Model). v2/V3/BMA archived |
+| EVALUATION STATUS | V4 2022 (4th reading of 2022; first for this target): AUPRC 0.0255 (lift 2.45), ROC AUC 0.714, BSS +0.007, ECE 0.0003, precision 0.028 at alert; large-error component weakly predicted (AUC 0.54) |
 | TEST STATUS | 96 pytest (incl. headless E2E 16/16 UI = API) + 8 vitest passing |
-| SERVING | `config.served_run()` → artifacts/v3 (FBS_SERVE_RUN=v2 serves the archive). Static /api/forecast,/api/replay → archived v2 replay report |
+| SERVING | `config.served_run()` -> artifacts/v4 (FBS_SERVE_RUN overrides). Static /api/forecast,/api/replay -> archived v2 replay report |
 | RENDER | VERIFIED 2026-09-30 on the v2 deploy (https://forecast-bust-sentinel-g0py.onrender.com/). No Render dashboard/log access from this machine |
 | DATA | Geopotential 457/457; wind/MSLP 457/457 (validated). Nothing to download |
 | KNOWN ISSUES | Render free tier cold start; server RSS 425 MB of 512 MB. 2022 read three times (v1, v2, v3): no future test claim possible |
-| EXACT NEXT ACTION | None. Stop rule reached: no further model candidates. Reassess the problem (data resolution/target), not the learner. Any new idea must use FBS_SPLIT=dev; 2022 cannot support a test claim |
+| EXACT NEXT ACTION | None. Hard stop on model/target changes. Only documentation/demo polish allowed |
 
 ## Background processes
 

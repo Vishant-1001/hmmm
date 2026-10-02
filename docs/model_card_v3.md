@@ -1,8 +1,7 @@
 # Model card — Forecast Bust Sentinel v3 (quantile gradient boosting)
 
-**Status: V3 — Quantile Gradient Boosting — archived experiment; not selected as final predictive core.** It is still the
-model the live demo serves (`config.served_run()` = artifacts/v3), because the only later candidate (BMA,
-`docs/model_card_bma.md`) failed its pre-registered gate; it is not shown to outperform B2. v2's B2/Sentinel XGBoost
+**Status: V3 — Quantile Gradient Boosting — archived experiment; not selected as final predictive core.** Superseded in
+serving by V4 (pattern-aware XGBoost, `docs/model_card_v4.md`); it was not shown to outperform B2. v2's B2/Sentinel XGBoost
 classifiers are archived benchmarks (`docs/model_card_v2.md`); the abandoned QRF attempt is described in
 `docs/scientific_methodology.md` §0.8.
 

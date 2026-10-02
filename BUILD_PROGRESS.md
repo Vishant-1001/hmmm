@@ -129,3 +129,13 @@ dev split (`FBS_SPLIT=dev`); 2022 is now inspected and can no longer serve as an
 * Exchangeable-member BMA, 60-day causal window: dev-test 2021 AUPRC 0.1210 (B0 0.0932, B2 0.1578, V3 0.1396);
   BMA − B2 −0.037 [−0.045, −0.027]; 0/10 lead days ≥ B2; raw ECE 0.060. Validation 2020: 0.130 vs B2 0.175.
 * NO-GO: 2022 not evaluated, production not switched, no further models. `docs/model_card_bma.md`.
+
+## V4 pattern-aware bust (2026-10-02) — final predictive-core change
+
+* Pre-registered target/model/gate `config/model_v4.yaml` (47ce766); local 3x3 ACC + TRAIN Q10 labels (a37b9e5).
+* Audit (3297f1d): ACC coverage 100%; prevalence ~1.0-1.4%; only ~12% of magnitude busts are pattern busts.
+* Dev gate PROMOTE 11/11 (405d2aa): dev-test AUPRC 0.0230 (lift 2.24), ROC AUC 0.674, +0.033 AUC vs magnitude target.
+  Proxy diagnostic: low local ACC partly reflects weak anomaly fields (artifacts/v4/dev/proxy_diagnostic.json).
+* 2022 once (b34b3a5): AUPRC 0.0255 (lift 2.45), ROC AUC 0.714, precision 0.028 / recall 0.305 at alert.
+* Integration: engine/API (37d823f), frontend (b1b946c); docs model_card_v4, evaluation_v4, scientific_methodology_v4,
+  limitations_v4, FORECAST_BUST_SENTINEL_FINAL_FROZEN_BUILD_SPEC_v4.md.
