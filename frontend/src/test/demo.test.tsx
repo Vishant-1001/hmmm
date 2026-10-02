@@ -49,17 +49,19 @@ describe("demo app (live-inference API)", () => {
     const c = fx.region.trajectory[day - 1];
     expect(screen.getByTestId("rel-p").textContent).toBe(pct(c.bust_probability));
     expect(screen.getByTestId("rel-conf").textContent).toBe(pct(c.reliability_confidence));
-    expect(screen.getByTestId("rel-central").textContent).toBe(`${num(c.expected_error, 2)}×`);
-    expect(screen.getByTestId("rel-range").textContent).toBe(`${num(c.uncertainty_low, 2)}–${num(c.uncertainty_high, 2)}×`);
-    expect(screen.getByTestId("rel-tail").textContent).toBe(`${num(c.upper_tail_error, 2)}×`);
+    expect(screen.getByTestId("rel-confidence").textContent).toBe(c.confidence);
+    expect(screen.getByTestId("rel-mag").textContent).toBe(c.magnitude_criterion);
+    expect(screen.getByTestId("rel-pat").textContent).toBe(c.pattern_criterion);
+    expect(screen.getByTestId("rel-support").textContent).toBe(c.historical_support);
     expect(screen.queryByTestId("rel-b2")).toBeNull();
+    expect(screen.queryByTestId("rel-tail")).toBeNull();
 
     fireEvent.click(screen.getByTestId("go-evidence"));
     await waitFor(() => expect(screen.getByTestId("why-p")).toBeTruthy());
     const x = fx.explain;
     expect(screen.getByTestId("why-p").textContent).toBe(pct(x.bust_probability));
-    expect(screen.getByTestId("why-central").textContent).toBe(`${num(x.expected_error, 2)}×`);
-    expect(screen.getByTestId("why-tail").textContent).toBe(`${num(x.upper_tail_error, 2)}×`);
+    expect(screen.getByTestId("why-mag").textContent).toBe(x.magnitude_criterion);
+    expect(screen.getByTestId("why-pat").textContent).toBe(x.pattern_criterion);
     for (const t of x.interpretation) expect(screen.getByTestId("why-list").textContent).toContain(t);
     expect(screen.getByTestId("why-support").textContent).toBe(x.support_level);
     expect(screen.getByTestId("why-evidence").textContent).toBe(x.evidence_quality);
@@ -72,6 +74,7 @@ describe("demo app (live-inference API)", () => {
     expect(screen.getByTestId("verif-mode").textContent).toContain("BLIND");
     expect(calls.some((u) => u.includes("/reveal"))).toBe(false);
     expect(screen.queryByTestId("actual-bust")).toBeNull();
+    expect(screen.queryByTestId("actual-pat")).toBeNull();
 
     fireEvent.click(screen.getByTestId("reveal"));
     await waitFor(() => expect(screen.getByTestId("memory-update")).toBeTruthy());
@@ -79,6 +82,7 @@ describe("demo app (live-inference API)", () => {
     expect(calls.filter((u) => u.includes("/reveal")).length).toBeGreaterThan(0);
     expect(screen.getByTestId("actual-bust").textContent).toBe(v.verification.actual_bust ? "BUST" : "NO BUST");
     expect(screen.getByTestId("actual-err").textContent).toBe(v.verification.normalized_error.toFixed(3));
+    expect(screen.getByTestId("actual-pat").textContent).toContain(num(v.verification.local_acc, 3));
     expect(screen.getByTestId("fingerprint").textContent).toContain(v.verification.failure_fingerprint.label);
     expect(screen.getByTestId("mem-before").textContent).toBe(String(v.memory_update.verified_cases_before));
     expect(screen.getByTestId("mem-after").textContent).toBe(String(v.memory_update.verified_cases_after));

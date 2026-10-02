@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { BarRow, ReliabilityDiagram } from "./Charts";
 
-// Renders artifacts/<served run>/metrics.json as written by forecast_bust.evaluation.run_qgb (v3).
+// Renders artifacts/<served run>/metrics.json as written by forecast_bust.evaluation.run_v4 (V4).
 const f = (v: number | null | undefined, n = 3) => (v == null || Number.isNaN(v) ? "—" : v.toFixed(n));
-const QS = ["q10", "q25", "q50", "q75", "q90", "q95"];
 
 export function Analytics() {
   const [m, setM] = useState<any>(null);
@@ -13,75 +12,65 @@ export function Analytics() {
   if (err) return <div className="card err" data-testid="metrics-error">Metrics NOT YET COMPUTED / DATA UNAVAILABLE — {err}</div>;
   if (!m) return <div className="card muted">Loading metrics…</div>;
   const mt = m.metrics;
-  if (!mt.qgb) return <div className="card muted" data-testid="metrics-error">Served metrics are not in the v3 format.</div>;
-  const q = mt.qgb;
-  const p = q.calibrated_bust_probability;
-  const raw = q.estimated_exceedance_probability_uncalibrated;
-  const d = q.distribution;
-  const refs = mt.references;
-  const maxLead = Math.max(...mt.by_lead_day.map((x: any) => Math.max(x.auprc, x.auprc_B0)), 0.01);
+  if (!mt.splits?.test?.pattern_target) return <div className="card muted" data-testid="metrics-error">Served metrics are not in the V4 format.</div>;
+  const t = mt.splits.test;
+  const pt = t.pattern_target;
+  const v4 = pt.V4;
+  const mag = t.magnitude_target.same_model_on_magnitude;
+  const ps = t.pattern_specific;
+  const maxLead = Math.max(...t.by_lead_day.map((x: any) => x.auprc), 0.001);
+  const rows: [string, any][] = [["V4 calibrated", v4], ["B0 pattern-bust climatology", pt.B0_climatology], ["B1 spread percentile", pt.B1_spread]];
   return (
     <>
       <div className="card" style={{ marginBottom: 12 }}>
         <h2>Evaluation — {mt.label}</h2>
-        <p className="muted" data-testid="eval-provenance">{mt.model_type} · experiment {mt.experiment_id} · rows train {mt.rows.train.toLocaleString()} /
-          validation {mt.rows.validation.toLocaleString()} / evaluated {mt.rows.test.toLocaleString()} · bust base rate {f(mt.test_base_rate)}.
-          Discrimination (AUPRC), probabilistic accuracy (Brier), calibration and quantile quality are reported separately: calibration changes
-          probability reliability, not ranking.</p>
+        <p className="muted" data-testid="eval-provenance">Event: pattern-aware bust (large error AND poor local pattern agreement), prevalence {f(v4.prevalence, 4)}.
+          AUPRC must be read against that prevalence (lift = AUPRC / prevalence). Discrimination, Brier, calibration and alerting are reported separately.</p>
         <table data-testid="headline-table">
-          <thead><tr><th></th><th>AUPRC</th><th>ROC AUC</th><th>Brier</th><th>ECE</th><th>Recall @10% FAR</th><th>Hidden-bust recall</th></tr></thead>
-          <tbody>
-            <tr style={{ fontWeight: 600 }}><td>v3 calibrated bust probability</td><td>{f(p.auprc)}</td><td>{f(p.roc_auc)}</td><td>{f(p.brier)}</td><td>{f(p.ece)}</td>
-              <td>{f(p.recall_at_far_10)}</td><td>{f(p.hidden_bust.hidden_bust_recall)} <span className="muted">(n = {p.hidden_bust.n_hidden_busts})</span></td></tr>
-            <tr><td>v3 estimated exceedance (before calibration)</td><td>{f(raw.auprc)}</td><td>{f(raw.roc_auc)}</td><td>{f(raw.brier)}</td><td>{f(raw.ece)}</td><td>—</td><td>—</td></tr>
-            <tr><td>B0 climatology (reference)</td><td>{f(refs.B0_climatology.auprc)}</td><td>—</td><td>{f(refs.B0_climatology.brier)}</td><td>—</td><td>—</td><td>—</td></tr>
-            {refs.B2_dev_reference && <tr className="muted"><td>B2 spread-only (archival dev reference)</td><td>{f(refs.B2_dev_reference.auprc)}</td><td>—</td>
-              <td>{f(refs.B2_dev_reference.brier)}</td><td>—</td><td>—</td><td>{f(refs.B2_dev_reference.hidden_bust_recall)}</td></tr>}
-            {refs.v2_historical && <tr className="muted"><td>v2 B2 on 2022 (historical, different generation)</td><td>{f(refs.v2_historical.B2.auprc)}</td><td>—</td>
-              <td>{f(refs.v2_historical.B2.brier)}</td><td>—</td><td>—</td><td>{f(refs.v2_historical.B2.hidden_bust_recall)}</td></tr>}
-          </tbody>
+          <thead><tr><th></th><th>AUPRC</th><th>Lift</th><th>ROC AUC</th><th>Brier</th><th>ECE</th><th>Recall @10% FAR</th><th>Precision at alert</th><th>Hidden-bust recall</th></tr></thead>
+          <tbody>{rows.map(([name, x]) => (
+            <tr key={name} style={name.startsWith("V4") ? { fontWeight: 600 } : undefined}>
+              <td>{name}</td><td>{f(x.auprc, 4)}</td><td>{f(x.lift, 2)}</td><td>{f(x.roc_auc)}</td><td>{f(x.brier, 5)}</td><td>{f(x.ece, 4)}</td>
+              <td>{f(x.recall_at_far_10)}</td><td>{f(x.operating_point.precision)}</td><td>{f(x.hidden_bust.hidden_bust_recall)}</td>
+            </tr>
+          ))}</tbody>
         </table>
-        {refs.QGB_minus_B2_block_bootstrap && <p className="muted small" data-testid="b2-diff">v3 − B2 (dev reference) AUPRC difference: mean {f(refs.QGB_minus_B2_block_bootstrap.mean, 4)}, 95% CI [{f(refs.QGB_minus_B2_block_bootstrap.ci95[0], 4)}, {f(refs.QGB_minus_B2_block_bootstrap.ci95[1], 4)}] (block bootstrap by initialisation day).</p>}
+        <p className="muted small" data-testid="adequacy">Same model, same features, trained on the old magnitude-only target: ROC AUC {f(mag.roc_auc)} (AUPRC {f(mag.auprc, 4)} at prevalence {f(mag.prevalence, 3)}).
+          Pattern-target ROC AUC gain {f(t.adequacy_rocauc_gain.point, 3)} [{f(t.adequacy_rocauc_gain.ci95[0], 3)}, {f(t.adequacy_rocauc_gain.ci95[1], 3)}].
+          Part of that gain reflects that low local correlation is more frequent when the forecast anomaly field is weak (see model card).</p>
       </div>
       <div className="grid2">
         <div className="card">
-          <h2>Predicted error distribution quality</h2>
-          <p>Central (q50) error: MAE {f(d.mae_q50)}, RMSE {f(d.rmse_q50)} · mean pinball loss {f(d.pinball_mean, 4)} · q25–q75 coverage {f(d.central_range_q25_q75_coverage)} (nominal 0.50)</p>
-          <table data-testid="quantile-table"><thead><tr><th>Quantile</th><th>Nominal</th><th>Empirical coverage</th><th>Pinball loss</th></tr></thead>
-            <tbody>{QS.map((k, i) => (
-              <tr key={k}><td>{k}</td><td>{f(mt.quantiles[i], 2)}</td><td>{f(d.coverage[k])}</td><td>{f(d.pinball[k], 4)}</td></tr>
-            ))}</tbody></table>
-          {d.validation_quantile_crossing && <p className="muted small">Quantile crossing before rearrangement (validation): {f(100 * d.validation_quantile_crossing.share_rows_crossing, 2)}% of rows; median size {f(d.validation_quantile_crossing.median_violation_when_crossing)}.</p>}
-        </div>
-        <div className="card">
-          <h2>Reliability of the bust probability</h2>
-          <ReliabilityDiagram curves={[
-            { name: "calibrated", color: "var(--series-1)", bins: p.reliability.bins },
-            { name: "before calibration", color: "var(--series-2)", bins: raw.reliability.bins },
-          ]} />
+          <h2>Reliability of the pattern-aware bust probability</h2>
+          <ReliabilityDiagram minN={200} curves={[{ name: "V4 calibrated", color: "var(--series-1)", bins: v4.reliability.bins }]} />
         </div>
         <div className="card">
           <h2>AUPRC by lead day</h2>
-          {mt.by_lead_day.map((r: any) => (
+          {t.by_lead_day.map((r: any) => (
             <div key={r.lead_day} style={{ marginBottom: 6 }}>
-              <div className="muted">Day {r.lead_day} · bust rate {f(r.bust_rate, 2)} · MAE(q50) {f(r.mae_q50)}</div>
-              <BarRow label="v3" value={r.auprc} max={maxLead} />
-              <BarRow label="B0 climatology" value={r.auprc_B0} max={maxLead} color="var(--neutral)" />
+              <div className="muted">Day {r.lead_day} · {r.positives} events · lift {f(r.lift, 2)} · ROC AUC {f(r.roc_auc)}</div>
+              <BarRow label="V4" value={r.auprc} max={maxLead} fmt={(v) => v.toFixed(3)} />
+              <BarRow label="B1 spread" value={r.auprc_B1} max={maxLead} color="var(--neutral)" fmt={(v) => v.toFixed(3)} />
             </div>
           ))}
         </div>
         <div className="card">
-          <h2>Operational and regional checks</h2>
+          <h2>Is V4 alerting on the intended event?</h2>
           <table><tbody>
-            <tr><td>Operating point (chosen on validation, 10% FAR)</td><td>threshold {f(p.operating_point.threshold)} · precision {f(p.operating_point.precision)} · recall {f(p.operating_point.recall)}</td></tr>
-            <tr><td>Mean lead day of detected busts</td><td>{f(p.warning_lead.mean_lead_day_of_detected_busts, 2)}</td></tr>
-            <tr><td>Low-spread AUPRC</td><td>{f(p.hidden_bust.low_spread_auprc)}</td></tr>
-            <tr><td>Q95 bust label AUPRC (sensitivity)</td><td>{f(q.q95_sensitivity.auprc)}</td></tr>
-            <tr><td>Peak-risk day error (mean |Δday|)</td><td>{f(q.peak_risk_day.mean_abs_peak_day_error, 2)}</td></tr>
-            <tr><td>Spatial overlap (mean Jaccard)</td><td>{f(q.spatial_overlap.mean_jaccard)}</td></tr>
-            <tr><td>Regional AUPRC (median, 10th–90th pct over {mt.regional_stability.n_regions} regions)</td>
-              <td>{f(mt.regional_stability.auprc_median)} ({f(mt.regional_stability.auprc_p10)}–{f(mt.regional_stability.auprc_p90)})</td></tr>
+            <tr><td>Alerts (validation 10%-FAR threshold)</td><td>{ps.alerts}</td></tr>
+            <tr><td>Share of alerts with a large-error bust / a pattern failure</td><td>{f(ps.alert_share_magnitude_busts)} / {f(ps.alert_share_pattern_failures)}</td></tr>
+            <tr><td>Median normalized error, alerts vs others</td><td>{f(ps.median_norm_error_alert_vs_not[0])} vs {f(ps.median_norm_error_alert_vs_not[1])}</td></tr>
+            <tr><td>Median local ACC, alerts vs others</td><td>{f(ps.median_local_acc_alert_vs_not[0])} vs {f(ps.median_local_acc_alert_vs_not[1])}</td></tr>
+            <tr><td>ROC AUC of V4 for the large-error / pattern-failure criterion alone</td><td>{f(ps.rocauc_V4_for_magnitude_failure)} / {f(ps.rocauc_V4_for_pattern_failure)}</td></tr>
+            <tr><td>Warning lead (mean lead day of detected busts)</td><td>{f(v4.warning_lead.mean_lead_day_of_detected_busts, 2)}</td></tr>
+            <tr><td>Regional ROC AUC (median, 10th–90th pct; regions with ≥ 20 events)</td>
+              <td>{f(t.by_region.auc_median)} ({f(t.by_region.auc_p10_p90?.[0])}–{f(t.by_region.auc_p10_p90?.[1])}), {t.by_region.n_regions_ge_20_positives} regions</td></tr>
           </tbody></table>
+        </div>
+        <div className="card">
+          <h2>Archived generations (history, not used by V4)</h2>
+          <p className="muted small">Measured on the earlier magnitude-only target, so not directly comparable with V4: v2 B2 / Sentinel, V3 quantile
+            gradient boosting and BMA (failed its pre-registered gate). See docs/model_card_v3.md, docs/model_card_bma.md, docs/evaluation_v4.md.</p>
         </div>
       </div>
     </>
