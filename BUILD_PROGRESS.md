@@ -154,3 +154,18 @@ dev split (`FBS_SPLIT=dev`); 2022 is now inspected and can no longer serve as an
   got HTTP 401 (no ECDS token), so no NCMRWF data was retrieved and no NCMRWF B2 run or benchmark exists.
 * API `/api/providers` and a `source` block on demo runs; UI `SourceBadge` (SOURCE · ECMWF IFS / ERA5; synthetic → DEMO MODE).
 * Benchmarks (v2/v3/V4 metrics) are untouched. Next action: add an ECDS token, then run `scripts/ncmrwf_tigge_check.py`.
+
+## MVP / judging freeze (2026-10-04): B2 is the one served model
+
+* Serving moved from V4 back to the frozen **B2** (`b2_spread_calibrated`, `B2 v2-final (locked 8b196ee)`, calibration
+  `isotonic_validation_2021_v2`) from `artifacts/v2`. The engine reproduces the benchmark `p_B2` on every served region-day.
+  V3, BMA and V4 are archived. Benchmark metrics are unchanged (2022 B2 AUPRC 0.1434; the Sentinel did not beat B2).
+* The UI shows bust probability vs B0, risk level, evidence quality (no "confidence %"), B2 TreeSHAP, blind replay with
+  POST-VERIFICATION labels and RESET, the B2 benchmark Trust view, and NCMRWF as "authenticated retrieval pending".
+* Tests: 128 pytest (incl. headless E2E) + 15 vitest pass. Local server RSS is 416 MB at startup and 436 MB after the
+  flow. Run ≈ 0.3 s locally.
+* **Public deployment VERIFIED 2026-10-04** at https://forecast-bust-sentinel-g0py.onrender.com (commit c0fab06):
+  `/api/health` reports b2_spread_calibrated. `scripts/demo_walkthrough.py` against the public URL passed 24/24
+  UI-vs-API checks with 0 console errors, and API calls go to the same deployed origin. It covered Day 5, reveal, reset,
+  refresh on every route and back/forward. Public latencies: static endpoints ≈ 0.26–0.28 s, case run 3.7 s (free
+  tier), first load 6.5 s. Errors return a clean 404/400 JSON. Screenshots: `artifacts/screenshots/public/`.
