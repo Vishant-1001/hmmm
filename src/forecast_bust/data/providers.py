@@ -29,6 +29,7 @@ import xarray as xr
 
 from forecast_bust.config import REPO_ROOT, cache_dir, data_config
 from forecast_bust.data.adapters import normalise_coords, validate_forecast
+from forecast_bust.data.provenance import ECMWF_MEMBER_COUNT, PROVIDER_INFO
 
 G = 9.80665
 ECDS_API_URL = "https://ecds.ecmwf.int/api"
@@ -153,10 +154,9 @@ class ForecastProvider(ABC):
 class ECMWFResearchProvider(ForecastProvider):
     """Real ECMWF IFS ENS (50 perturbed members) from the cached WeatherBench 2 blocks used by the benchmark."""
     provider = "ecmwf_research"
-    dataset = "ECMWF IFS ENS via WeatherBench 2 (64x32 conservative)"
-    source_label = "ECMWF IFS ENS / ERA5 (historical research archive)"
-    # Every cached block holds members 1..50 (states.nc n_members min = max = 50); read from data in retrieve()
-    ensemble_member_count = 50
+    dataset = PROVIDER_INFO[provider]["dataset"]
+    source_label = PROVIDER_INFO[provider]["source_label"]
+    ensemble_member_count = ECMWF_MEMBER_COUNT   # nominal; retrieve() reads the actual count from the data
 
     def __init__(self, block_dir: Path | None = None):
         self.block_dir = Path(block_dir or cache_dir() / "ens")
@@ -188,8 +188,8 @@ class NCMRWFTIGGEProvider(ForecastProvider):
     (`url: https://ecds.ecmwf.int/api`, `key: <token>`) or FBS_ECDS_KEY / CDSAPI_KEY in the environment.
     The returned GRIB is aggregated to the 5.625 deg benchmark grid (`conservative_box_mean`)."""
     provider = "ncmrwf_tigge"
-    dataset = "TIGGE (ECMWF ECDS tigge-forecasts), origin NCMRWF (dems)"
-    source_label = "NCMRWF NEPS via TIGGE/ECDS"
+    dataset = PROVIDER_INFO[provider]["dataset"]
+    source_label = PROVIDER_INFO[provider]["source_label"]
     # Internal operational description (NCMRWF NEPS documentation): 1 control + 22 perturbed = 23 members.
     # Used for LOGGING ONLY; the archived count is always read from the returned GRIB.
     documented_operational_members = 23
@@ -322,10 +322,10 @@ class SyntheticDemoProvider(ForecastProvider):
     """Seeded synthetic ensemble fields for UI stress cases, development and tests. NEVER real, never
     used for training, calibration or a reported benchmark."""
     provider = "synthetic"
-    dataset = "synthetic demonstration scenario"
+    dataset = PROVIDER_INFO[provider]["dataset"]
     synthetic = True
     demo_only = True
-    source_label = "Synthetic demonstration scenario"
+    source_label = PROVIDER_INFO[provider]["source_label"]
 
     def __init__(self, n_members: int = 20, seed: int = 0, spread_scale_m: float = 30.0):
         self.n_members, self.seed, self.spread_scale_m = n_members, seed, spread_scale_m

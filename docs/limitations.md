@@ -11,17 +11,22 @@
 5. **The MVP target is Z500 only.** Z500 is the first validated target variable; this does not
    mean the system handles monsoon depressions, heavy rainfall, cyclones or heat waves from Z500
    alone. In the tropics Z500 variability is small, so busts there are small in absolute metres.
-6. **NCMRWF operational integration depends on data access.** None was available; the adapter is a
-   documented boundary only.
+6. **NCMRWF integration depends on authenticated data access.** The NCMRWF/TIGGE provider is implemented and
+   ECDS catalogue availability is confirmed. Actual retrieval has **not** been done, because there is no ECDS token
+   here (HTTP 401), so no NCMRWF data is used anywhere (`docs/ncmrwf_tigge_availability.md`).
 7. **Novel atmospheric states may have weak historical support.** The system says so
    (support / evidence categories) rather than hiding it.
 8. **Historical failure signatures are evidence-derived, not causal proof.**
 9. **Historical relationships change when the NWP system changes** (IFS cycle upgrades during
    2018–2022 are part of the data). A drift monitor is future work.
-10. **Performance must be measured before claiming improvement** — see `docs/evaluation_v3.md` (current
-    model) and `docs/evaluation_v2.md` (archived) for the measured results, including comparisons with B2.
+10. **Performance must be measured before claiming improvement.** The served model is B2. Its measured result is in
+    `docs/evaluation_v2.md`: AUPRC 0.143 at a 0.088 base rate, which is real but modest skill. No richer model
+    (Sentinel, V3, BMA, V4) showed a material, validated improvement over B2 on the same target.
 11. **Research-dataset performance ≠ operational NCMRWF performance.**
 12. **Regional outputs are 5.625° boxes**, not high-resolution local predictions.
+13. **The 2022 test year has been read four times** (v1, v2, V3, V4). It is not an untouched test set, and the B2
+    numbers shown in the demo are a disclosed repeated look.
+14. **The hosted demo is a historical replay** of 5 stored 2022 cases. It is not a live or operational forecast feed.
 
 ## Limitations specific to this build
 

@@ -123,9 +123,9 @@ export function RegionMap(props: {
         return (
           <div className="tooltip" style={{ left: hover.x, top: hover.y }}>
             <strong>{hover.r.region_id}</strong> · {latlon(hover.r.lat, hover.r.lon)} · Day {props.day}<br />
-            Pattern-aware bust probability {pct(c.bust_probability)} · confidence {c.confidence}<br />
-            Large-error evidence {c.magnitude_criterion} · pattern-failure evidence {c.pattern_criterion} · historical support {c.historical_support}<br />
-            {c.support_level} · evidence {c.evidence_quality}
+            Bust probability {pct(c.bust_probability)} · {c.risk_level}<br />
+            Climatology (B0) {pct(c.b0_probability)} · spread {num(c.spread_m, 1)} m ({pct(c.spread_pct, 0)} pct)<br />
+            {c.support_level} · evidence quality {c.evidence_quality}
           </div>
         );
       })()}
@@ -135,8 +135,8 @@ export function RegionMap(props: {
             <span key={i}><span className="chip" style={{ background: `var(--risk-${i})` }} />{`${Math.round(lo * 100)}–${Math.min(100, Math.round(RISK_BINS[i + 1] * 100))}%`}</span>
           ))}
           {metric === "risk" && <span>● alert (≥ validation 10%-FAR threshold)</span>}
-          {metric === "verified" && <span><span className="chip" style={{ background: "var(--risk-4)" }} />verified pattern-aware bust (ERA5)</span>}
-          {metric !== "verified" && props.busts && <span>▢ verified pattern-aware bust</span>}
+          {metric === "verified" && <span><span className="chip" style={{ background: "var(--risk-4)" }} />verified bust (ERA5)</span>}
+          {metric !== "verified" && props.busts && <span>▢ verified bust (ERA5)</span>}
         </div>
       )}
     </div>
@@ -147,23 +147,24 @@ const W = 560, H = 230, M = { l: 44, r: 14, t: 18, b: 30 };
 const xs = (d: number) => M.l + ((d - 1) / 9) * (W - M.l - M.r);
 
 export function Trajectory(props: { days: Cell[]; threshold: number; day: number; onDay: (d: number) => void; busts?: boolean[] }) {
-  const ymax = Math.max(0.03, props.threshold * 1.4, ...props.days.map((d) => d.bust_probability * 1.2));
+  const ymax = Math.max(0.03, props.threshold * 1.4, ...props.days.map((d) => Math.max(d.bust_probability, d.b0_probability) * 1.2));
   const ys = (v: number) => H - M.b - (v / ymax) * (H - M.t - M.b);
   const step = ymax > 0.3 ? 0.1 : ymax > 0.1 ? 0.05 : ymax > 0.05 ? 0.01 : 0.005;
   const ticks = Array.from({ length: Math.floor(ymax / step) + 1 }, (_, i) => +(i * step).toFixed(3));
   const series = [
-    { key: "bust_probability", label: "Calibrated pattern-aware bust probability (V4)", color: "var(--series-1)", dash: undefined, w: 2.5 },
+    { key: "b0_probability", label: "B0 climatological bust rate (baseline)", color: "var(--text-muted)", dash: "5 4", w: 1.5 },
+    { key: "bust_probability", label: "B2 bust probability (served model)", color: "var(--series-1)", dash: undefined, w: 2.5 },
   ] as const;
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Day 1-10 bust-probability trajectory">
+        <rect x={Math.max(M.l, xs(props.day) - 14)} y={M.t} width={28 - Math.max(0, M.l - (xs(props.day) - 14))} height={H - M.t - M.b} fill="var(--surface-2)" />
         {ticks.map((t) => (
           <g key={t}>
             <line x1={M.l} x2={W - M.r} y1={ys(t)} y2={ys(t)} stroke="var(--grid)" />
             <text x={M.l - 6} y={ys(t) + 4} textAnchor="end">{(t * 100).toFixed(step < 0.01 ? 1 : 0)}%</text>
           </g>
         ))}
-        <rect x={xs(props.day) - 14} y={M.t} width={28} height={H - M.t - M.b} fill="var(--surface-2)" />
         <line x1={M.l} x2={W - M.r} y1={ys(props.threshold)} y2={ys(props.threshold)} stroke="var(--text-muted)" strokeDasharray="4 4" />
         <text x={W - M.r} y={ys(props.threshold) - 5} textAnchor="end">alert threshold {pct(props.threshold)}</text>
         {props.days.map((d) => (
@@ -171,7 +172,7 @@ export function Trajectory(props: { days: Cell[]; threshold: number; day: number
             onClick={() => props.onDay(d.lead_day)}>D{d.lead_day}</text>
         ))}
         {props.busts?.map((b, i) => b ? (
-          <rect key={i} x={xs(i + 1) - 5} y={4} width={10} height={10} rx={2} fill="var(--verify)"><title>{`Day ${i + 1}: verified pattern-aware bust`}</title></rect>
+          <rect key={i} x={xs(i + 1) - 5} y={4} width={10} height={10} rx={2} fill="var(--verify)"><title>{`Day ${i + 1}: verified bust (ERA5)`}</title></rect>
         ) : null)}
         {series.map((s) => (
           <g key={s.key}>
@@ -180,7 +181,7 @@ export function Trajectory(props: { days: Cell[]; threshold: number; day: number
             {s.key === "bust_probability" && props.days.map((d) => (
               <circle key={d.lead_day} cx={xs(d.lead_day)} cy={ys(d[s.key])} r={d.lead_day === props.day ? 5.5 : 3.5} fill={s.color}
                 stroke="var(--surface-1)" strokeWidth={1.5} style={{ cursor: "pointer" }} onClick={() => props.onDay(d.lead_day)}>
-                <title>{`Day ${d.lead_day}: pattern-aware bust probability ${pct(d.bust_probability)} · confidence ${d.confidence}`}</title>
+                <title>{`Day ${d.lead_day}: bust probability ${pct(d.bust_probability)} · ${d.risk_level}`}</title>
               </circle>
             ))}
           </g>
@@ -190,7 +191,7 @@ export function Trajectory(props: { days: Cell[]; threshold: number; day: number
         {series.slice().reverse().map((s) => (
           <span key={s.key}><svg width="22" height="8"><line x1="0" x2="22" y1="4" y2="4" stroke={s.color} strokeWidth={Math.min(s.w, 6)} strokeDasharray={s.dash} /></svg>{s.label}</span>
         ))}
-        {props.busts && <span>■ verified pattern-aware bust day</span>}
+        {props.busts && <span>■ verified bust day (ERA5)</span>}
       </div>
     </div>
   );

@@ -34,9 +34,14 @@ class ImportanceItem(BaseModel):
 
 
 class ModelSummary(BaseModel):
+    """The ONE served model (B2) - ids shared by API, UI and docs."""
+    model_id: str
     model_type: str
-    estimator: str
     model_version: str
+    provider: str
+    dataset_mode: str
+    calibration_version: str
+    estimator: str
     model_artifact: str
     exported_from: str
     retrained_for_demo: bool
@@ -45,32 +50,32 @@ class ModelSummary(BaseModel):
     calibration: str
     params: dict[str, float]
     features: list[str]
-    experiment_id: str
-    base_rate_pattern_bust: float
-    model_level_importance: list[ImportanceItem]
     alert_threshold: float
     alert_threshold_definition: str
-    confidence_definition: str
     target: str
+    probability_meaning: str
+    test_metrics_2022: dict[str, float]
+    base_rate_bust: float
+    risk_level_definition: str
+    model_level_importance: list[ImportanceItem]
 
 
 class Cell(BaseModel):
-    """V4 model output for one region x lead day (forecast-time information only)."""
+    """B2 output for one region x lead day (forecast-time information only)."""
     lead_day: int
     valid_time: str
+    model_id: str
     model_type: str
     raw_probability: float                 # XGBoost, before calibration
-    calibrated_bust_probability: float     # validation-only isotonic; P(pattern-aware bust)
+    calibrated_bust_probability: float     # validation-only isotonic; P(normalized error > TRAIN Q90)
     bust_probability: float                # = calibrated_bust_probability
-    reliability_confidence: float          # = 1 - calibrated_bust_probability
-    confidence: str                        # LOW / MODERATE / HIGH (see model.confidence_definition)
-    magnitude_criterion: str               # evidence from verified analogues: HIGH/ELEVATED/NORMAL/INSUFFICIENT
-    pattern_criterion: str
-    historical_support: str
-    b0_probability: float                  # magnitude-bust climatology (reference only)
+    risk_level: str                        # ALERT / ABOVE CLIMATOLOGY / AT OR BELOW CLIMATOLOGY
+    b0_probability: float                  # climatological bust rate (baseline reference)
     alert: bool
     spread_m: float
     spread_pct: Optional[float]
+    spread_thr_ratio: Optional[float]
+    analogue_evidence: str                 # verified analogues: HIGH/ELEVATED/NORMAL/INSUFFICIENT (not a model input)
     support_level: str
     support_distance: Optional[float]
     evidence_quality: str
@@ -155,7 +160,6 @@ class Attribution(BaseModel):
     method: str
     bias_logodds: float
     drivers: list[Driver]
-    groups: dict[str, float]
     note: str
 
 
@@ -195,12 +199,6 @@ class FailureSignature(BaseModel):
     top_label: Optional[str] = None
 
 
-class Criterion(BaseModel):
-    rate: Optional[float]
-    climatology: float
-    level: str
-
-
 class ContextFeature(BaseModel):
     feature: str
     label: str
@@ -214,7 +212,6 @@ class Explanation(Cell):
     attribution: Attribution
     evidence: list[EvidenceItem]
     interpretation: list[str]
-    criteria: dict[str, Criterion]
     analogue_summary: AnalogueSummary
     failure_signature: FailureSignature
     context_features: list[ContextFeature]
@@ -227,17 +224,10 @@ class Fingerprint(BaseModel):
     phase_share: Optional[float]
     bias_m: Optional[float]
     pattern_corr: Optional[float]
-    magnitude_failure: bool
-    pattern_failure: bool
 
 
 class VerificationOut(BaseModel):
-    actual_bust: bool                      # pattern-aware bust (V4 target)
-    actual_magnitude_bust: bool
-    magnitude_failure: bool
-    pattern_failure: bool
-    local_acc: Optional[float]
-    acc_q10: Optional[float]
+    actual_bust: bool                      # normalized error > TRAIN Q90 (the B2 target)
     normalized_error: float
     threshold_q90: float
     error_m: float
@@ -248,10 +238,9 @@ class VerificationOut(BaseModel):
 class RevealForecast(BaseModel):
     bust_probability: float
     raw_probability: float
-    confidence: str
-    magnitude_criterion: str
-    pattern_criterion: str
-    historical_support: str
+    b0_probability: float
+    risk_level: str
+    analogue_evidence: str
     alert: bool
     expected_signature: FailureSignature
 
@@ -266,8 +255,6 @@ class Comparison(BaseModel):
 class VerifDay(BaseModel):
     lead_day: int
     actual_bust: bool
-    actual_magnitude_bust: bool
-    local_acc: Optional[float]
     normalized_error: float
     threshold_q90: float
     signature: str
@@ -276,7 +263,6 @@ class VerifDay(BaseModel):
 class CaseSummary(BaseModel):
     region_days: int
     verified_busts: int
-    verified_magnitude_busts: int
     model_alerts: int
     model_hits: int
     hidden_busts: int
@@ -286,7 +272,6 @@ class BustCell(BaseModel):
     region_id: str
     lead_day: int
     bust: int
-    magnitude_bust: int
     signature: str
 
 
@@ -295,7 +280,6 @@ class MemoryEntry(BaseModel):
     lead_day: int
     valid_time: str
     bust: bool
-    magnitude_bust: bool
     normalized_error: float
     signature: str
 
@@ -314,6 +298,7 @@ class Reveal(BaseModel):
     case_id: str
     region_id: str
     lead_day: int
+    post_verification: bool
     reference: str
     forecast: RevealForecast
     verification: VerificationOut

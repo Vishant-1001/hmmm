@@ -4,7 +4,14 @@ Research prototype for **SIH26079 — AI-Based Forecast Bust Detection for Mediu
 (Ministry of Earth Sciences / NCMRWF). The official problem statement, metadata and rubric are reproduced
 verbatim, separately from our material, in [`docs/sih_source.md`](docs/sih_source.md).
 
-> NWP tells you what it predicts. Forecast Bust Sentinel estimates when that prediction is likely to fail.
+> NWP tells you what it predicts. Forecast Bust Sentinel tells you when to be cautious about it.
+
+**MVP freeze (judging build).** One model is served: **B2** (`model_id = b2_spread_calibrated`, version
+`B2 v2-final (locked 8b196ee)`, calibration `isotonic_validation_2021_v2`). It is a calibrated spread-based
+model run on real ECMWF IFS ENS forecasts and verified against ERA5. Its 2022 result is AUPRC 0.143 at a bust base rate
+of 0.088, and the richer Sentinel did **not** beat it, which is why B2 is the model served. V3, BMA and V4 are archived
+experiments that are not served. NCMRWF/TIGGE has a provider implementation and catalogue availability is confirmed,
+but **authenticated retrieval is still pending**. Synthetic data is never used scientifically.
 
 ## 1. What it does
 
@@ -76,23 +83,33 @@ TRAIN-only PCA (8 components); purge of rows whose verification crosses a split 
 
 ## 7. Model
 
-XGBoost (`hist`, CPU), one shared model for all regions and lead days. Feature groups: ATM (atmospheric
-state), ENS (ensemble behaviour), PAT (frozen PCA pattern), EVO (forecast evolution), MEM (historical
-forecast-state memory / analogues), REC (recent verified error behaviour), DYN (v2: wind, shear, vorticity,
-divergence, MSLP, and in-forecast Z500/MSLP/vorticity tendencies).
+**Served model (MVP): B2, the calibrated spread baseline.** XGBoost (`hist`, CPU) with 7 forecast-time inputs:
+ensemble spread (`spread_m`), its TRAIN percentile for the same region, lead and season (`spread_pct`), spread
+relative to the bust threshold (`spread_thr_ratio`), lead day, region, season and initialisation hour. Isotonic
+calibration was fitted on validation (2021) only. Hyper-parameters are locked in `config/model_v2.yaml` (dev split,
+no 2022 tuning). The exported artifact is `artifacts/v2/demo/model/b2_booster.json` with
+`models.json` (`B2.isotonic`), and the model card is `artifacts/v2/demo/model/served_b2.json`
+(`scripts/export_served_b2.py`). The demo engine reproduces the benchmark's `p_B2` for every served region-day
+(`tests/test_demo_engine.py`). Inference takes about 50 ms for 640 region-days on CPU.
 
-**V4 (current, served): pattern-aware forecast bust.** The event is now large Z500 error (normalized error > TRAIN Q90)
-AND poor local spatial pattern agreement (3×3 anomaly correlation < TRAIN Q10); ONE shared XGBoost classifier on the
-existing prediction-time-safe features, validation-only isotonic calibration. Pre-registered gate passed on the dev
-split; 2022 (not a pristine test): AUPRC 0.0255 at 1.04% prevalence (lift 2.45), ROC AUC 0.714, precision 0.028 at
-the alert threshold. Caveats (weak large-error skill; partly artifactual pattern signal) in
-[`docs/limitations_v4.md`](docs/limitations_v4.md); model card [`docs/model_card_v4.md`](docs/model_card_v4.md).
+The probability is **P(normalized regional Z500 error > TRAIN Q90 for that region, lead day and season)**. It is not the
+probability of a weather event, and it is not a global forecast-quality score. The UI shows it as *bust probability*,
+next to the B0 climatological rate, a risk level (ALERT ≥ 13.9%, the 10%-false-alarm threshold on validation; ABOVE
+CLIMATOLOGY; or AT OR BELOW CLIMATOLOGY) and, separately, *evidence quality* drawn from verified historical analogues.
+
+Richer feature groups exist for research: ATM, ENS, PAT, EVO, MEM, REC and DYN (`features/build.py`).
+
+**V4 (archived experiment, not served): pattern-aware forecast bust.** V4 predicts a different and rarer event: large Z500
+error AND poor local pattern agreement. On 2022 (not a pristine test) it scored AUPRC 0.0255 at 1.04% prevalence and
+ROC AUC 0.714 ([`docs/model_card_v4.md`](docs/model_card_v4.md)). It was served from 2026-10-02 to 2026-10-04. The MVP
+freeze returned serving to B2, because B2 is the validated model for the project's main bust definition and
+it is simpler to explain.
 
 **BMA experiment (NO-GO, not served):** Bayesian Model Averaging of the 50 genuine IFS ENS members failed its
 pre-registered gate on the dev split (dev-test AUPRC 0.121 vs B2 0.158 and V3 0.140) and was not evaluated on 2022.
 It is kept as a negative result ([`docs/model_card_bma.md`](docs/model_card_bma.md)).
 
-**v3 (archived experiment, superseded by V4): quantile gradient boosting.** Forecast Bust Sentinel models the conditional
+**v3 (archived experiment): quantile gradient boosting.** Forecast Bust Sentinel models the conditional
 distribution of future normalized regional Z500 forecast error using quantile gradient boosting
 (`HistGradientBoostingRegressor(loss="quantile")`, q10/q25/q50/q75/q90/q95, one shared configuration) applied to
 prediction-time-safe NWP forecast-state features (SPREAD+ATM+ENS+PAT+EVO+MEM+REC+DYN). The upper tail of that
@@ -104,7 +121,7 @@ first evaluation of a period already read by v1/v2 — AUPRC 0.1449 (base rate 0
 spread-only B2 (−0.018 AUPRC). Method and references: `docs/scientific_methodology.md` §0; model card
 `docs/model_card_v3.md`; run `scripts/run_v3.sh dev|final`.
 
-**v2 (archived; superseded by v3):** hyper-parameters, learner and feature groups were chosen on the development split
+**v2 (source of the served B2):** hyper-parameters, learner and feature groups were chosen on the development split
 only (train 2018–19, validation 2020, dev-test 2021) and locked in `config/model_v2.yaml` before 2022 was
 scored ([`docs/optimization_v2.md`](docs/optimization_v2.md)). B2 and the Sentinel were tuned with the same
 20-configuration grid and chose the same values. **Sentinel = B2 inputs + ATM + EVO + MEM + REC**: the groups
@@ -120,8 +137,8 @@ reliable-ensemble spread probability beat the v1 tree B2 on validation.
 
 ## 9. Calibration
 
-Isotonic regression fitted on validation predictions only, then frozen. Confidence = 1 − bust probability.
-Confidence disagreement = Sentinel − B2 (percentage points), a project-level diagnostic.
+Isotonic regression fitted on validation (2021) predictions only, then frozen (`isotonic_validation_2021_v2`).
+The UI never presents a "confidence %". It shows the bust probability and, separately, evidence quality and support.
 
 ## 10. Evaluation
 
@@ -162,16 +179,19 @@ served only on "Reveal". Case selection is documented: 4 hidden-bust stress case
 
 ## Interactive demo (live inference)
 
-`scripts/serve.sh`, then open http://127.0.0.1:8000. The locked v2 Sentinel/B2 models (served from
-`artifacts/v2/demo/`; `config.served_run()`) execute on stored real 2022 forecast states for 5 registered
-cases; historical memory features are computed live and causally; ERA5 verification appears only on *Reveal*.
-The demo needs no download or retraining. See [docs/demo.md](docs/demo.md). Screenshots of the running app are
-in `artifacts/screenshots/` (v1 era).
+`scripts/serve.sh`, then open http://127.0.0.1:8000. The served B2 model (`artifacts/v2/demo/`,
+`config.served_run()` → `v2`) runs on stored real 2022 ECMWF IFS ENS forecast states for 5 registered cases.
+Historical-analogue evidence is computed live and causally, and ERA5 verification appears only on *Reveal*. The
+judging flow is:
+case → risk map → Day 1–10 → region → lead day → bust probability vs B0 → spread context → explanation
+(TreeSHAP + forecast-time evidence) → blind replay → reveal (ERA5 error, bust, failure fingerprint) → reset.
+Every response carries provenance (`source.provider = ecmwf_research`, `synthetic = false`), and the UI shows
+`SOURCE · ECMWF IFS / ERA5`. See [docs/demo.md](docs/demo.md).
 
-**Hosted demo (Render):** an API web service plus a static site for the UI, both from this repository
-(`render.yaml`). Step-by-step setup: [docs/render_deploy.md](docs/render_deploy.md). The hosted API serves the
-committed runtime bundle (`artifacts/v2/demo/`, `artifacts/v2/replay/`, v2 metrics JSONs) and never downloads
-data or trains.
+**Hosted demo (Render):** an API web service plus a static UI site, both from this repository (`render.yaml`,
+[docs/render_deploy.md](docs/render_deploy.md)). The hosted API serves the committed bundle (`artifacts/v2/`) and never
+downloads data or trains. Deployment verification status: see [docs/render_deploy.md](docs/render_deploy.md) and
+`BUILD_PROGRESS.md`.
 
 ## Data status
 

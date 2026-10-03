@@ -257,3 +257,40 @@ def explain_row_v4(row: pd.Series, contrib_row: np.ndarray, features: list[str],
             "attribution_note": "TreeSHAP contributions of the V4 XGBoost model (log-odds, before isotonic calibration). "
                                 "They describe what the model used; they are associations, not physical causes. "
                                 "The criterion levels come from verified historical analogues, not from the model."}
+
+
+def explain_row_b2(row: pd.Series, contrib_row: np.ndarray, features: list[str], ref: dict, p: float, p_raw: float,
+                   p_b0: float, base_rate: float, threshold: float, analogue_level: str, top: int = 7) -> dict:
+    """Served B2: TreeSHAP of the 7 B2 inputs (log-odds, before calibration) plus forecast-time evidence (spread,
+    atmospheric state, causal verified analogues, forecast evolution, recent errors verified before initialisation).
+    No verification of this region-day is read. Associations, not causes."""
+    c = contrib_row[:-1]
+    drivers = []
+    for i in np.argsort(-np.abs(c))[:top]:
+        f = features[i]
+        v = row.get(f, np.nan)
+        v = float(v) if v is not None and np.isfinite(v) else None
+        drivers.append({"feature": f, "label": FEATURE_LABELS.get(f, f), "group": feature_group(f), "value": v,
+                        "train_percentile": train_percentile(v, ref.get(f)) if v is not None else None,
+                        "contribution_logodds": float(c[i]), "direction": "raises risk" if c[i] > 0 else "lowers risk"})
+    ev = _state_evidence(row, ref, base_rate)
+    ev.append({"kind": "E. Baseline comparison",
+               "text": f"B2 bust probability {100 * p:.1f}% vs climatological rate B0 {100 * p_b0:.1f}% for this region, "
+                       f"lead day and season ({100 * (p - p_b0):+.1f} percentage points)."})
+    why = [f"Bust probability {100 * p:.1f}% (raw model {100 * p_raw:.1f}%): the estimated chance that this region-day's "
+           f"Z500 forecast error exceeds the project bust threshold (training Q90).",
+           ("At or above" if p >= threshold else "Below") + f" the alert threshold {100 * threshold:.1f}% "
+           "(10% false-alarm rate on validation)."]
+    sp = row.get("spread_pct")
+    if sp is not None and np.isfinite(sp):
+        why.append(f"Ensemble spread is at the {100 * sp:.0f}th percentile of training spread for this region, lead day "
+                   "and season; B2 uses spread, its percentile and its ratio to the bust threshold, plus lead/region/season.")
+    why.append(f"Historical analogue evidence (verified similar forecast states, not a model input): {analogue_level}.")
+    up = [d for d in drivers if d["contribution_logodds"] > 0][:3]
+    if up:
+        why.append("Inputs pushing the risk up for this case (TreeSHAP, associations not causes): "
+                   + ", ".join(d["label"] for d in up) + ".")
+    return {"drivers": drivers, "evidence": ev, "interpretation": why,
+            "attribution_note": "TreeSHAP contributions of the B2 booster (log-odds, before isotonic calibration). B2 sees "
+                                "only spread, spread percentile, spread/threshold ratio, lead day, region, season and init "
+                                "hour; the other evidence items are context, not model inputs."}

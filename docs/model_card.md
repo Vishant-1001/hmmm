@@ -1,3 +1,11 @@
+> **MVP freeze status (2026-10-04).** The served model is **B2** (`model_id = b2_spread_calibrated`, version
+> `B2 v2-final (locked 8b196ee)`, calibration `isotonic_validation_2021_v2`). Its inputs are spread, spread
+> percentile, spread/threshold ratio, lead day, region, season and init hour, and it runs on real ECMWF IFS ENS data
+> verified against ERA5. Its machine-readable card is `artifacts/v2/demo/model/served_b2.json`. 2022 metrics
+> (unchanged, `artifacts/v2/metrics.json`): AUPRC 0.1434 [0.1308, 0.1572], ROC AUC 0.619, Brier 0.0788, ECE 0.0061,
+> recall at 10% FAR 0.213. The richer Sentinel did not beat B2. The card below is the v1 card, generated from the v1
+> artifacts and kept for the record. V3, BMA and V4 have their own cards and are not served.
+
 # Model card — Forecast Bust Sentinel (generated from artifacts)
 
 ## Intended use

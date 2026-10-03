@@ -9,7 +9,7 @@ export const ROUTES = [
   ["reliability", "Reliability", "Region × Day 1–10"],
   ["evidence", "Evidence", "Why flagged"],
   ["priority", "Priority", "Forecaster review queue"],
-  ["verification", "Verification", "Reveal & fingerprint"],
+  ["verification", "Blind replay", "Predict → reveal ERA5"],
   ["trust", "Trust", "Model evaluation"],
 ] as const;
 export type Route = (typeof ROUTES)[number][0];
@@ -83,9 +83,10 @@ export default function DemoApp() {
           ))}
         </nav>
         <div className="side-foot">
-          <div className="loop">FORECAST → RELIABILITY → EVIDENCE → VERIFICATION → MEMORY</div>
+          <div className="loop">NWP tells you what it predicts. Sentinel tells you when to be cautious about it.</div>
+          <div className="loop">FORECAST → RISK → EVIDENCE → BLIND REPLAY → VERIFICATION</div>
           {run && <div className="muted" data-testid="inference-time">Models executed live: {run.timings_ms.total.toFixed(0)} ms for {run.regions.length} regions × 10 days</div>}
-          {run && <div className="muted">Model {run.model.model_version}</div>}
+          {run && <div className="muted" data-testid="served-model">Model {run.model.model_id} · {run.model.model_version}</div>}
         </div>
       </aside>
       <div className="main-col">
@@ -115,7 +116,7 @@ export default function DemoApp() {
         </div>
         <main className="content">
           {err && <div className="panel err" data-testid="error">{err} <button className="btn" data-testid="retry" onClick={retry}>Retry</button></div>}
-          {!err && (loading || !run || !sel) && route !== "trust" && <div className="panel muted" data-testid="loading">Running the V4 pattern-aware model on the stored forecast state… <span className="muted">(first request after idle can take up to a minute while the demo server wakes)</span></div>}
+          {!err && (loading || !run || !sel) && route !== "trust" && <div className="panel muted" data-testid="loading">Running the B2 bust-risk model on the stored forecast state… <span className="muted">(first request after idle can take up to a minute while the demo server wakes)</span></div>}
           {run && sel && !loading && (
             <>
               {route === "overview" && <OverviewScreen run={run} sel={sel} setDay={setDay} focus={focus} />}
@@ -124,7 +125,8 @@ export default function DemoApp() {
               {route === "priority" && <PriorityScreen run={run} focus={focus} />}
               {route === "verification" && region && (
                 <VerificationScreen run={run} sel={sel} region={region} setDay={setDay} revealed={isRevealed}
-                  onReveal={() => setRevealed((s) => new Set(s).add(sel.caseId))} />
+                  onReveal={() => setRevealed((s) => new Set(s).add(sel.caseId))}
+                  onReset={() => setRevealed((s) => { const n = new Set(s); n.delete(sel.caseId); return n; })} />
               )}
             </>
           )}

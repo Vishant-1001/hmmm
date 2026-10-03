@@ -28,12 +28,16 @@ def peak_rss_mb() -> float:
 
 def update_dataset_manifest(rep: dict) -> None:
     """Separate provider entries in artifacts/dataset_manifest.json; the existing ECMWF/ERA5 entries are kept."""
-    path = REPO_ROOT / "artifacts" / "dataset_manifest.json"
+    for path in (REPO_ROOT / "artifacts" / "dataset_manifest.json", REPO_ROOT / "artifacts" / "v2" / "dataset_manifest.json"):
+        _update_one(path, rep)
+
+
+def _update_one(path, rep: dict) -> None:
     man = json.loads(path.read_text()) if path.exists() else {}
     cov = rep.get("coverage", {})
     man["providers"] = {
         "ecmwf_era5": {"provider": "ECMWF (IFS ENS) + ERA5 verification", "archive": "WeatherBench 2 (gs://weatherbench2)",
-                       "synthetic": False, "role": "benchmark data source of B2/v2/v3/V4 and every served case",
+                       "synthetic": False, "role": "benchmark data source of the served B2 model and every served case",
                        "entries": "see `forecast`, `reference`, `climatology` above (unchanged)"},
         "ncmrwf_tigge": {"provider": "NCMRWF", "archive": "TIGGE/ECDS", "origin": "dems", "synthetic": False,
                          "source_url": ECDS_DATASET_URL, "api_url": ECDS_API_URL,

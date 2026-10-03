@@ -46,13 +46,13 @@ INTERIM_DIR = REPO_ROOT / "data" / "interim" / _suffix
 
 def served_run() -> tuple[Path, str]:
     """(artifact dir, run name) the API/demo SERVE (read-only): FBS_ARTIFACT_DIR if set (run name from
-    FBS_SERVE_RUN, default ""); else artifacts/<FBS_SERVE_RUN> (default v4) when that run's final metrics and
+    FBS_SERVE_RUN, default ""); else artifacts/<FBS_SERVE_RUN> (default v2: the frozen B2 MVP) when that run's final metrics and
     demo bundle exist; else the v1 artifacts/. Read at call time, so an environment override applies to
     modules (re)imported afterwards. Pipelines still write to ARTIFACT_DIR."""
     env = os.environ.get("FBS_ARTIFACT_DIR")
     if env:
         return Path(env), os.environ.get("FBS_SERVE_RUN", "")
-    run = os.environ.get("FBS_SERVE_RUN", "v4")
+    run = os.environ.get("FBS_SERVE_RUN", "v2")
     p = REPO_ROOT / "artifacts" / run
     if run and (p / "metrics.json").is_file() and (p / "demo" / "registry.json").is_file():
         return p, run

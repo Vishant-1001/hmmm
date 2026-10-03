@@ -64,3 +64,14 @@ def formula_v4() -> dict:
     return {"formula": "score = p_pattern_bust * 0.5**((lead_day-1)/H) * evidence_weight",
             "H_days": cfg["urgency_halflife_days"], "B": 0.0, "evidence_weight": cfg["evidence_weight"],
             "note": "Product triage rule; weights are design choices, not fitted or validated constants."}
+
+
+def formula_b2() -> dict:
+    cfg = model_config()["priority"]
+    return {"formula": "score = p_bust(B2) * 0.5**((lead_day-1)/H) * evidence_weight",
+            "H_days": cfg["urgency_halflife_days"], "B": 0.0, "evidence_weight": cfg["evidence_weight"],
+            "note": "Product triage rule; weights are design choices, not fitted or validated constants."}
+
+
+# B2 serving uses the same rule (p_bust x urgency x evidence weight, no baseline/tail bonus)
+priority_score_b2 = priority_score_v4

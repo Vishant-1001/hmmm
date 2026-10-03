@@ -27,6 +27,7 @@ import pandas as pd
 import xarray as xr
 
 from forecast_bust.config import REPO_ROOT, data_config
+from forecast_bust.data.provenance import B2_MODES
 from forecast_bust.data.providers import G, ForecastBundle, ensemble_mean_spread
 from forecast_bust.data.regions import build_regions, region_members
 from forecast_bust.verification.alignment import SEASON_CODES, season_of, valid_time
@@ -37,13 +38,7 @@ B2_SOURCE_RUN = REPO_ROOT / "artifacts" / "v2"
 B2_FEATURES = ["spread_m", "spread_pct", "spread_thr_ratio", "lead_day", "region_code", "season_code", "init_hour"]
 GROUP = ["region_id", "lead_day", "season"]
 
-# Model/provider modes. b2_ecmwf is the existing benchmark model; b2_ncmrwf is the same frozen B2 applied
-# to NCMRWF inputs; synthetic_demo is never a scientific result.
-MODES = {
-    "b2_ecmwf": {"provider": "ecmwf_research", "artifact_dir": "ecmwf"},
-    "b2_ncmrwf": {"provider": "ncmrwf_tigge", "artifact_dir": "ncmrwf"},
-    "synthetic_demo": {"provider": "synthetic", "artifact_dir": "../demo/synthetic"},
-}
+MODES = B2_MODES
 ECMWF_CALIBRATION = "ECMWF_IFS_v2_validation2021_isotonic"
 
 

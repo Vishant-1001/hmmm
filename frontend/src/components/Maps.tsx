@@ -2,8 +2,8 @@ import { useState } from "react";
 import coast from "../data/coastline.json";
 import type { Region, VerifDay } from "../types";
 
-// V4 pattern-aware bust is a ~1% event (training rate 1.3%; validation 10%-FAR alert threshold 2.05%)
-export const RISK_BINS = [0, 0.01, 0.02, 0.03, 0.05, 0.08, 1.0001];
+// B2 bust probability bins (training bust rate ~10%; alert threshold 13.9%)
+export const RISK_BINS = [0, 0.05, 0.08, 0.11, 0.14, 0.2, 1.0001];
 export function riskClass(p: number): number {
   for (let i = 0; i < RISK_BINS.length - 1; i++) if (p < RISK_BINS[i + 1]) return i;
   return RISK_BINS.length - 2;

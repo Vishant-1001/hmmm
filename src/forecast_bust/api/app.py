@@ -71,10 +71,11 @@ def health_light():
 @app.get("/api/health")
 def health():
     idx = REPORT / "replay" / "index.json"
-    md = ART / "demo" / "model" / "v4" / "metadata.json"
+    md = ART / "demo" / "model" / "served_b2.json"
     served = json.loads(md.read_text()) if md.exists() else {}
-    return {"status": "ok", "mode": MODE, "served_run": SERVED_RUN, "model_type": served.get("model_type"),
-            "experiment_id": served.get("experiment_id"), "artifacts_present": {
+    return {"status": "ok", "mode": MODE, "served_run": SERVED_RUN, "model_id": served.get("model_id"),
+            "model_type": served.get("model_type"), "model_version": served.get("model_version"),
+            "calibration_version": served.get("calibration_version"), "artifacts_present": {
         "metrics": (ART / "metrics.json").exists(), "replay_index": idx.exists(),
         "dataset_manifest": (ART / "dataset_manifest.json").exists()}}
 
@@ -97,16 +98,19 @@ def provenance():
 def providers():
     """Forecast providers, their evidence level and the B2 model/provider modes. NCMRWF status is read from the
     machine-readable availability manifest written by scripts/ncmrwf_tigge_check.py - never asserted here."""
-    from forecast_bust.data.providers import PROVIDERS
+    from forecast_bust.data.provenance import B2_MODES, PROVIDER_INFO
     av_path = REPO_ROOT / "artifacts" / "ncmrwf_tigge_availability.json"
     av = json.loads(av_path.read_text()) if av_path.exists() else None
-    status = {"ecmwf_research": "real data - source of the served cases and the B2/V4 benchmarks",
+    status = {"ecmwf_research": "real data - source of the served cases and of the B2 benchmark",
               "ncmrwf_tigge": (av or {}).get("status", "NOT CHECKED (no availability manifest)"),
               "synthetic": "demo only - never used for training, calibration or reported metrics"}
     out = []
-    for name, cls in PROVIDERS.items():
-        out.append({"provider": name, "dataset": cls.dataset, "source_label": cls.source_label,
-                    "synthetic": cls.synthetic, "demo_only": cls.demo_only, "status": status[name]})
+    for name, info in PROVIDER_INFO.items():
+        out.append({"provider": name, **info, "status": status[name]})
+    for p in out:
+        if p["provider"] == "ncmrwf_tigge":
+            p["ui_label"] = ("Provider integration implemented; catalogue availability confirmed; authenticated retrieval "
+                             "pending" if not (av or {}).get("retrieval_success") else p["status"])
     ncm = None
     if av:
         ncm = {k: av.get(k) for k in ("status", "retrieval_success", "members_found", "available_leads", "tested_date",
@@ -115,8 +119,7 @@ def providers():
                                                             "level_500_listed", "perturbed_forecast_listed",
                                                             "day1_10_leads_listed")}
                                   for y, v in av.get("catalogue", {}).get("years", {}).items()}
-    from forecast_bust.b2_provider import MODES
-    return {"providers": out, "served_provider": "ecmwf_research", "b2_modes": MODES, "ncmrwf_tigge_availability": ncm}
+    return {"providers": out, "served_provider": "ecmwf_research", "b2_modes": B2_MODES, "ncmrwf_tigge_availability": ncm}
 
 
 @app.get("/api/metrics")
@@ -221,7 +224,7 @@ def verification(case_id: str):
 # ---------------------------------------------------------------------------------------------
 from forecast_bust.demo import schemas as S  # noqa: E402
 
-DEMO_MODE = ("Historical replay research prototype - the frozen V4 pattern-aware XGBoost model executes live on stored real "
+DEMO_MODE = ("Historical replay research prototype - the frozen B2 spread model executes live on stored real "
              "ECMWF IFS ENS forecast states; not a live or NCMRWF feed")
 
 

@@ -1,17 +1,16 @@
 """Live inference engine for the interactive demo (historical replay, real model execution).
 
-On every case run the engine:
-  1. loads the stored forecast-state inputs of one real initialisation (64 regions x Day 1-10),
-  2. runs the frozen V4 pattern-aware XGBoost classifier (raw probability -> validation-fitted isotonic
-     calibrator) and the B0 climatology reference (B2 / V3 / BMA / the old Sentinel are not used),
-  3. queries the historical forecast-state memory (analogues verified no later than the init time),
-  4. computes support / OOD distance, evidence strength, review priority,
-  5. computes TreeSHAP attributions of the V4 booster for explanations, plus magnitude / pattern evidence
-     from the causal analogue memory (verified historical cases only).
+ONE served model: the frozen B2 spread baseline (v2, locked 8b196ee; models.b2_served). On every case run the engine:
+  1. loads the stored forecast-state inputs of one real ECMWF IFS ENS initialisation (64 regions x Day 1-10),
+  2. runs the exported B2 booster (raw probability -> validation-2021 isotonic calibrator) and the B0
+     climatology reference,
+  3. queries the historical forecast-state memory (analogues verified no later than the init time) - evidence only,
+  4. computes support / OOD distance, evidence strength and review priority,
+  5. computes TreeSHAP attributions of the B2 booster for explanations (on request).
 
-Nothing here is a lookup of precomputed probabilities: predictions come from the exported
-pattern-aware XGBoost model (artifacts/v4/demo/model/v4/) evaluated on the stored inputs. Verification (ERA5) is read
-from a separate file, and only by `reveal()`.
+Nothing here is a lookup of precomputed probabilities: predictions come from the exported B2 model
+(artifacts/v2/demo/model/) evaluated on the stored inputs. Verification (ERA5) is read from a separate file,
+and only by `reveal()`. V3, BMA and V4 are archived experiments and are not loaded.
 """
 from __future__ import annotations
 
@@ -27,10 +26,10 @@ import pandas as pd
 
 from forecast_bust.config import model_config
 from forecast_bust.demo.build import SERVED_DEMO_DIR
-from forecast_bust.explainability.explain import FEATURE_LABELS, criterion_level, explain_row_v4
-from forecast_bust.explainability.priority import EVIDENCE_NAMES, formula_v4, priority_score_v4
+from forecast_bust.explainability.explain import FEATURE_LABELS, criterion_level, explain_row_b2
+from forecast_bust.explainability.priority import EVIDENCE_NAMES, formula_b2, priority_score_b2
 from forecast_bust.labels.signature import CLASSES, LABELS
-from forecast_bust.models.pattern_bust import V4Model
+from forecast_bust.models.b2_served import B2Served
 from forecast_bust.support.ood import SUPPORT_LEVELS, evidence_strength, support_distance
 
 
@@ -43,7 +42,7 @@ class CaseRun:
     case_id: str
     meta: dict
     rows: pd.DataFrame                   # 640 rows, forecast state + model outputs (no verification)
-    contrib: dict                        # row -> V4 TreeSHAP (n_features + 1), filled on demand
+    contrib: dict                        # row -> B2 TreeSHAP (n_features + 1), filled on demand
     neighbours: list                     # per row: (memory indices, distances)
     timings_ms: dict = field(default_factory=dict)
 
@@ -56,7 +55,7 @@ class Engine:
         self.registry = json.loads((demo_dir / "registry.json").read_text())
         self.meta = json.loads((demo_dir / "model_meta.json").read_text())
         spec = json.loads((demo_dir / "model" / "models.json").read_text())
-        self.model = V4Model(demo_dir / "model" / "v4")
+        self.model = B2Served(demo_dir / "model")
         b0 = spec["B0"]
         self.b0_table = pd.DataFrame(b0["table"])
         self.b0_group = b0["group"]
@@ -69,10 +68,8 @@ class Engine:
         self.k, self.kmin = am["k"], am["min_analogues"]
         tr = json.loads((demo_dir / "train_reference.json").read_text())
         self.ref = {k: np.asarray(v, float) for k, v in tr["quantiles"].items()}
-        self.base_rate = tr["base_rate"]                      # TRAIN magnitude-bust rate
-        self.clim = {"magnitude": self.base_rate, "pattern": self.meta["base_rate_pattern_failure"],
-                     "support": self.meta["base_rate_pattern_bust"]}
-        self.threshold = self.meta["alert_threshold"]
+        self.base_rate = tr["base_rate"]                      # TRAIN bust rate (Q90 criterion)
+        self.threshold = self.model.card["alert_threshold"]   # B2, 10% false-alarm rate on VALIDATION
         self._load_memory(memory_path)
         self._lock = threading.Lock()
         self._cache: dict[str, CaseRun] = {}
@@ -91,8 +88,7 @@ class Engine:
         import pyarrow.parquet as pq
         from pandas.api.types import union_categoricals
 
-        keep = ["case_id", "init_time", "valid_time", "region_id", "lead_day", "split", "bust", "norm_error",
-                "sig_class", "pattern_failure", "pattern_bust"]
+        keep = ["case_id", "init_time", "valid_time", "region_id", "lead_day", "split", "bust", "norm_error", "sig_class"]
         strs = {"region_id", "split", "sig_class"}  # low-cardinality; case_id is unique per row
         pf, pool = pq.ParquetFile(path), pa.default_memory_pool()
 
@@ -125,8 +121,6 @@ class Engine:
                            for k, v in mem.groupby(["region_id", "lead_day"], observed=True).indices.items()}
         self.mem_bust = mem["bust"].to_numpy(float)
         self.mem_err = mem["norm_error"].to_numpy(float)
-        self.mem_pfail = mem["pattern_failure"].to_numpy(float)   # evidence only (verified cases), never a feature
-        self.mem_pbust = mem["pattern_bust"].to_numpy(float)
         pool.release_unused()
 
     def memory_lookup(self, rows: pd.DataFrame) -> tuple[pd.DataFrame, list]:
@@ -136,7 +130,7 @@ class Engine:
         init = rows["init_time"].values.astype("datetime64[ns]")
         out = {c: np.full(len(rows), np.nan) for c in
                ["an_n_within", "an_dist1", "an_dist_mean", "an_bust_rate", "an_err_med", "an_err_q90", "an_n_eligible",
-                "an_pattern_failure_rate", "an_pattern_bust_rate", "an_n_used"]}
+                "an_n_used"]}
         neigh = []
         for i, (rid, ld) in enumerate(zip(rows["region_id"].to_numpy(), rows["lead_day"].to_numpy())):
             lo, hi = self.mem_groups[(rid, int(ld))]
@@ -155,8 +149,6 @@ class Engine:
                 out["an_bust_rate"][i] = self.mem_bust[cand].mean()
                 out["an_err_med"][i] = np.median(self.mem_err[cand])
                 out["an_err_q90"][i] = np.quantile(self.mem_err[cand], 0.9)
-                out["an_pattern_failure_rate"][i] = np.nanmean(self.mem_pfail[cand])
-                out["an_pattern_bust_rate"][i] = np.nanmean(self.mem_pbust[cand])
                 out["an_n_used"][i] = n
             neigh.append((cand, dk))
         res = rows.copy()
@@ -185,22 +177,22 @@ class Engine:
             rows = pd.read_parquet(self.dir / "cases" / case_id / "forecast_state.parquet")
             rows = rows.sort_values(["region_id", "lead_day"]).reset_index(drop=True)
             t["load_inputs"] = time.perf_counter() - t0
-            # memory first: the model uses MEM features, which exist only after the causal lookup
-            t0 = time.perf_counter()
-            rows, neigh = self.memory_lookup(rows)
-            t["memory_lookup"] = time.perf_counter() - t0
             t0 = time.perf_counter()
             out = self.model.predict(rows)
             for c in out.columns:
                 rows[c] = out[c].to_numpy()
             rows["p_b0"] = self.b0_predict(rows)
             t["model_inference"] = time.perf_counter() - t0
+            # historical evidence (not a B2 input): causal analogue lookup
+            t0 = time.perf_counter()
+            rows, neigh = self.memory_lookup(rows)
+            t["memory_lookup"] = time.perf_counter() - t0
             t0 = time.perf_counter()
             dist, lvl = support_distance(rows, self.support)
             rows["support_distance"], rows["support_level"] = dist, lvl
             rows["evidence_level"] = evidence_strength(lvl, rows["an_n_within"].to_numpy(), rows["an_bust_rate"].to_numpy(),
                                                        rows["calibrated_bust_probability"].to_numpy(), self.kmin)
-            rows["priority"] = priority_score_v4(rows["calibrated_bust_probability"].to_numpy(), rows["lead_day"].to_numpy(),
+            rows["priority"] = priority_score_b2(rows["calibrated_bust_probability"].to_numpy(), rows["lead_day"].to_numpy(),
                                                  rows["evidence_level"].to_numpy())
             t["support_evidence_priority"] = time.perf_counter() - t0
             run = CaseRun(case_id, entry, rows, {}, neigh,
@@ -208,26 +200,23 @@ class Engine:
             self._cache[case_id] = run
             return run
 
-    def criteria(self, r: pd.Series) -> dict:
-        """Magnitude / pattern / joint evidence from the k nearest VERIFIED analogues (causal memory)."""
-        rates = {"magnitude": _f(r.get("an_bust_rate")), "pattern": _f(r.get("an_pattern_failure_rate")),
-                 "support": _f(r.get("an_pattern_bust_rate"))}
-        n = _f(r.get("an_n_used"))
-        return {k: {"rate": v, "climatology": self.clim[k], "level": criterion_level(v, self.clim[k], n, self.kmin)}
-                for k, v in rates.items()}
+    def analogue_level(self, r: pd.Series) -> str:
+        """Bust rate among the nearest VERIFIED historical analogues vs the TRAIN rate (evidence, not a model output)."""
+        return criterion_level(_f(r.get("an_bust_rate")), self.base_rate, _f(r.get("an_n_used")), self.kmin)
+
+    def risk_level(self, p: float, p_b0: float) -> str:
+        return "ALERT" if p >= self.threshold else "ABOVE CLIMATOLOGY" if p > p_b0 else "AT OR BELOW CLIMATOLOGY"
 
     # ---------------- views ----------------
     def _cell(self, r: pd.Series) -> dict:
-        p = float(r["calibrated_bust_probability"])
-        crit = self.criteria(r)
-        return {"lead_day": int(r["lead_day"]), "valid_time": str(r["valid_time"]), "model_type": self.model.model_type,
+        p, p0 = float(r["calibrated_bust_probability"]), float(r["p_b0"])
+        return {"lead_day": int(r["lead_day"]), "valid_time": str(r["valid_time"]), "model_id": self.model.card["model_id"],
+                "model_type": self.model.model_type,
                 "raw_probability": float(r["raw_probability"]), "calibrated_bust_probability": p,
-                "bust_probability": p, "reliability_confidence": 1 - p,
-                "confidence": "LOW" if p >= self.threshold else "MODERATE" if p >= self.clim["support"] else "HIGH",
-                "magnitude_criterion": crit["magnitude"]["level"], "pattern_criterion": crit["pattern"]["level"],
-                "historical_support": crit["support"]["level"],
-                "b0_probability": float(r["p_b0"]), "alert": bool(p >= self.threshold),
-                "spread_m": float(r["spread_m"]), "spread_pct": _f(r["spread_pct"]),
+                "bust_probability": p, "risk_level": self.risk_level(p, p0), "b0_probability": p0,
+                "alert": bool(p >= self.threshold),
+                "spread_m": float(r["spread_m"]), "spread_pct": _f(r["spread_pct"]), "spread_thr_ratio": _f(r["spread_thr_ratio"]),
+                "analogue_evidence": self.analogue_level(r),
                 "support_level": SUPPORT_LEVELS[int(r["support_level"])], "support_distance": _f(r["support_distance"]),
                 "evidence_quality": EVIDENCE_NAMES[int(r["evidence_level"])],
                 "analogues_within_radius": _i(r["an_n_within"]), "verified_cases_available": _i(r["an_n_eligible"]),
@@ -247,7 +236,7 @@ class Engine:
                             "alert_days": [c["lead_day"] for c in cells if c["alert"]], "days": cells})
         queue = run.rows.sort_values("priority", ascending=False).head(20)
         return {"case": run.meta, "source": self.source(run), "model": self.model_summary(), "timings_ms": run.timings_ms,
-                "alert_threshold": self.threshold, "priority_formula": formula_v4(),
+                "alert_threshold": self.threshold, "priority_formula": formula_b2(),
                 "regions": regions,
                 "priority_queue": [{"region_id": r["region_id"], **self._cell(r)} for _, r in queue.iterrows()],
                 "lead_summary": [{"lead_day": d, "mean_bust_probability": float(g["calibrated_bust_probability"].mean()),
@@ -288,8 +277,9 @@ class Engine:
         cell = self._cell(r)
         if i not in run.contrib:
             run.contrib[i] = self.model.contributions(run.rows.iloc[[i]])[0]
-        ex = explain_row_v4(r, run.contrib[i], self.model.features, self.ref, cell["calibrated_bust_probability"],
-                            cell["raw_probability"], self.base_rate, self.criteria(r))
+        ex = explain_row_b2(r, run.contrib[i], self.model.features, self.ref, cell["bust_probability"],
+                            cell["raw_probability"], cell["b0_probability"], self.base_rate, self.threshold,
+                            cell["analogue_evidence"])
         cand, dk = run.neighbours[i]
         analogues = []
         for j, d in list(zip(cand, dk))[:8]:
@@ -308,10 +298,9 @@ class Engine:
                 pct = float(np.searchsorted(ref, abs(v) if f == "anom500" else v, side="right") / len(ref) * 100)
             context.append({"feature": f, "label": FEATURE_LABELS.get(f, f), "value": v, "train_percentile": pct})
         return {"case_id": case_id, "region_id": region_id, "lead_day": lead_day, **cell,
-                "attribution": {"method": "TreeSHAP on the V4 XGBoost booster (log-odds, before isotonic calibration)",
+                "attribution": {"method": "TreeSHAP on the B2 booster (log-odds, before isotonic calibration)",
                                 "bias_logodds": float(run.contrib[i][-1]), "drivers": ex["drivers"],
-                                "groups": ex["groups"], "note": ex["attribution_note"]},
-                "criteria": self.criteria(r),
+                                "note": ex["attribution_note"]},
                 "evidence": ex["evidence"], "interpretation": ex["interpretation"],
                 "analogue_summary": {"k": self.k, "radius": self.radius, "rule": "same region and lead day; "
                                      "verified (valid_time) no later than this initialisation",
@@ -332,16 +321,10 @@ class Engine:
         self.case_entry(case_id)
         return json.loads((self.dir / "cases" / case_id / "verification.json").read_text())
 
-    @lru_cache(maxsize=16)
-    def _pattern_verification(self, case_id: str) -> dict:
-        self.case_entry(case_id)
-        rows = json.loads((self.dir / "cases" / case_id / "pattern_verification.json").read_text())["rows"]
-        return {(x["region_id"], x["lead_day"]): x for x in rows}
-
     def reveal(self, case_id: str, region_id: str, lead_day: int) -> dict:
+        """POST-VERIFICATION: ERA5 outcome of the B2 target (normalized error > TRAIN Q90) and the failure fingerprint."""
         run = self.run(case_id)
         v = self._verification(case_id)
-        pv = self._pattern_verification(case_id)
         i, r = self._row(run, region_id, lead_day)
         reg = next(x for x in v["regions"] if x["region_id"] == region_id)
         day = next(d for d in reg["days"] if d["lead_day"] == lead_day)
@@ -355,49 +338,34 @@ class Engine:
         order = run.rows[["region_id", "lead_day"]].apply(tuple, axis=1).tolist()
         vmap = {(x["region_id"], d["lead_day"]): d["bust"] for x in v["regions"] for d in x["days"]}
         busts = np.array([vmap[k] for k in order])
-        pbusts = np.array([pv[k]["pattern_bust"] for k in order])
-        pd_ = pv[(region_id, lead_day)]
-        return {"case_id": case_id, "region_id": region_id, "lead_day": lead_day,
+        return {"case_id": case_id, "region_id": region_id, "lead_day": lead_day, "post_verification": True,
                 "reference": v["reference"],
                 "forecast": {"bust_probability": cell["bust_probability"], "raw_probability": cell["raw_probability"],
-                             "confidence": cell["confidence"], "magnitude_criterion": cell["magnitude_criterion"],
-                             "pattern_criterion": cell["pattern_criterion"], "historical_support": cell["historical_support"],
-                             "alert": cell["alert"], "expected_signature": exp},
-                "verification": {"actual_bust": bool(pd_["pattern_bust"]), "actual_magnitude_bust": bool(day["bust"]),
-                                 "magnitude_failure": bool(pd_["magnitude_failure"]),
-                                 "pattern_failure": bool(pd_["pattern_failure"]),
-                                 "local_acc": pd_["local_acc"], "acc_q10": pd_["acc_q10"],
-                                 "normalized_error": day["normalized_error"],
+                             "b0_probability": cell["b0_probability"], "risk_level": cell["risk_level"],
+                             "analogue_evidence": cell["analogue_evidence"], "alert": cell["alert"],
+                             "expected_signature": exp},
+                "verification": {"actual_bust": bool(day["bust"]), "normalized_error": day["normalized_error"],
                                  "threshold_q90": day["threshold_q90"], "error_m": day["error_m"],
                                  "hidden_bust": bool(day["hidden_bust"]),
-                                 "failure_fingerprint": {"signature": day["signature"],
-                                                         "label": day["signature_label"],
+                                 "failure_fingerprint": {"signature": day["signature"], "label": day["signature_label"],
                                                          "phase_share": day["phase_share"], "bias_m": day["bias_m"],
-                                                         "pattern_corr": day["pattern_corr"],
-                                                         "magnitude_failure": bool(pd_["magnitude_failure"]),
-                                                         "pattern_failure": bool(pd_["pattern_failure"])}},
+                                                         "pattern_corr": day["pattern_corr"]}},
                 "comparison": {"expected_top": exp.get("top"),
                                "p_expected_for_actual": (exp["distribution"] or {}).get(day["signature"]),
                                "match": exp.get("top") == day["signature"] if day["bust"] else None,
                                "note": "The expected signature is evaluated against the actual fingerprint only "
                                        "when the region-day verified as a bust."},
-                "trajectory": [{"lead_day": d["lead_day"], "actual_bust": bool(pv[(region_id, d["lead_day"])]["pattern_bust"]),
-                                "actual_magnitude_bust": bool(d["bust"]),
-                                "local_acc": pv[(region_id, d["lead_day"])]["local_acc"],
+                "trajectory": [{"lead_day": d["lead_day"], "actual_bust": bool(d["bust"]),
                                 "normalized_error": d["normalized_error"], "threshold_q90": d["threshold_q90"],
                                 "signature": d["signature"]} for d in sorted(reg["days"], key=lambda d: d["lead_day"])],
-                "case_summary": {"region_days": int(len(busts)), "verified_busts": int(pbusts.sum()),
-                                 "verified_magnitude_busts": int(busts.sum()),
-                                 "model_alerts": int(alerts.sum()), "model_hits": int((alerts & (pbusts == 1)).sum()),
+                "case_summary": {"region_days": int(len(busts)), "verified_busts": int(busts.sum()),
+                                 "model_alerts": int(alerts.sum()), "model_hits": int((alerts & (busts == 1)).sum()),
                                  "hidden_busts": v["summary"]["n_hidden_bust_region_days"]},
-                "bust_map": [{"region_id": x["region_id"], "lead_day": d["lead_day"],
-                              "bust": int(pv[(x["region_id"], d["lead_day"])]["pattern_bust"]),
-                              "magnitude_bust": int(d["bust"]),
+                "bust_map": [{"region_id": x["region_id"], "lead_day": d["lead_day"], "bust": int(d["bust"]),
                               "signature": d["signature"]} for x in v["regions"] for d in x["days"]],
                 "memory_update": {"entries_added": int(len(busts)),
                                   "entry": {"region_id": region_id, "lead_day": lead_day,
-                                            "valid_time": cell["valid_time"], "bust": bool(pd_["pattern_bust"]),
-                                            "magnitude_bust": bool(day["bust"]),
+                                            "valid_time": cell["valid_time"], "bust": bool(day["bust"]),
                                             "normalized_error": day["normalized_error"],
                                             "signature": day["signature"]},
                                   "verified_cases_before": n_before,
@@ -415,29 +383,30 @@ class Engine:
 
     def source(self, run: CaseRun) -> dict:
         """Forecast provenance: every served case is a real ECMWF IFS ENS initialisation (never synthetic)."""
-        from forecast_bust.data.providers import ECMWFResearchProvider
+        from forecast_bust.data.provenance import ECMWF_MEMBER_COUNT, PROVIDER_INFO
+        info = PROVIDER_INFO["ecmwf_research"]
         init = pd.Timestamp(run.meta["init_time"])
         days = sorted(int(d) for d in run.rows["lead_day"].unique())
-        return {"provider": ECMWFResearchProvider.provider, "dataset": ECMWFResearchProvider.dataset,
-                "source_label": ECMWFResearchProvider.source_label, "initialization_time": init.isoformat(),
+        return {"provider": "ecmwf_research", "dataset": info["dataset"],
+                "source_label": info["source_label"], "initialization_time": init.isoformat(),
                 "valid_times": [(init + pd.Timedelta(days=d)).isoformat() for d in days], "lead_days": days,
-                "synthetic": False, "demo_only": False, "model_version": str(self.meta.get("model_version")),
-                "ensemble_member_count": ECMWFResearchProvider.ensemble_member_count,
+                "synthetic": False, "demo_only": False, "model_version": self.model.card["model_version"],
+                "ensemble_member_count": ECMWF_MEMBER_COUNT,
                 "verification_reference": "ERA5 reanalysis (WeatherBench 2, 5.625 deg)"}
 
     def model_summary(self) -> dict:
-        md = self.model.metadata
-        imp = md.get("importance_top15", {})
-        return {"model_type": self.model.model_type,
-                "estimator": "xgboost.XGBClassifier (tree_method hist) + validation-only isotonic calibration",
-                **{k: self.meta.get(k) for k in ("model_version", "model_artifact", "exported_from", "retrained_for_demo",
-                                                 "training_window", "calibration_window", "calibration",
-                                                 "alert_threshold", "alert_threshold_definition",
-                                                 "confidence_definition", "target")},
-                "params": md["params"], "features": md["features"], "experiment_id": md["experiment_id"],
-                "base_rate_pattern_bust": self.clim["support"],
+        c = self.model.card
+        return {**{k: c[k] for k in ("model_id", "model_type", "model_version", "provider", "dataset_mode",
+                                     "calibration_version", "estimator", "model_artifact", "exported_from",
+                                     "retrained_for_demo", "training_window", "calibration_window", "calibration",
+                                     "params", "features", "alert_threshold", "alert_threshold_definition", "target",
+                                     "probability_meaning", "test_metrics_2022")},
+                "base_rate_bust": self.base_rate,
+                "risk_level_definition": "ALERT: bust probability >= alert threshold; ABOVE CLIMATOLOGY: above the "
+                                         "B0 climatological rate for this region, lead day and season; otherwise AT OR "
+                                         "BELOW CLIMATOLOGY. Evidence quality is reported separately.",
                 "model_level_importance": [{"feature": f, "label": FEATURE_LABELS.get(f, f), "importance": v}
-                                           for f, v in list(imp.items())[:10]]}
+                                           for f, v in c["importance"].items()]}
 
 def _f(x):
     try:

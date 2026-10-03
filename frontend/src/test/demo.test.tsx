@@ -49,20 +49,19 @@ describe("demo app (live-inference API)", () => {
     await waitFor(() => expect(screen.getByTestId("rel-p")).toBeTruthy());
     const c = fx.region.trajectory[day - 1];
     expect(screen.getByTestId("rel-p").textContent).toBe(pct(c.bust_probability));
-    expect(screen.getByTestId("rel-conf").textContent).toBe(pct(c.reliability_confidence));
-    expect(screen.getByTestId("rel-confidence").textContent).toBe(c.confidence);
-    expect(screen.getByTestId("rel-mag").textContent).toBe(c.magnitude_criterion);
-    expect(screen.getByTestId("rel-pat").textContent).toBe(c.pattern_criterion);
-    expect(screen.getByTestId("rel-support").textContent).toBe(c.historical_support);
-    expect(screen.queryByTestId("rel-b2")).toBeNull();
-    expect(screen.queryByTestId("rel-tail")).toBeNull();
+    expect(screen.getByTestId("rel-b0").textContent).toBe(pct(c.b0_probability));
+    expect(screen.getByTestId("rel-risk").textContent).toBe(c.risk_level);
+    expect(screen.getByTestId("rel-analogue").textContent).toBe(c.analogue_evidence);
+    expect(screen.getByTestId("rel-evidence").textContent).toBe(c.evidence_quality);
+    expect(screen.queryByText(/confidence/i)).toBeNull();
 
     fireEvent.click(screen.getByTestId("go-evidence"));
     await waitFor(() => expect(screen.getByTestId("why-p")).toBeTruthy());
     const x = fx.explain;
     expect(screen.getByTestId("why-p").textContent).toBe(pct(x.bust_probability));
-    expect(screen.getByTestId("why-mag").textContent).toBe(x.magnitude_criterion);
-    expect(screen.getByTestId("why-pat").textContent).toBe(x.pattern_criterion);
+    expect(screen.getByTestId("why-b0").textContent).toBe(pct(x.b0_probability));
+    expect(screen.getByTestId("why-risk").textContent).toBe(x.risk_level);
+    expect(screen.getByTestId("why-analogue").textContent).toBe(x.analogue_evidence);
     for (const t of x.interpretation) expect(screen.getByTestId("why-list").textContent).toContain(t);
     expect(screen.getByTestId("why-support").textContent).toBe(x.support_level);
     expect(screen.getByTestId("why-evidence").textContent).toBe(x.evidence_quality);
@@ -75,7 +74,8 @@ describe("demo app (live-inference API)", () => {
     expect(screen.getByTestId("verif-mode").textContent).toContain("BLIND");
     expect(calls.some((u) => u.includes("/reveal"))).toBe(false);
     expect(screen.queryByTestId("actual-bust")).toBeNull();
-    expect(screen.queryByTestId("actual-pat")).toBeNull();
+    expect(screen.queryByTestId("actual-err")).toBeNull();
+    expect(screen.queryByTestId("fingerprint")).toBeNull();
 
     fireEvent.click(screen.getByTestId("reveal"));
     await waitFor(() => expect(screen.getByTestId("memory-update")).toBeTruthy());
@@ -83,10 +83,44 @@ describe("demo app (live-inference API)", () => {
     expect(calls.filter((u) => u.includes("/reveal")).length).toBeGreaterThan(0);
     expect(screen.getByTestId("actual-bust").textContent).toBe(v.verification.actual_bust ? "BUST" : "NO BUST");
     expect(screen.getByTestId("actual-err").textContent).toBe(v.verification.normalized_error.toFixed(3));
-    expect(screen.getByTestId("actual-pat").textContent).toContain(num(v.verification.local_acc, 3));
+    expect(screen.getByTestId("actual-rmse").textContent).toBe(`${num(v.verification.error_m, 1)} m`);
+    expect(screen.getByTestId("verif-mode").textContent).toContain("POST-VERIFICATION");
     expect(screen.getByTestId("fingerprint").textContent).toContain(v.verification.failure_fingerprint.label);
     expect(screen.getByTestId("mem-before").textContent).toBe(String(v.memory_update.verified_cases_before));
     expect(screen.getByTestId("mem-after").textContent).toBe(String(v.memory_update.verified_cases_after));
+
+    // reset returns to blind mode: truth hidden again, reveal available again
+    fireEvent.click(screen.getByTestId("reset"));
+    await waitFor(() => expect(screen.getByTestId("reveal")).toBeTruthy());
+    expect(screen.getByTestId("verif-mode").textContent).toContain("BLIND");
+    expect(screen.queryByTestId("actual-bust")).toBeNull();
+    expect(screen.queryByTestId("fingerprint")).toBeNull();
+    const before = calls.filter((u) => u.includes("/reveal")).length;
+    fireEvent.click(screen.getByTestId("reveal"));
+    await waitFor(() => expect(screen.getByTestId("actual-bust")).toBeTruthy());
+    expect(calls.filter((u) => u.includes("/reveal")).length).toBe(before + 1);
+  });
+
+  it("Day 1-10: switching lead day updates the reliability values without off-by-one", async () => {
+    render(<DemoApp />);
+    await waitFor(() => expect(screen.getByTestId(`prio-${rid}`)).toBeTruthy());
+    fireEvent.click(screen.getByTestId(`prio-${rid}`));
+    await waitFor(() => expect(screen.getByTestId("rel-p")).toBeTruthy());
+    for (const d of [1, 5, 10, 2]) {
+      fireEvent.click(screen.getByTestId(`day-${d}`));
+      const c = fx.region.trajectory[d - 1];
+      expect(c.lead_day).toBe(d);
+      await waitFor(() => expect(screen.getByTestId("rel-p").textContent).toBe(pct(c.bust_probability)));
+      expect(screen.getByTestId("selection-pill").textContent).toContain(`Day ${d}`);
+    }
+  });
+
+  it("shows the served model id and real-data provenance", async () => {
+    render(<DemoApp />);
+    await waitFor(() => expect(screen.getByTestId("n-alerts")).toBeTruthy());
+    expect(screen.getByTestId("served-model").textContent).toContain(fx.run.model.model_id);
+    expect(screen.getByTestId("source-badge").textContent).toBe("SOURCE · ECMWF IFS / ERA5");
+    expect(screen.getByTestId("model-note").textContent).toContain("b2_spread_calibrated");
   });
 
   it("shows API errors instead of placeholder numbers", async () => {

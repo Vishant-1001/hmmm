@@ -62,7 +62,7 @@
   "normalisation": "artifacts/preprocessing.json"
  },
  "licensing": "ERA5: Copernicus licence (LICENSE file in bucket). IFS ENS: ECMWF data terms - verify the WeatherBench 2 licence notes before redistribution. Raw data is NOT committed to git.",
- "not_used": "No NCMRWF data is used; NCMRWF NEPS integration is architected (adapter interface) but not claimed.",
+ "not_used": "No NCMRWF data is used. NCMRWF/TIGGE: provider implemented, catalogue availability confirmed, authenticated retrieval pending (see providers.ncmrwf_tigge).",
  "providers": {
   "ecmwf_era5": {
    "provider": "ECMWF (IFS ENS) + ERA5 verification",

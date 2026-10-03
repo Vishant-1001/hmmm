@@ -1,0 +1,55 @@
+{
+ "model_id": "b2_spread_calibrated",
+ "model_type": "b2_spread_xgboost",
+ "model_version": "B2 v2-final (locked 8b196ee)",
+ "provider": "ecmwf_research",
+ "dataset_mode": "historical_replay_real_ecmwf_ifs_ens_era5",
+ "calibration_version": "isotonic_validation_2021_v2",
+ "estimator": "xgboost gradient-boosted trees (CPU hist) + isotonic calibration fitted on validation only",
+ "model_artifact": "artifacts/v2/demo/model/b2_booster.json + models.json (B2.isotonic)",
+ "booster_sha256": "24b6c43e62578ea078fb5cbc0d59916d486f3e8d220ce6065122b2282d75824c",
+ "exported_from": "models/v2/models.joblib -> artifacts/v2/demo/model/ (identical predictions, parity-tested)",
+ "retrained_for_demo": false,
+ "training_window": "2018-01-01 .. 2020-12-29",
+ "calibration_window": "2021-01-01 .. 2021-12-28",
+ "calibration": "isotonic regression fitted on VALIDATION (2021) predictions only, then frozen",
+ "params": {
+  "learning_rate": 0.05,
+  "subsample": 0.8,
+  "reg_lambda": 10.0,
+  "n_estimators": 3000.0,
+  "max_depth": 3.0,
+  "min_child_weight": 50.0,
+  "colsample_bytree": 0.5
+ },
+ "best_iteration": 114,
+ "features": [
+  "spread_m",
+  "spread_pct",
+  "spread_thr_ratio",
+  "lead_day",
+  "region_code",
+  "season_code",
+  "init_hour"
+ ],
+ "importance": {
+  "spread_pct": 0.46926326167367105,
+  "spread_thr_ratio": 0.328828018032549,
+  "region_code": 0.07539090535842181,
+  "spread_m": 0.06109653368861104,
+  "lead_day": 0.031020203959184662,
+  "init_hour": 0.017213310796488673,
+  "season_code": 0.017187766491073772
+ },
+ "alert_threshold": 0.13923682272434235,
+ "alert_threshold_definition": "calibrated B2 bust probability giving a 10% false-alarm rate on VALIDATION (2021)",
+ "target": "bust = regional Z500 ensemble-mean RMSE vs ERA5, normalized by the TRAIN anomaly scale, exceeds the TRAIN Q90 for (region, lead day, season)",
+ "probability_meaning": "estimated probability that this region-day's Z500 forecast error exceeds the project-defined large-error (bust) threshold. Not the probability of a weather event, and not a global forecast-quality score.",
+ "test_metrics_2022": {
+  "auprc": 0.14344550084314628,
+  "roc_auc": 0.6191927254005454,
+  "brier": 0.07876189798116684,
+  "ece": 0.006149857532413665,
+  "recall_at_far_10": 0.21278764928633848
+ }
+}
