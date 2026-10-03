@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { demoApi } from "./api";
-import { Badge, latlon } from "./ui";
+import { Badge, latlon, SourceBadge } from "./ui";
 import { EvidenceScreen, OverviewScreen, PriorityScreen, ReliabilityScreen, TrustScreen, VerificationScreen } from "./screens";
 import type { CaseInfo, RunResult } from "./types";
 
@@ -94,6 +94,7 @@ export default function DemoApp() {
             <h1>Forecast Bust Sentinel</h1>
             <Badge kind="replay" testid="replay-badge">HISTORICAL REPLAY</Badge>
             <Badge kind="proto">RESEARCH PROTOTYPE</Badge>
+            <SourceBadge source={run?.source} />
           </div>
           <div className="tb-right">
             <label className="case-sel">

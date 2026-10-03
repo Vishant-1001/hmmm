@@ -37,6 +37,7 @@ describe("demo app (live-inference API)", () => {
     expect(calls).toContain(`/api/demo/cases/${cid}/run`);
     expect(screen.getByTestId("n-alerts").textContent).toBe(String(fx.run.lead_summary[day - 1].n_alerts));
     expect(screen.getByTestId("replay-badge").textContent).toBe("HISTORICAL REPLAY");
+    expect(screen.getByTestId("source-badge").textContent).toBe("SOURCE · ECMWF IFS / ERA5");
     expect(screen.getByTestId("selection-pill").textContent).toContain(rid);
   });
 

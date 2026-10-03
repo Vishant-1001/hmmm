@@ -100,21 +100,20 @@ class IFSENSWeatherBenchAdapter(ForecastSourceAdapter):
 
 
 class NCMRWFAdapter(ForecastSourceAdapter):
-    """Placeholder for NCMRWF NEPS ingestion. NOT IMPLEMENTED: no NCMRWF data access was available.
-
-    Integration requires NEPS ensemble geopotential (500/700/850 hPa) for Day 1-10 with
-    initialisation metadata; once converted with `normalise_coords` and passing
-    `validate_forecast`, the rest of the pipeline is provider-agnostic. Historical error
-    statistics would have to be re-learned on NEPS hindcasts (relationships are model-specific).
+    """Bulk-archive adapter slot for NCMRWF NEPS. Per-initialisation access is implemented by
+    `forecast_bust.data.providers.NCMRWFTIGGEProvider` (ECMWF ECDS TIGGE, origin dems), which needs an ECDS
+    token; whether retrieval works is recorded in artifacts/ncmrwf_tigge_availability.json, never assumed.
+    Historical error statistics would have to be re-learned on NCMRWF forecasts (relationships are model-specific).
     """
-    name = "NCMRWF NEPS (not available)"
+    name = "NCMRWF NEPS via TIGGE/ECDS (see providers.NCMRWFTIGGEProvider)"
     operational = False
 
     def list_initialisations(self):
-        raise NotImplementedError("NCMRWF data access not available; integration is architected, not claimed")
+        raise NotImplementedError("no bulk NCMRWF archive is cached; use providers.NCMRWFTIGGEProvider per initialisation "
+                                  "(retrieval status: artifacts/ncmrwf_tigge_availability.json)")
 
     def load(self, *a, **k):
-        raise NotImplementedError("NCMRWF data access not available; integration is architected, not claimed")
+        raise NotImplementedError("no bulk NCMRWF archive is cached; use providers.NCMRWFTIGGEProvider per initialisation")
 
 
 ADAPTERS = {"ifs_ens_wb2": IFSENSWeatherBenchAdapter, "ncmrwf_neps": NCMRWFAdapter}

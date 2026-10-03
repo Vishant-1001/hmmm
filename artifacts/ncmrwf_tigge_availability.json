@@ -1,0 +1,282 @@
+{
+ "generated": "2026-10-03T21:07:12+00:00",
+ "retrieval_mechanism": {
+  "client": "cdsapi (ECDS / CDS-API engine)",
+  "api_url": "https://ecds.ecmwf.int/api",
+  "dataset": "tigge-forecasts",
+  "dataset_url": "https://ecds.ecmwf.int/datasets/tigge-forecasts",
+  "authentication": "ECMWF account + ECDS personal access token; ECDS terms and TIGGE licence accepted"
+ },
+ "tested_date": "2021-07-15",
+ "tested_cycle": "00 UTC",
+ "origin": "ncmrwf (MARS/GRIB origin dems, WMO centre 29)",
+ "variable": "geopotential_height (TIGGE param 156, gpm)",
+ "level": "500 hPa",
+ "forecast_type": "perturbed_forecast",
+ "requested_leads": [
+  24,
+  48,
+  72,
+  96,
+  120,
+  144,
+  168,
+  192,
+  216,
+  240
+ ],
+ "domain_requested": {
+  "area_NWSE": [
+   42.0,
+   56.0,
+   -8.0,
+   108.0
+  ],
+  "target_domain": {
+   "lat_min": -5.0,
+   "lat_max": 40.0,
+   "lon_min": 60.0,
+   "lon_max": 105.0
+  }
+ },
+ "smoke_request": {
+  "dataset": "tigge-forecasts",
+  "request": {
+   "origin": "ncmrwf",
+   "year": [
+    "2021"
+   ],
+   "month": [
+    "07"
+   ],
+   "day": [
+    "15"
+   ],
+   "time": [
+    "00:00"
+   ],
+   "level_type": "pressure",
+   "variable": [
+    "geopotential_height"
+   ],
+   "level_value": [
+    "500_hpa"
+   ],
+   "forecast_type": "perturbed_forecast",
+   "leadtime_hour": [
+    "24",
+    "48",
+    "72",
+    "96",
+    "120",
+    "144",
+    "168",
+    "192",
+    "216",
+    "240"
+   ],
+   "data_format": "grib",
+   "area": [
+    42.0,
+    56.0,
+    -8.0,
+    108.0
+   ]
+  }
+ },
+ "catalogue": {
+  "endpoint": "https://ecds.ecmwf.int/api/retrieve/v1/processes/tigge-forecasts/constraints",
+  "queried": "2026-10-03T21:07:12+00:00",
+  "evidence_level": "catalogue metadata only - NOT a retrieval",
+  "years": {
+   "2018": {
+    "http_status": 200,
+    "ncmrwf_listed": true,
+    "months": [
+     "01",
+     "02",
+     "03",
+     "04",
+     "05",
+     "06",
+     "07",
+     "08",
+     "09",
+     "10",
+     "11",
+     "12"
+    ],
+    "times": [
+     "00:00",
+     "12:00"
+    ],
+    "geopotential_height_listed": true,
+    "level_500_listed": true,
+    "perturbed_forecast_listed": true,
+    "day1_10_leads_listed": true,
+    "max_lead_h": 240,
+    "note": "constraints are filtered by the selections; day-level gaps are not resolved by this endpoint"
+   },
+   "2019": {
+    "http_status": 200,
+    "ncmrwf_listed": true,
+    "months": [
+     "01",
+     "02",
+     "03",
+     "04",
+     "05",
+     "06",
+     "07",
+     "08",
+     "09",
+     "10",
+     "11",
+     "12"
+    ],
+    "times": [
+     "00:00",
+     "12:00"
+    ],
+    "geopotential_height_listed": true,
+    "level_500_listed": true,
+    "perturbed_forecast_listed": true,
+    "day1_10_leads_listed": true,
+    "max_lead_h": 240,
+    "note": "constraints are filtered by the selections; day-level gaps are not resolved by this endpoint"
+   },
+   "2020": {
+    "http_status": 200,
+    "ncmrwf_listed": true,
+    "months": [
+     "01",
+     "02",
+     "03",
+     "04",
+     "05",
+     "06",
+     "07",
+     "08",
+     "09",
+     "10",
+     "11",
+     "12"
+    ],
+    "times": [
+     "00:00",
+     "12:00"
+    ],
+    "geopotential_height_listed": true,
+    "level_500_listed": true,
+    "perturbed_forecast_listed": true,
+    "day1_10_leads_listed": true,
+    "max_lead_h": 240,
+    "note": "constraints are filtered by the selections; day-level gaps are not resolved by this endpoint"
+   },
+   "2021": {
+    "http_status": 200,
+    "ncmrwf_listed": true,
+    "months": [
+     "01",
+     "02",
+     "03",
+     "04",
+     "05",
+     "06",
+     "07",
+     "08",
+     "09",
+     "10",
+     "11",
+     "12"
+    ],
+    "times": [
+     "00:00",
+     "12:00"
+    ],
+    "geopotential_height_listed": true,
+    "level_500_listed": true,
+    "perturbed_forecast_listed": true,
+    "day1_10_leads_listed": true,
+    "max_lead_h": 240,
+    "note": "constraints are filtered by the selections; day-level gaps are not resolved by this endpoint"
+   },
+   "2022": {
+    "http_status": 200,
+    "ncmrwf_listed": true,
+    "months": [
+     "01",
+     "02",
+     "03",
+     "04",
+     "05",
+     "06",
+     "07",
+     "08",
+     "09",
+     "10",
+     "11",
+     "12"
+    ],
+    "times": [
+     "00:00",
+     "12:00"
+    ],
+    "geopotential_height_listed": true,
+    "level_500_listed": true,
+    "perturbed_forecast_listed": true,
+    "day1_10_leads_listed": true,
+    "max_lead_h": 240,
+    "note": "constraints are filtered by the selections; day-level gaps are not resolved by this endpoint"
+   }
+  }
+ },
+ "credentials": {
+  "available": false,
+  "reason": "no ECDS personal access token (~/.cdsapirc absent; FBS_ECDS_KEY/CDSAPI_KEY unset)"
+ },
+ "unauthenticated_attempt": {
+  "http_status": 401,
+  "response": {
+   "type": "permission denied",
+   "title": "permission denied",
+   "status": 401,
+   "detail": "authentication required",
+   "instance": "https://ecds.ecmwf.int/api/retrieve/v1/processes/tigge-forecasts/execution",
+   "trace_id": "8bfec746-e740-49b3-b4cb-a6be9058db97"
+  }
+ },
+ "retrieval_success": false,
+ "members_found": null,
+ "available_leads": null,
+ "grid": null,
+ "units": null,
+ "error_message_if_any": "Retrieval not attempted with credentials: no ECDS personal access token (~/.cdsapirc absent; FBS_ECDS_KEY/CDSAPI_KEY unset). ECDS answered the smoke request with HTTP 401 'authentication required'.",
+ "coverage": {
+  "2018": {
+   "attempted": false,
+   "reason": "no ECDS token"
+  },
+  "2019": {
+   "attempted": false,
+   "reason": "no ECDS token"
+  },
+  "2020": {
+   "attempted": false,
+   "reason": "no ECDS token"
+  },
+  "2021": {
+   "attempted": false,
+   "reason": "no ECDS token"
+  },
+  "2022": {
+   "attempted": false,
+   "reason": "no ECDS token"
+  }
+ },
+ "b2_smoke": {
+  "ran": false,
+  "reason": "no real NCMRWF data retrieved"
+ },
+ "status": "NCMRWF/TIGGE CATALOGUE CONFIRMED, RETRIEVAL NOT YET VERIFIED"
+}

@@ -139,3 +139,18 @@ dev split (`FBS_SPLIT=dev`); 2022 is now inspected and can no longer serve as an
 * 2022 once (b34b3a5): AUPRC 0.0255 (lift 2.45), ROC AUC 0.714, precision 0.028 / recall 0.305 at alert.
 * Integration: engine/API (37d823f), frontend (b1b946c); docs model_card_v4, evaluation_v4, scientific_methodology_v4,
   limitations_v4, FORECAST_BUST_SENTINEL_FINAL_FROZEN_BUILD_SPEC_v4.md.
+
+## NCMRWF/TIGGE provider (2026-10-04) — catalogue confirmed, retrieval not yet verified
+
+* Audit: the B2/V4 scientific path already used real ECMWF IFS ENS + ERA5. There were no synthetic forecast inputs
+  outside labelled test fixtures.
+* `data/providers.py`: `ForecastProvider` plus `ECMWFResearchProvider`, `NCMRWFTIGGEProvider` (ECDS `tigge-forecasts`,
+  cdsapi, cfgrib, origin check dems/29, gpm→m² s⁻², 5.625° box-mean aggregation) and `SyntheticDemoProvider`
+  (synthetic/demo_only).
+* `b2_provider.py`: frozen v2 B2 on any provider bundle. On real ECMWF data the provider path reproduces the
+  benchmark B2 (2021-01-01 00 UTC, 640 rows: features identical, max |Δp| 1.5e-8). Cost 76 ms per initialisation,
+  peak RSS ≈ 397 MB.
+* ECDS catalogue (public constraints) lists NCMRWF Z500 perturbed members, Day 1–10, for 2018–2022. The smoke retrieval
+  got HTTP 401 (no ECDS token), so no NCMRWF data was retrieved and no NCMRWF B2 run or benchmark exists.
+* API `/api/providers` and a `source` block on demo runs; UI `SourceBadge` (SOURCE · ECMWF IFS / ERA5; synthetic → DEMO MODE).
+* Benchmarks (v2/v3/V4 metrics) are untouched. Next action: add an ECDS token, then run `scripts/ncmrwf_tigge_check.py`.

@@ -49,9 +49,10 @@ Nothing under `data/` is committed.
 
 ## NCMRWF
 
-No NCMRWF NEPS data was accessible for this build. `forecast_bust.data.adapters.NCMRWFAdapter`
-defines the integration boundary and raises `NotImplementedError`; no NCMRWF data is fabricated.
-The research prototype is evaluated on historical ECMWF IFS ENS data only.
+NCMRWF NEPS ensemble members are listed in the ECMWF ECDS TIGGE catalogue (origin `dems`, Z500, Day 1–10,
+2018–2022). `forecast_bust.data.providers.NCMRWFTIGGEProvider` implements retrieval and verification, but **no NCMRWF file
+has been retrieved** because there is no ECDS token in this environment. See `docs/ncmrwf_tigge_availability.md`.
+No NCMRWF data is fabricated, and every result is evaluated on historical ECMWF IFS ENS data only.
 
 ## Licensing
 

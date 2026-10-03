@@ -93,6 +93,32 @@ def provenance():
     return out
 
 
+@app.get("/api/providers")
+def providers():
+    """Forecast providers, their evidence level and the B2 model/provider modes. NCMRWF status is read from the
+    machine-readable availability manifest written by scripts/ncmrwf_tigge_check.py - never asserted here."""
+    from forecast_bust.data.providers import PROVIDERS
+    av_path = REPO_ROOT / "artifacts" / "ncmrwf_tigge_availability.json"
+    av = json.loads(av_path.read_text()) if av_path.exists() else None
+    status = {"ecmwf_research": "real data - source of the served cases and the B2/V4 benchmarks",
+              "ncmrwf_tigge": (av or {}).get("status", "NOT CHECKED (no availability manifest)"),
+              "synthetic": "demo only - never used for training, calibration or reported metrics"}
+    out = []
+    for name, cls in PROVIDERS.items():
+        out.append({"provider": name, "dataset": cls.dataset, "source_label": cls.source_label,
+                    "synthetic": cls.synthetic, "demo_only": cls.demo_only, "status": status[name]})
+    ncm = None
+    if av:
+        ncm = {k: av.get(k) for k in ("status", "retrieval_success", "members_found", "available_leads", "tested_date",
+                                      "tested_cycle", "error_message_if_any", "generated")}
+        ncm["catalogue_years"] = {y: {k: v.get(k) for k in ("ncmrwf_listed", "geopotential_height_listed",
+                                                            "level_500_listed", "perturbed_forecast_listed",
+                                                            "day1_10_leads_listed")}
+                                  for y, v in av.get("catalogue", {}).get("years", {}).items()}
+    from forecast_bust.b2_provider import MODES
+    return {"providers": out, "served_provider": "ecmwf_research", "b2_modes": MODES, "ncmrwf_tigge_availability": ncm}
+
+
 @app.get("/api/metrics")
 def metrics():
     out = {"served_run": SERVED_RUN, "metrics": _read(ART / "metrics.json")}

@@ -180,7 +180,7 @@ data or trains.
 | ECMWF IFS ENS geopotential (Z500/700/850, 50 members, 5.625°), 2018–2022 | **Available**: 457/457 blocks |
 | IFS ENS wind (u/v at 500/700/850 hPa) and MSLP ensemble statistics | **Available**: 457/457 blocks, 1,828 initialisations, validated (`artifacts/extras_validation.json`); used by the v2 DYN group |
 | ERA5 verification reference + 1990–2017 climatology | **Available** |
-| NCMRWF NEPS | **Not available**: adapter interface only |
+| NCMRWF NEPS (TIGGE/ECDS, origin `dems`) | **Catalogue confirmed, retrieval not yet verified**: provider implemented; no ECDS token here (HTTP 401). See §19 |
 
 ## 12–17. Install, train, evaluate, run
 
@@ -207,9 +207,25 @@ states, and model-specific (ECMWF IFS) relationships.
 
 ## 19. NCMRWF integration status
 
-**Not integrated.** No NCMRWF NEPS data was accessible. `forecast_bust.data.adapters` defines the provider
-contract and an `NCMRWFAdapter` boundary that raises `NotImplementedError`. *Research prototype evaluated on
-historical ECMWF IFS ENS data. NCMRWF integration is architected but not claimed as operational.*
+**Status: NCMRWF/TIGGE catalogue confirmed, retrieval not yet verified.** Full record:
+[`docs/ncmrwf_tigge_availability.md`](docs/ncmrwf_tigge_availability.md) and `artifacts/ncmrwf_tigge_availability.json`.
+
+| Evidence level | Status |
+|---|---|
+| Catalogue availability | **Confirmed**: the public ECDS `tigge-forecasts` constraints list NCMRWF perturbed members, geopotential height at 500 hPa, Day 1–10 (0–240 h), 00/12 UTC, for every year 2018–2022 |
+| Retrieval demonstrated | **No**: this environment has no ECDS personal access token, and ECDS answers the smoke request with HTTP 401 |
+| Historical coverage demonstrated | **No** |
+| Operational access | **Not addressed** (TIGGE is a delayed research archive) |
+
+Implemented: `forecast_bust.data.providers` gives ECMWF research, NCMRWF/TIGGE and synthetic data one
+normalised forecast contract (`ForecastProvider`: `ECMWFResearchProvider`, `NCMRWFTIGGEProvider`,
+`SyntheticDemoProvider`). `forecast_bust.b2_provider` runs the **unchanged frozen B2** on any provider's
+bundle (modes `b2_ecmwf`, `b2_ncmrwf`, `synthetic_demo`). On real ECMWF data it reproduces the benchmark B2
+exactly: max |Δp| = 1.5e-8. NCMRWF outputs would use ECMWF TRAIN references and the ECMWF calibrator, and
+they are labelled as a cross-system transfer that has not been validated for NCMRWF. With an ECDS token,
+`scripts/ncmrwf_tigge_check.py` performs the retrieval and verification. The existing benchmarks are unchanged and
+use ECMWF IFS ENS + ERA5 only. Synthetic data is never used scientifically, and the UI shows a `SOURCE` / `DEMO MODE`
+badge.
 
 ## 20. Reproducibility
 

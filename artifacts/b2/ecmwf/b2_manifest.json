@@ -1,0 +1,39 @@
+{
+ "mode": "b2_ecmwf",
+ "provider": "ecmwf_research",
+ "synthetic": false,
+ "model": "B2 v2 (locked 8b196ee), exported booster artifacts/v2/demo/model/b2_booster.json",
+ "calibration": "ECMWF_IFS_v2_validation2021_isotonic (artifacts/v2/demo/model/models.json B2.isotonic)",
+ "spread_reference": {
+  "file": "spread_reference.parquet",
+  "fitted_on": "train",
+  "period": [
+   "2018-01-01",
+   "2020-12-31T23:59"
+  ],
+  "rows": 698624,
+  "sha256": "4585377fdff149b147bef9881e271ceec6ece7d99ecb8e3aebe69f7d07a3c646"
+ },
+ "thresholds": "artifacts/v2/thresholds.json (TRAIN Q90)",
+ "scales": "artifacts/v2/preprocessing.json (TRAIN)",
+ "benchmark_results": "artifacts/v2/metrics.json - UNCHANGED by the provider work",
+ "provider_path_equivalence": {
+  "init": "2021-01-01 00:00:00",
+  "split": "validation",
+  "rows": 640,
+  "max_abs_diff": {
+   "spread_m": 0.0,
+   "spread_pct": 0.0,
+   "spread_thr_ratio": 0.0,
+   "p_B2": 1.4901161193847656e-08
+  },
+  "passed": true,
+  "timings_ms": {
+   "load_reference": 0.0,
+   "ensemble_mean_spread": 2478.22,
+   "features": 2587.92,
+   "b2_inference": 742.75,
+   "total": 5808.88
+  }
+ }
+}

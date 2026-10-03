@@ -25,8 +25,13 @@ export interface RegionOverview {
   peak_bust_probability: number; alert_days: number[]; days: Cell[];
 }
 export interface LeadSummary { lead_day: number; mean_bust_probability: number; max_bust_probability: number; n_alerts: number }
+export interface ForecastSource {
+  provider: string; dataset: string; source_label: string; initialization_time: string; valid_times: string[];
+  lead_days: number[]; synthetic: boolean; demo_only: boolean; model_version: string; ensemble_member_count: number;
+  verification_reference?: string | null;
+}
 export interface RunResult {
-  mode: string; case: CaseInfo; model: ModelSummary; timings_ms: Record<string, number>; alert_threshold: number;
+  mode: string; source?: ForecastSource; case: CaseInfo; model: ModelSummary; timings_ms: Record<string, number>; alert_threshold: number;
   priority_formula: { formula: string; H_days: number; B: number; evidence_weight: Record<string, number>; note: string };
   regions: RegionOverview[]; priority_queue: QueueItem[]; lead_summary: LeadSummary[]; blind: boolean;
 }

@@ -1,0 +1,9 @@
+{
+ "mode": "b2_ncmrwf",
+ "provider": "ncmrwf_tigge",
+ "synthetic": false,
+ "model": "frozen B2 v2 (same booster as b2_ecmwf); no NCMRWF-trained model exists",
+ "calibration": "NONE for NCMRWF. b2_ncmrwf outputs use the ECMWF validation-2021 isotonic calibrator and are labelled 'cross-system transfer; NOT validated for this provider'. A calibration.json here must be fitted on an NCMRWF VALIDATION period only (fitted_on: validation) - enforced in b2_provider.provider_calibrator.",
+ "spread_reference": "ECMWF IFS ENS TRAIN 2018-2020 (cross-system transfer until an NCMRWF TRAIN reference is retrieved)",
+ "benchmark": "NONE. No real NCMRWF forecasts have been retrieved in this environment (see artifacts/ncmrwf_tigge_availability.json)."
+}

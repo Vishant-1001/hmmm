@@ -246,7 +246,7 @@ class Engine:
                             "peak_lead_day": int(np.argmax(ps)) + 1, "peak_bust_probability": float(ps.max()),
                             "alert_days": [c["lead_day"] for c in cells if c["alert"]], "days": cells})
         queue = run.rows.sort_values("priority", ascending=False).head(20)
-        return {"case": run.meta, "model": self.model_summary(), "timings_ms": run.timings_ms,
+        return {"case": run.meta, "source": self.source(run), "model": self.model_summary(), "timings_ms": run.timings_ms,
                 "alert_threshold": self.threshold, "priority_formula": formula_v4(),
                 "regions": regions,
                 "priority_queue": [{"region_id": r["region_id"], **self._cell(r)} for _, r in queue.iterrows()],
@@ -412,6 +412,18 @@ class Engine:
     def fields(self, case_id: str) -> dict:
         self.case_entry(case_id)
         return json.loads((self.dir / "cases" / case_id / "fields.json").read_text())
+
+    def source(self, run: CaseRun) -> dict:
+        """Forecast provenance: every served case is a real ECMWF IFS ENS initialisation (never synthetic)."""
+        from forecast_bust.data.providers import ECMWFResearchProvider
+        init = pd.Timestamp(run.meta["init_time"])
+        days = sorted(int(d) for d in run.rows["lead_day"].unique())
+        return {"provider": ECMWFResearchProvider.provider, "dataset": ECMWFResearchProvider.dataset,
+                "source_label": ECMWFResearchProvider.source_label, "initialization_time": init.isoformat(),
+                "valid_times": [(init + pd.Timedelta(days=d)).isoformat() for d in days], "lead_days": days,
+                "synthetic": False, "demo_only": False, "model_version": str(self.meta.get("model_version")),
+                "ensemble_member_count": ECMWFResearchProvider.ensemble_member_count,
+                "verification_reference": "ERA5 reanalysis (WeatherBench 2, 5.625 deg)"}
 
     def model_summary(self) -> dict:
         md = self.model.metadata

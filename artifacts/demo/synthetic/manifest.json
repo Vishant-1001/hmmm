@@ -1,0 +1,12 @@
+{
+ "mode": "synthetic_demo",
+ "provider": "synthetic",
+ "synthetic": true,
+ "demo_only": true,
+ "source_label": "Synthetic demonstration scenario",
+ "generator": "forecast_bust.data.providers.SyntheticDemoProvider (seeded, in-process; nothing stored here)",
+ "allowed_uses": ["UI stress cases", "edge-case demonstrations", "interactive scenarios", "development and tests"],
+ "forbidden_uses": ["training", "calibration", "spread/threshold references", "reported metrics or benchmarks", "verification labels"],
+ "served_by_api": false,
+ "note": "The served demo shows only real ECMWF IFS ENS cases. Synthetic data, if ever displayed, is badged DEMO MODE - SYNTHETIC SCENARIO."
+}

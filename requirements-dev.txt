@@ -14,3 +14,5 @@ fastapi>=0.110
 uvicorn>=0.27
 pytest>=8
 httpx>=0.27
+# NCMRWF/TIGGE provider and its GRIB-fixture tests
+-r requirements-ncmrwf.txt

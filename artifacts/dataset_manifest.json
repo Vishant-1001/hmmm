@@ -62,5 +62,47 @@
   "normalisation": "artifacts/preprocessing.json"
  },
  "licensing": "ERA5: Copernicus licence (LICENSE file in bucket). IFS ENS: ECMWF data terms - verify the WeatherBench 2 licence notes before redistribution. Raw data is NOT committed to git.",
- "not_used": "No NCMRWF data is used; NCMRWF NEPS integration is architected (adapter interface) but not claimed."
+ "not_used": "No NCMRWF data is used; NCMRWF NEPS integration is architected (adapter interface) but not claimed.",
+ "providers": {
+  "ecmwf_era5": {
+   "provider": "ECMWF (IFS ENS) + ERA5 verification",
+   "archive": "WeatherBench 2 (gs://weatherbench2)",
+   "synthetic": false,
+   "role": "benchmark data source of B2/v2/v3/V4 and every served case",
+   "entries": "see `forecast`, `reference`, `climatology` above (unchanged)"
+  },
+  "ncmrwf_tigge": {
+   "provider": "NCMRWF",
+   "archive": "TIGGE/ECDS",
+   "origin": "dems",
+   "synthetic": false,
+   "source_url": "https://ecds.ecmwf.int/datasets/tigge-forecasts",
+   "api_url": "https://ecds.ecmwf.int/api",
+   "access_type": "authenticated ECDS personal access token (cdsapi); catalogue/constraints endpoint is public",
+   "retrieval_date": null,
+   "catalogue_checked": "2026-10-03T21:07:12+00:00",
+   "retrieval_success": false,
+   "coverage": {
+    "catalogue_years_listing_z500_pf": [
+     "2018",
+     "2019",
+     "2020",
+     "2021",
+     "2022"
+    ],
+    "retrieved_years": [],
+    "measured": false
+   },
+   "status": "NCMRWF/TIGGE CATALOGUE CONFIRMED, RETRIEVAL NOT YET VERIFIED",
+   "details": "artifacts/ncmrwf_tigge_availability.json"
+  },
+  "synthetic_demo": {
+   "provider": "SyntheticDemoProvider (in-process, seeded)",
+   "synthetic": true,
+   "demo_only": true,
+   "source_label": "Synthetic demonstration scenario",
+   "role": "UI stress cases, development and tests only; never training, calibration or metrics",
+   "details": "artifacts/demo/synthetic/manifest.json"
+  }
+ }
 }

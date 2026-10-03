@@ -29,8 +29,9 @@ Violations raise `DataContractError` (tested in `tests/test_adapters_failure_mod
 `ForecastSourceAdapter` is the integration boundary (`list_initialisations`, `load`).
 
 * `IFSENSWeatherBenchAdapter`: implemented, used for every result in this repository.
-* `NCMRWFAdapter`: **interface only**. It raises `NotImplementedError` because no NCMRWF NEPS
-  data was available to this build. No NCMRWF integration is claimed.
+* `NCMRWFAdapter`: bulk-archive slot, still `NotImplementedError` (no NCMRWF archive is cached). Per-initialisation
+  access is `forecast_bust.data.providers.NCMRWFTIGGEProvider` (ECDS TIGGE, needs a token). Status: catalogue
+  confirmed, retrieval not yet verified (`docs/ncmrwf_tigge_availability.md`).
 
 ## Smoke test
 

@@ -103,8 +103,24 @@ class LeadSummary(BaseModel):
     n_alerts: int
 
 
+class ForecastSource(BaseModel):
+    """Provenance of the forecast behind a response (see forecast_bust.data.providers)."""
+    provider: str                     # ecmwf_research | ncmrwf_tigge | synthetic
+    dataset: str
+    source_label: str
+    initialization_time: str
+    valid_times: list[str]
+    lead_days: list[int]
+    synthetic: bool
+    demo_only: bool
+    model_version: str
+    ensemble_member_count: int
+    verification_reference: Optional[str] = None
+
+
 class RunResult(BaseModel):
     mode: str
+    source: ForecastSource
     case: CaseInfo
     model: ModelSummary
     timings_ms: dict[str, float]

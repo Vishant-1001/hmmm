@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Coast, Graticule, proj, riskClass, RISK_BINS, type Box } from "../components/Maps";
-import type { Cell, RegionOverview } from "./types";
+import type { Cell, RegionOverview, ForecastSource } from "./types";
 
 export const pct = (v: number | null | undefined, d = 1) => (v == null || Number.isNaN(v) ? "—" : `${(100 * v).toFixed(d)}%`);
 export const num = (v: number | null | undefined, d = 2) => (v == null || Number.isNaN(v) ? "—" : v.toFixed(d));
@@ -16,6 +16,19 @@ const HALF = 5.625 / 2;
 
 export function Badge({ kind, children, testid }: { kind?: string; children: ReactNode; testid?: string }) {
   return <span className={`badge ${kind ?? ""}`} data-testid={testid}>{children}</span>;
+}
+
+const PROVIDER_LABELS: Record<string, string> = { ncmrwf_tigge: "NCMRWF TIGGE", ecmwf_research: "ECMWF IFS / ERA5" };
+
+/** Forecast provenance, visible without developer tools. Synthetic data never gets a real-source label. */
+export function SourceBadge({ source }: { source?: ForecastSource | null }) {
+  if (!source) return null;
+  if (source.synthetic || source.demo_only || source.provider === "synthetic") {
+    return <span className="badge source synthetic" data-testid="source-badge" title={source.source_label}>DEMO MODE · SYNTHETIC SCENARIO</span>;
+  }
+  const label = PROVIDER_LABELS[source.provider] ?? source.provider;
+  const title = `${source.dataset} · ${source.ensemble_member_count} members · init ${source.initialization_time.slice(0, 16)} UTC`;
+  return <span className="badge source real" data-testid="source-badge" title={title}>SOURCE · {label}</span>;
 }
 
 export function supportKind(s: string) {
